@@ -1,6 +1,7 @@
 package com.team.blog.post.domain;
 
 import com.team.blog.shared.application.markdown.RenderVersion;
+import com.team.blog.shared.application.markdown.RenderedContent;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -131,6 +132,42 @@ public class Post {
     public static Post newDraft(
             long authorId, Visibility visibility, String title, String contentMd, Instant now) {
         return new Post(authorId, visibility, title, contentMd, now);
+    }
+
+    /**
+     * 발행·다시 발행 (data-model §2 의사 코드, 05 J-1, FR-031·032). 본문·HTML·요약·썸네일·공개 범위·{@code
+     * render_version}·{@code updated_at}을 바꾸고 {@code edit_version = currentVersion + 1}로 둔다. 반응
+     * 수·{@code hidden_*}·{@code deleted_at}은 건드리지 않는다.
+     *
+     * @param currentVersion 현재 편집 버전 = max(Redis, {@code post_draft}, {@code post}) — 호출하는 쪽이 확인한
+     *     값(A-6 ④)
+     */
+    public PublishResult publish(
+            PublishCommand cmd, RenderedContent rendered, long currentVersion, Instant now) {
+        Objects.requireNonNull(now, "now");
+        boolean firstPublish = this.publishedAt == null;
+        boolean wentPublic = false;
+        if (firstPublish) {
+            this.publishedAt = now;
+        } else {
+            this.editedAt = now;
+        }
+        if (cmd.visibility() == Visibility.PUBLIC && this.firstPublicAt == null) {
+            this.firstPublicAt = now;
+            wentPublic = true;
+        }
+        this.status = PostStatus.PUBLISHED;
+        this.visibility = Objects.requireNonNull(cmd.visibility(), "visibility");
+        this.title = cmd.title();
+        this.contentMd = cmd.contentMd();
+        this.contentHtml = rendered.html();
+        this.excerpt = rendered.excerpt();
+        this.thumbnailUrl = rendered.thumbnailUrl();
+        this.renderVersion = rendered.renderVersion();
+        this.editVersion = currentVersion + 1;
+        this.updatedAt = now;
+        return new PublishResult(
+                null, publishedAt, firstPublicAt, editedAt, editVersion, firstPublish, wentPublic);
     }
 
     public boolean isDraft() {

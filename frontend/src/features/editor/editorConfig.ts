@@ -19,6 +19,10 @@ export const EDITOR_CONFIG = Object.freeze({
   previewDebounceMs: 500,
   backupRetentionMs: 7 * 24 * 60 * 60 * 1000,
   inProgressRetryMs: 1000,
+  /** 태그 최대 개수 (`blog.post.max-tags`와 같은 값, 008 화면이 교체). */
+  maxTags: 10,
+  /** 제목 최대 글자 수 (`blog.post.title-max`). */
+  titleMax: 100,
 });
 
 /**

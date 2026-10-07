@@ -3,6 +3,9 @@ import { createRoot } from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
 import App from './App';
 import { ensureCsrf } from './api/client';
+import { registerLogoutCleanup } from './features/auth/logout';
+import { clearMemberDrafts } from './features/editor/localDraftStore';
+import { flushPendingWork } from './features/editor/pendingWork';
 
 const container = document.getElementById('root');
 if (!container) {
@@ -18,6 +21,9 @@ function render(root: HTMLElement) {
     </StrictMode>,
   );
 }
+
+// 002: 로그아웃 때 미전송 자동 저장을 보내고 이 기기 임시 글을 지운다(001 logout.ts 등록 지점).
+registerLogoutCleanup({ flushPendingWork, clearMemberDrafts });
 
 // 상태를 바꾸는 첫 요청 전에 XSRF-TOKEN 쿠키를 받아 둔다(R-05). 실패해도 화면은 띄우고,
 // 다음 ensureCsrf() 호출이 다시 시도한다.

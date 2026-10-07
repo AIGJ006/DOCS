@@ -1,0 +1,125 @@
+/* 에디터 화면 (002). 375px에서도 가로 스크롤 없이 위아래로 쌓인다. */
+.editor-page {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 72rem;
+  margin: 0 auto;
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  overflow-wrap: anywhere;
+}
+
+.editor-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.editor-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.editor-title {
+  box-sizing: border-box;
+  width: 100%;
+  font-size: 1.5rem;
+  padding: 0.5rem;
+}
+
+.editor-body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 1rem;
+}
+
+@media (min-width: 900px) {
+  .editor-body {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+}
+
+.editor-input textarea {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 24rem;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  padding: 0.5rem;
+}
+
+.preview-pane {
+  min-width: 0;
+  border: 1px solid #ccc;
+  padding: 0.75rem;
+}
+
+.preview-note {
+  margin: 0 0 0.5rem;
+  font-size: 0.85rem;
+  color: #555;
+}
+
+.post-content pre {
+  overflow-x: auto;
+}
+
+.post-content img {
+  max-width: 100%;
+  height: auto;
+}
+
+.field-error,
+.form-error,
+.preview-error {
+  color: #b00020;
+}
+
+.publish-dialog {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgb(0 0 0 / 40%);
+  padding: 1rem;
+}
+
+.publish-dialog form {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 28rem;
+  background: #fff;
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.tag-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  list-style: none;
+  margin: 0 0 0.5rem;
+  padding: 0;
+}
+
+.tag-chips li {
+  border: 1px solid #999;
+  border-radius: 1rem;
+  padding: 0.1rem 0.5rem;
+}
+
+.tag-chips li[aria-invalid='true'] {
+  border-color: #b00020;
+}
+
+.dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}

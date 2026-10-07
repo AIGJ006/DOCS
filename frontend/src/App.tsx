@@ -3,6 +3,7 @@ import { Route, Routes, useLocation } from 'react-router-dom';
 import { onNotFound } from './api/client';
 import { SessionProvider } from './features/auth/SessionProvider';
 import SessionBar from './features/auth/SessionBar';
+import EditorPage, { NewPostPage } from './pages/EditorPage';
 import LoginPage from './pages/LoginPage';
 import NotFoundPage from './pages/NotFoundPage';
 import PrivacyPage from './pages/PrivacyPage';
@@ -40,6 +41,8 @@ export default function App() {
           <Route path="/settings" element={<Placeholder name="settings" />} />
           <Route path="/terms" element={<TermsPage />} />
           <Route path="/privacy" element={<PrivacyPage />} />
+          <Route path="/write/new" element={<NewPostPage />} />
+          <Route path="/write/:postId" element={<EditorPage />} />
           <Route path="*" element={<NotFoundPage />} />
         </Routes>
       )}
