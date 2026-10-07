@@ -12,7 +12,7 @@ import org.springframework.context.annotation.Primary;
  * <p>{@link IntegrationTestBase}가 가져오므로 모든 통합 테스트가 같은 Spring 컨텍스트를 재사용한다.
  */
 @TestConfiguration(proxyBeanMethods = false)
-@Import({TestLoginController.class, ProbeController.class})
+@Import({TestLoginController.class, ProbeController.class, ReadProbeController.class})
 public class TestSupportConfiguration {
 
     @Bean
