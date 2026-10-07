@@ -8,7 +8,9 @@
  * - 오류 응답은 공통 본문 `{code, message, errors, details}`를 `ApiError`로 던진다. JSON이 아니면 `code = 'UNKNOWN'`.
  * - 401이면 등록된 `onUnauthorized` 콜백을 부른다(로그인 화면 안내).
  *
- * 화면별 403 코드 안내(`useAuthGate`)와 404 `onNotFound` 분기는 004가 이 파일 위에 더한다.
+ * - 404 `NOT_FOUND`면 등록된 `onNotFound` 콜백을 부른다(공통 404 화면 전환, 004 T024).
+ *
+ * 화면별 403 코드 안내(`useAuthGate`)는 004가 이 파일 위에 더한다.
  */
 
 export const CSRF_COOKIE = 'XSRF-TOKEN';
@@ -65,8 +67,10 @@ export interface RequestOptions {
 
 type Method = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
 type UnauthorizedHandler = (error: ApiError) => void;
+type NotFoundHandler = (error: ApiError) => void;
 
 const unauthorizedHandlers = new Set<UnauthorizedHandler>();
+const notFoundHandlers = new Set<NotFoundHandler>();
 let csrfPromise: Promise<void> | null = null;
 
 /** 401 응답 때 부를 콜백을 등록한다. 돌려받은 함수로 해제한다. */
@@ -74,6 +78,17 @@ export function onUnauthorized(handler: UnauthorizedHandler): () => void {
   unauthorizedHandlers.add(handler);
   return () => {
     unauthorizedHandlers.delete(handler);
+  };
+}
+
+/**
+ * 404 `NOT_FOUND` 응답 때 부를 콜백을 등록한다(공통 404 화면 전환, 004 FR-014). 돌려받은 함수로 해제한다.
+ * 볼 수 없는 글과 없는 글은 같은 404이므로 이유를 구분하지 않는다.
+ */
+export function onNotFound(handler: NotFoundHandler): () => void {
+  notFoundHandlers.add(handler);
+  return () => {
+    notFoundHandlers.delete(handler);
   };
 }
 
@@ -100,6 +115,7 @@ export function ensureCsrf(): Promise<void> {
 export function resetClientForTests(): void {
   csrfPromise = null;
   unauthorizedHandlers.clear();
+  notFoundHandlers.clear();
 }
 
 export function apiGet<T>(path: string, options?: RequestOptions): Promise<T> {
@@ -207,6 +223,11 @@ async function request<T>(
     const error = await toApiError(response);
     if (error.status === 401) {
       for (const handler of [...unauthorizedHandlers]) {
+        handler(error);
+      }
+    }
+    if (error.status === 404 && error.code === 'NOT_FOUND') {
+      for (const handler of [...notFoundHandlers]) {
         handler(error);
       }
     }
