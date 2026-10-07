@@ -12,7 +12,8 @@ import org.springframework.web.bind.annotation.RestController;
 
 /**
  * 발행·다시 발행 (contracts {@code publishPost}). {@code Idempotency-Key} 헤더는 필수이며 형식 확인은 계정 상태·소유 판정 뒤에
- * 한다(42 §3 순서). 같은 키의 중복 판정은 US6(T111)에서 붙인다.
+ * 한다(42 §3 순서). 같은 키의 중복 판정(002 T111): 처리 중이면 409 {@code IN_PROGRESS}, 끝났으면 저장된 응답(200), 다른 내용·다른
+ * 글이면 422 {@code IDEMPOTENCY_KEY_REUSED}. Redis 장애면 건너뛰고 행 잠금 + 버전 확인으로 막는다.
  */
 @RestController
 public class PublishController {

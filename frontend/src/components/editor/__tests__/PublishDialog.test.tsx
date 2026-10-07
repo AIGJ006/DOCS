@@ -153,4 +153,41 @@ describe('PublishDialog', () => {
       '다른 탭이나 기기에서 이 글이 수정되었어요',
     );
   });
+
+  it('응답 전에는 [발행]을 끄고 "발행 중…"으로 보이며 두 번 눌러도 한 번만 보낸다', async () => {
+    let finish: (r: Response) => void = () => undefined;
+    const fetchMock = stubFetch({
+      'POST /api/posts/42/publish': () => new Promise<Response>((resolve) => (finish = resolve)),
+    });
+    const user = userEvent.setup();
+    const props = renderDialog();
+
+    await user.click(screen.getByRole('button', { name: '발행' }));
+
+    const busy = await screen.findByRole('button', { name: '발행 중…' });
+    expect(busy).toBeDisabled();
+    await user.click(busy);
+    expect(requestsTo(fetchMock, 'POST', '/api/posts/42/publish')).toHaveLength(1);
+    finish(json(200, PUBLISHED));
+    await waitFor(() => expect(props.onPublished).toHaveBeenCalledWith(PUBLISHED));
+  });
+
+  it('409 IN_PROGRESS면 같은 키로 다시 보낸다', async () => {
+    const replies = [
+      () => json(409, errorBody('IN_PROGRESS', '발행을 처리하고 있어요')),
+      () => json(200, PUBLISHED),
+    ];
+    const fetchMock = stubFetch({ 'POST /api/posts/42/publish': () => replies.shift()!() });
+    const user = userEvent.setup();
+    const props = renderDialog();
+
+    await user.click(screen.getByRole('button', { name: '발행' }));
+
+    await waitFor(() => expect(props.onPublished).toHaveBeenCalledWith(PUBLISHED), {
+      timeout: 3000,
+    });
+    const [a, b] = requestsTo(fetchMock, 'POST', '/api/posts/42/publish');
+    expect(sentKey(a)).toMatch(UUID);
+    expect(sentKey(b)).toBe(sentKey(a));
+  });
 });

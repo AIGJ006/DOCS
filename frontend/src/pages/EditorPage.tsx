@@ -17,6 +17,7 @@ import ConflictBanner from '../components/editor/ConflictBanner';
 import DiffDialog from '../components/editor/DiffDialog';
 import PreviewPane from '../components/editor/PreviewPane';
 import PublishDialog, { type PublishContent } from '../components/editor/PublishDialog';
+import { finishPublish } from '../features/editor/publish';
 import SaveStatus from '../components/editor/SaveStatus';
 import { useSession } from '../features/auth/useSession';
 import { AutosaveQueue, type AutosaveStatus } from '../features/editor/autosaveQueue';
@@ -265,12 +266,17 @@ export default function EditorPage() {
     };
   }, [opened]);
 
+  /** 발행 성공 — 이 기기 초안을 지운 뒤 글 주소로 옮긴다 (US1·US6, `features/editor/publish.ts`). */
   const onPublished = async (response: PublishResponse) => {
     queueRef.current?.dispose();
-    if (memberId !== null) {
-      await removeDraft(memberId, postId).catch(() => undefined);
-    }
-    window.location.assign(response.url);
+    await finishPublish(response, {
+      removeLocalDraft: async () => {
+        if (memberId !== null) {
+          await removeDraft(memberId, postId);
+        }
+      },
+      navigate: (url) => window.location.assign(url),
+    });
   };
 
   /** [변경 취소] 확인 뒤 — 작업본을 버리고 이 기기 초안을 지운 다음 발행본으로 다시 연다 (FR-035, US4 #3). */
