@@ -52,6 +52,7 @@ class EmailLoginLogoutIntegrationTest extends IntegrationTestBase {
 
         mockMvc.perform(get("/api/me").cookie(session))
                 .andExpect(status().isOk())
+                .andExpect(jsonPath("$.memberId").value(memberId))
                 .andExpect(jsonPath("$.handle").value("kim755030"))
                 .andExpect(jsonPath("$.emailVerified").value(true));
     }

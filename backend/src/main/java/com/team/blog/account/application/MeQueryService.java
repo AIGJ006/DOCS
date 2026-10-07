@@ -55,6 +55,7 @@ public class MeQueryService {
                         .map(imageUrlResolver::publicUrl)
                         .orElse(null);
         return new MeSummary(
+                memberId,
                 member.getHandle(),
                 member.getNickname(),
                 member.getRole().name(),
