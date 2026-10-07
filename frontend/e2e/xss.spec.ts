@@ -8,7 +8,14 @@ import { createPost, hasAccount, login, publish, xssCorpus } from './support';
 test.describe('본문의 스크립트는 실행되지 않는다', () => {
   test.skip(!hasAccount, 'E2E_EMAIL·E2E_PASSWORD(이메일 인증된 회원)가 필요합니다');
 
-  test('공격 문자열 32개를 발행하고 에디터 미리보기를 열어도 알림창 0번', async ({ page }) => {
+  test('공격 문자열 32개를 발행하고 에디터 미리보기를 열어도 알림창 0번', async ({
+    page,
+  }, testInfo) => {
+    // 같은 계정으로 두 프로젝트가 돌면 미리보기 요청 제한(1분 60번)에 걸린다. 정화는 화면 폭과 무관해 desktop에서만 본다.
+    test.skip(
+      testInfo.project.name !== 'desktop',
+      '미리보기 요청 제한 — desktop 프로젝트에서만 실행',
+    );
     test.setTimeout(180_000);
     const dialogs: string[] = [];
     page.on('dialog', async (dialog) => {

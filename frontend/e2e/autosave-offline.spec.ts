@@ -34,6 +34,8 @@ test.describe('쓰다 만 글을 잃지 않는다', () => {
 
     // 미전송 내용이 있을 때 떠나면 확인창 (beforeunload)
     await page.getByLabel('본문').fill('첫 문단\n\n오프라인 문단\n\n떠나기 직전');
+    // 이 기기 저장(1초 뒤)으로 바뀐 것을 본 뒤 떠난다. 그래야 아래 "저장됨"이 새 내용의 서버 저장이다.
+    await expect(status).toHaveText('● 이 기기에 저장됨 (동기화 대기)', { timeout: 2500 });
     let asked = false;
     page.once('dialog', async (dialog) => {
       asked = dialog.type() === 'beforeunload';
