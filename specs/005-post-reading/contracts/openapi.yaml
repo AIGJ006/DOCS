@@ -6,7 +6,7 @@ info:
     전체 글 목록·개인 블로그·글 상세 (C-READ-1, C-BLOG-1, C-READ-2).
     규약: docs/02-architecture.md §5-1 (2026-10-07 O8)
       - 경로 `/api/...` 복수형, 경로 변수 이름 `{postId}`, `{handle}`
-      - 오류 본문 `{ code, message, errors, details }` (errors는 입력 검증 오류일 때만)
+      - 오류 본문 `{ code, message, errors, details }` (errors는 항상 배열, 입력 검증 오류가 아니면 `[]`)
       - 목록 커서는 불투명 Base64URL 문자열. 클라이언트는 해석하지 않고 그대로 돌려준다
       - 인증은 세션 쿠키(Spring Session) + CSRF 토큰. 이 문서의 API는 모두 GET이라 CSRF 토큰이 필요 없고, 로그인 없이도 호출할 수 있다
         (로그인 정보는 "보는 사람 기준" 필드에만 쓰인다. 세션 저장소 장애 시 비회원으로 처리된다, 02 §2-1)
@@ -287,7 +287,7 @@ components:
             $ref: '#/components/schemas/ErrorResponse'
           example:
             code: INVALID_CURSOR
-            message: 목록 위치 값이 올바르지 않아요.
+            message: 목록 위치 값이 올바르지 않아요
             errors: []
             details: null
     NotFound:
@@ -303,7 +303,7 @@ components:
             $ref: '#/components/schemas/ErrorResponse'
           example:
             code: NOT_FOUND
-            message: 볼 수 없는 페이지예요.
+            message: 볼 수 없는 페이지예요
             errors: []
             details: null
     NotFoundPage:

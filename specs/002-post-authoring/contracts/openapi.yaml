@@ -129,7 +129,7 @@ paths:
               schema: { $ref: '#/components/schemas/ErrorResponse' }
               example:
                 code: NOT_PUBLISHED
-                message: 발행한 글만 변경을 취소할 수 있어요.
+                message: 발행한 글만 변경을 취소할 수 있어요
                 errors: []
                 details: null
 
@@ -175,7 +175,7 @@ paths:
               schema: { $ref: '#/components/schemas/ErrorResponse' }
               example:
                 code: AUTOSAVE_UNAVAILABLE
-                message: 잠시 후 다시 저장할게요.
+                message: 잠시 후 다시 저장할게요
                 errors: []
                 details: null
 
@@ -223,16 +223,16 @@ paths:
                 validation:
                   value:
                     code: VALIDATION_FAILED
-                    message: 입력값을 확인해 주세요.
+                    message: 입력값을 확인해 주세요
                     errors:
                       - { field: title, code: TITLE_REQUIRED, message: 제목을 입력해 주세요. }
                       - { field: contentMd, code: PENDING_IMAGES, message: 업로드가 끝나지 않은 사진이 있어요. }
-                      - { field: 'tags[2]', code: INVALID_TAG, message: 쓸 수 없는 글자가 있어요., value: '🔥hot' }
+                      - { field: 'tags[2]', code: INVALID_TAG, message: 쓸 수 없는 글자가 있어요, value: '🔥hot' }
                     details: null
                 tooComplex:
                   value:
                     code: VALIDATION_FAILED
-                    message: 입력값을 확인해 주세요.
+                    message: 입력값을 확인해 주세요
                     errors:
                       - { field: contentMd, code: CONTENT_TOO_COMPLEX, message: '글 구조가 너무 복잡해요 (목록·인용은 20단계까지)' }
                     details: null
@@ -248,14 +248,14 @@ paths:
                 versionConflict:
                   value:
                     code: VERSION_CONFLICT
-                    message: 다른 탭이나 기기에서 이 글이 수정되었어요.
+                    message: 다른 탭이나 기기에서 이 글이 수정되었어요
                     errors: []
                     details:
                       server: { title: JPA N+1 정리, contentMd: "## 원인\n…", version: 14, savedAt: '2026-10-02T14:03:12+09:00' }
                 inProgress:
                   value:
                     code: IN_PROGRESS
-                    message: 발행 중이에요.
+                    message: 발행 중이에요
                     errors: []
                     details: null
         '422':
@@ -265,7 +265,7 @@ paths:
               schema: { $ref: '#/components/schemas/ErrorResponse' }
               example:
                 code: IDEMPOTENCY_KEY_REUSED
-                message: 같은 요청 키로 다른 내용을 보낼 수 없어요.
+                message: 같은 요청 키로 다른 내용을 보낼 수 없어요
                 errors: []
                 details: null
 
@@ -451,7 +451,7 @@ components:
           schema: { $ref: '#/components/schemas/ErrorResponse' }
           example:
             code: VALIDATION_FAILED
-            message: 입력값을 확인해 주세요.
+            message: 입력값을 확인해 주세요
             errors:
               - { field: title, code: TITLE_TOO_LONG, message: 제목은 100자까지예요. }
             details: null
@@ -460,7 +460,7 @@ components:
       content:
         application/json:
           schema: { $ref: '#/components/schemas/ErrorResponse' }
-          example: { code: LOGIN_REQUIRED, message: 로그인이 필요해요., errors: [], details: null }
+          example: { code: LOGIN_REQUIRED, message: 로그인이 필요해요, errors: [], details: null }
     Forbidden:
       description: |
         계정 상태(인증 전·정지·탈퇴 유예 — 001 AccountStatusGuard, 탈퇴 유예는 001 T042a 필터도 거부) 또는 CSRF 토큰 거부.
@@ -470,13 +470,13 @@ components:
           schema: { $ref: '#/components/schemas/ErrorResponse' }
           examples:
             notVerified:
-              value: { code: EMAIL_NOT_VERIFIED, message: 이메일 인증 후 글을 쓸 수 있어요., errors: [], details: null }
+              value: { code: EMAIL_NOT_VERIFIED, message: 이메일 인증 후 글을 쓸 수 있어요, errors: [], details: null }
             suspended:
-              value: { code: ACCOUNT_SUSPENDED, message: 정지된 계정이에요., errors: [], details: null }
+              value: { code: ACCOUNT_SUSPENDED, message: 정지된 계정이에요, errors: [], details: null }
             withdrawn:
-              value: { code: ACCOUNT_WITHDRAWN, message: 탈퇴 신청한 계정이에요., errors: [], details: null }
+              value: { code: ACCOUNT_WITHDRAWN, message: 탈퇴 신청한 계정이에요, errors: [], details: null }
             csrfRejected:
-              value: { code: CSRF_REJECTED, message: 요청을 확인할 수 없어요. 새로고침 후 다시 시도해 주세요., errors: [], details: null }
+              value: { code: CSRF_REJECTED, message: 요청을 확인할 수 없어요. 새로고침 후 다시 시도해 주세요, errors: [], details: null }
     PreviewForbidden:
       description: |
         미리보기는 계정 상태(인증 전·정지)를 판정하지 않는다(B-12). CSRF 토큰이 없거나 틀리면 403 CSRF_REJECTED,
@@ -486,15 +486,15 @@ components:
           schema: { $ref: '#/components/schemas/ErrorResponse' }
           examples:
             csrfRejected:
-              value: { code: CSRF_REJECTED, message: 요청을 확인할 수 없어요. 새로고침 후 다시 시도해 주세요., errors: [], details: null }
+              value: { code: CSRF_REJECTED, message: 요청을 확인할 수 없어요. 새로고침 후 다시 시도해 주세요, errors: [], details: null }
             withdrawn:
-              value: { code: ACCOUNT_WITHDRAWN, message: 탈퇴 신청한 계정이에요., errors: [], details: null }
+              value: { code: ACCOUNT_WITHDRAWN, message: 탈퇴 신청한 계정이에요, errors: [], details: null }
     NotFound:
       description: 없는 글·남의 글·휴지통 글 (구분하지 않음)
       content:
         application/json:
           schema: { $ref: '#/components/schemas/ErrorResponse' }
-          example: { code: NOT_FOUND, message: 볼 수 없는 페이지예요., errors: [], details: null }
+          example: { code: NOT_FOUND, message: 볼 수 없는 페이지예요, errors: [], details: null }
     VersionConflict:
       description: 다른 탭·기기에서 먼저 저장함. 저장하지 않았다.
       content:
@@ -502,7 +502,7 @@ components:
           schema: { $ref: '#/components/schemas/ErrorResponse' }
           example:
             code: VERSION_CONFLICT
-            message: 다른 탭이나 기기에서 이 글이 수정되었어요.
+            message: 다른 탭이나 기기에서 이 글이 수정되었어요
             errors: []
             details:
               server: { title: JPA N+1 정리, contentMd: "## 원인\n…", version: 14, savedAt: '2026-10-02T14:03:12+09:00' }
@@ -511,7 +511,7 @@ components:
       content:
         application/json:
           schema: { $ref: '#/components/schemas/ErrorResponse' }
-          example: { code: PAYLOAD_TOO_LARGE, message: 요청이 너무 커요., errors: [], details: null }
+          example: { code: PAYLOAD_TOO_LARGE, message: 요청이 너무 커요, errors: [], details: null }
     RateLimited:
       description: 요청 과다 (이유 코드는 21의 RATE_LIMITED 재사용, 제안)
       headers:
@@ -521,4 +521,4 @@ components:
       content:
         application/json:
           schema: { $ref: '#/components/schemas/ErrorResponse' }
-          example: { code: RATE_LIMITED, message: 잠시 후 다시 시도해 주세요., errors: [], details: null }
+          example: { code: RATE_LIMITED, message: 잠시 후 다시 시도해 주세요, errors: [], details: null }
