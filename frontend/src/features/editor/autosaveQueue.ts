@@ -179,9 +179,17 @@ export class AutosaveQueue {
     }
   }
 
-  /** 충돌을 사용자가 정리했다 (서버 내용을 받아들임 등 — US5). */
-  resolveConflict(content: AutosaveContent, server: { title: string; contentMd: string }): void {
+  /**
+   * 충돌을 사용자가 정리했다 (US5: 편집 중인 내용으로 저장 / 저장된 내용 불러오기). `server`는 서버가 `content.baseVersion`에 가진
+   * 내용, `savedAt`은 그 저장 시각(있으면 "저장됨"으로 보인다).
+   */
+  resolveConflict(
+    content: AutosaveContent,
+    server: { title: string; contentMd: string },
+    savedAt?: string,
+  ): void {
     this.stopped = null;
+    this.attempts = 0;
     this.title = content.title;
     this.contentMd = content.contentMd;
     this.version = content.baseVersion;
@@ -189,8 +197,19 @@ export class AutosaveQueue {
     this.persistLocal();
     if (this.hasUnsent()) {
       this.firstUnsentAt = Date.now();
+      this.emit({ kind: 'local' });
       this.scheduleSend();
+    } else {
+      this.firstUnsentAt = null;
+      if (savedAt) {
+        this.emit({ kind: 'saved', savedAt });
+      }
     }
+  }
+
+  /** 충돌 상태인가 (서버 전송을 멈췄음). */
+  get inConflict(): boolean {
+    return this.stopped === 'conflict';
   }
 
   /** 수동 저장·발행이 409를 받았다 — 자동 저장도 멈추고 충돌 상태로 둔다. */

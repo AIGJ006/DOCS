@@ -157,3 +157,128 @@
   background: #fff;
   padding: 1rem;
 }
+
+/* 충돌 배너·비교 창 (002 US5). 색과 기호(−/+)를 함께 쓰고, 375px에서는 위아래 한 줄 목록으로 줄바꿈한다. */
+.conflict-banner {
+  border: 1px solid #b26a00;
+  background: #fff4e5;
+  padding: 0.5rem 0.75rem;
+}
+
+.diff-dialog {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  background: rgb(0 0 0 / 40%);
+  padding: 0.5rem;
+  overflow-y: auto;
+  z-index: 10;
+}
+
+.diff-dialog-box {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 72rem;
+  min-width: 0;
+  background: #fff;
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.diff-dialog-box h2 {
+  margin: 0;
+  font-size: 1.2rem;
+}
+
+.diff-legend,
+.diff-nav,
+.diff-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0;
+}
+
+.diff-chip {
+  padding: 0.1rem 0.4rem;
+}
+
+.diff-columns-head {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 0.25rem;
+  font-weight: 600;
+}
+
+.diff-body {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.9rem;
+}
+
+.diff-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0.25rem;
+}
+
+.diff-body[data-layout='split'] .diff-row {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+}
+
+.diff-cell {
+  display: flex;
+  gap: 0.4rem;
+  min-width: 0;
+  padding: 0 0.25rem;
+}
+
+.diff-sign {
+  flex: none;
+  width: 1ch;
+}
+
+.diff-text {
+  min-width: 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.diff-removed {
+  background: #ffebe9;
+}
+
+.diff-added {
+  background: #e6ffec;
+}
+
+.diff-removed .diff-word {
+  background: #ffc1bc;
+  text-decoration: line-through;
+}
+
+.diff-added .diff-word {
+  background: #abf2bc;
+  text-decoration: none;
+}
+
+.diff-current {
+  outline: 2px solid #0b57d0;
+}
+
+.diff-title {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.diff-fold button {
+  width: 100%;
+}
