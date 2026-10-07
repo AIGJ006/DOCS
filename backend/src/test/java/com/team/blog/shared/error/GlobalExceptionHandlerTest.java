@@ -8,6 +8,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.team.blog.shared.web.SecurityHeadersFilter;
 import com.team.blog.shared.web.cursor.InvalidCursorException;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
@@ -20,6 +21,8 @@ import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
+import org.springframework.context.annotation.ComponentScan;
+import org.springframework.context.annotation.FilterType;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -35,7 +38,12 @@ import org.springframework.web.bind.annotation.RestController;
  * 공통 오류 본문 {code, message, errors, details} (02 §5-1 O8, README "정해진 것" 2026-10-07: errors는 항상 배열,
  * 메시지 끝 마침표 없음, 404는 모든 경우 같은 본문).
  */
-@WebMvcTest(controllers = GlobalExceptionHandlerTest.ErrorProbeController.class)
+@WebMvcTest(
+        controllers = GlobalExceptionHandlerTest.ErrorProbeController.class,
+        excludeFilters =
+                @ComponentScan.Filter(
+                        type = FilterType.ASSIGNABLE_TYPE,
+                        classes = SecurityHeadersFilter.class))
 @AutoConfigureMockMvc(addFilters = false)
 @Import(GlobalExceptionHandlerTest.ErrorProbeController.class)
 class GlobalExceptionHandlerTest {

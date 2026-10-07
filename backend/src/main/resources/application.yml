@@ -25,6 +25,24 @@ spring:
 
 server:
   shutdown: graceful
+  # 클라이언트 IP·HTTPS 판별 (FR-037, R-13, H4): 신뢰 프록시(사설 대역 기본)에서 온 요청만 X-Forwarded-For의
+  # 가장 오른쪽 신뢰 밖 주소를 getRemoteAddr()로 쓴다. 운영 LB 대역은 BLOG_TRUSTED_PROXIES(정규식 또는 CIDR 목록)로 준다.
+  forward-headers-strategy: native
+  tomcat:
+    remoteip:
+      internal-proxies: ${BLOG_TRUSTED_PROXIES:10\.\d+\.\d+\.\d+|192\.168\.\d+\.\d+|172\.(1[6-9]|2\d|3[01])\.\d+\.\d+|127\.\d+\.\d+\.\d+}
+      remote-ip-header: x-forwarded-for
+      protocol-header: x-forwarded-proto
+  servlet:
+    session:
+      # 실제 세션 쿠키는 shared.security.session.SessionConfig가 만든다 (같은 값)
+      timeout: ${blog.auth.session-timeout}
+      cookie:
+        name: SESSION
+        http-only: true
+        secure: true
+        same-site: lax
+        path: /
 
 # ---------------------------------------------------------------------------
 # 서비스 설정값 (blog.*) — constitution VII
