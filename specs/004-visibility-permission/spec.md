@@ -8,6 +8,12 @@
 
 **Input**: 원문 설계 문서 — [docs/06-visibility.md](../../docs/06-visibility.md), [docs/42-permission-matrix.md](../../docs/42-permission-matrix.md). 참고: [docs/01-common-requirements.md](../../docs/01-common-requirements.md) C-POST-4·C-OWN-1·C-READ-2·§3·결정 기록(2026-10-02, 2026-10-07 H1·H6·H7), [docs/02-architecture.md](../../docs/02-architecture.md) §4-2·§5, [docs/05-publish.md](../../docs/05-publish.md) §3, [docs/13-delete-withdraw.md](../../docs/13-delete-withdraw.md) §2-3·§2-6·§3-2, [docs/43-report-hide.md](../../docs/43-report-hide.md) §4-1
 
+## Clarifications
+
+### Session 2026-10-07
+
+- Q: 자기 글에 좋아요를 누르면 어떤 응답을 줄까? → A: 규칙 위반 400 `CANNOT_LIKE_OWN_POST`, 판정 순서는 42 §3 (FR-037)
+
 ## User Scenarios & Testing *(mandatory)*
 
 ### User Story 1 - 글마다 공개 범위를 고르고 바로 바꾸기 (Priority: P1)
@@ -317,7 +323,7 @@
 
 - **읽기 판정** ([02 §4-2](../../docs/02-architecture.md), [06 §7](../../docs/06-visibility.md)): `PostAccessPolicy.canRead(post, viewer)` 하나. 순서: 존재 & `deleted_at IS NULL` → 작성자 본인이면 표시(임시·비공개·숨김 포함) → 아니면 `status = PUBLISHED AND visibility = PUBLIC AND hidden_at IS NULL AND 작성자 withdrawn_at IS NULL`. 공개 범위 값마다 `VisibilityRule { visibility(); canRead(post, viewer); listCondition(viewer, authorId) }` Bean(공통은 PUBLIC·PRIVATE, 적용자는 `FriendsVisibilityRule`). 목록은 `PostQueryRepository`의 `VisibilityFilter.forViewer(viewer, author)`만 사용. 오류는 `PostNotFoundException`(→404) 하나.
 - **공용 조건 = 인덱스 조건** (06 R-2b, 2026-10-07 H1): `ix_post_feed (first_public_at DESC, id DESC)`·`ix_post_blog (author_id, first_public_at DESC, id DESC)` 모두 `WHERE status = 'PUBLISHED' AND visibility = 'PUBLIC' AND deleted_at IS NULL AND hidden_at IS NULL`. 쿼리는 여기에 `member.withdrawn_at IS NULL`을 더한다. Testcontainers 통합 테스트에서 홈·블로그 대표 쿼리 EXPLAIN에 두 인덱스가 나오는지 확인. 휴지통 누락 방지로 `Post`에 `@SQLRestriction("deleted_at IS NULL")`(13 §2-6).
-- **공개 범위 변경 API** ([06 §4](../../docs/06-visibility.md)): `PATCH /api/posts/{postId}/visibility { "visibility": "PRIVATE" }` → `200 { visibility, firstPublicAt }` / `400 INVALID_VISIBILITY` / `404`. 행 잠금(`SELECT … FOR UPDATE`) 후 `UPDATE post SET visibility = :to, first_public_at = CASE WHEN first_public_at IS NULL AND status = 'PUBLISHED' AND :to = 'PUBLIC' THEN now() ELSE first_public_at END, updated_at = now() WHERE id = :postId AND author_id = :me AND deleted_at IS NULL`. 커밋 후 `PostVisibilityChanged(postId, from, to)`. 메서드는 O8([02 §5-1](../../docs/02-architecture.md) "상태 지정은 PUT·DELETE")과 맞춰 계획에서 확정.
+- **공개 범위 변경 API** ([06 §4](../../docs/06-visibility.md), PATCH → PUT은 plan R-20): `PUT /api/posts/{postId}/visibility { "visibility": "PRIVATE" }` → `200 { visibility, firstPublicAt }` / `400 INVALID_VISIBILITY` / `404`. 행 잠금(`SELECT … FOR UPDATE`) 후 `UPDATE post SET visibility = :to, first_public_at = CASE WHEN first_public_at IS NULL AND status = 'PUBLISHED' AND :to = 'PUBLIC' THEN now() ELSE first_public_at END, updated_at = now() WHERE id = :postId AND author_id = :me AND deleted_at IS NULL`. 커밋 후 `PostVisibilityChanged(postId, from, to)`. 메서드는 O8([02 §5-1](../../docs/02-architecture.md) "상태 지정은 PUT·DELETE")과 맞춰 계획에서 확정.
 - **캐시** (06 R-5, 40 R-9): `PUBLIC`이 아닌 글 응답 `Cache-Control: private, no-store`, CDN 캐시 키에 넣지 않음. 404 화면 OG: `og:title "볼 수 없는 글이에요"`, `og:description "친구 공개·비공개 글이거나 삭제된 글입니다."`, `<meta name="robots" content="noindex">`.
 - **스키마** ([51](../../docs/51-erd-unified.md)): `post.visibility`(`ck_post_visibility` PUBLIC/PRIVATE), `post.first_public_at`(`ck_post_public_at`: 공개 발행이면 NOT NULL), `post.edited_at`, `post.hidden_at`, `post.deleted_at`, `member.default_visibility`(기본 `'PUBLIC'`, `ck_member_default_visibility`), `member.role`(USER/ADMIN), `member.status`(ACTIVE/SUSPENDED/WITHDRAWN), `member.withdrawn_at`, `auth_identity.email_verified_at`, `friendship`(V1 포함, `ck_friendship_order`).
 - **`FRIENDS` 적용 마이그레이션** ([06 §6-1](../../docs/06-visibility.md)): `V{n}__friends.sql` — `ck_post_visibility`·`ck_member_default_visibility`를 `('PUBLIC', 'FRIENDS', 'PRIVATE')`로 교체, `CREATE INDEX ix_post_blog_friends ON post (author_id, published_at DESC, id DESC) WHERE status = 'PUBLISHED' AND visibility IN ('PUBLIC', 'FRIENDS') AND deleted_at IS NULL AND hidden_at IS NULL`. 친구 판정 `member_a_id = LEAST(:author, :viewer) AND member_b_id = GREATEST(:author, :viewer) AND status = 'ACCEPTED'`. 친구 블로그 커서 `k = (published_at, id)`.

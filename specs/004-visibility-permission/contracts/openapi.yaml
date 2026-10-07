@@ -1,0 +1,338 @@
+openapi: 3.1.0
+info:
+  title: 공개 범위와 권한 (004-visibility-permission)
+  version: 0.1.0
+  description: |
+    공개 범위 변경, 볼 수 없는 글의 404 응답 규격, 관리자 경로 보호, 공통 오류·권한 응답 규격.
+    규약은 docs/02 §5-1 (2026-10-07 O8)을 따른다.
+    - 경로 `/api/...` 복수형, 경로 변수는 이름을 붙인다(`{postId}`), 내 리소스는 `/api/me/...`.
+    - 상태 지정은 PUT(지정)·DELETE(해제). 여러 번 보내도 결과가 같다.
+    - 오류 본문 `{ code, message, errors: [{ field, code, message }], details }`.
+    - 인증은 세션 쿠키(Spring Session + Redis, HttpOnly·Secure·SameSite=Lax) + CSRF 토큰 헤더.
+      상태를 바꾸는 요청(POST·PUT·PATCH·DELETE)은 CSRF 헤더가 필요하다. 토큰 저장 방식은 M17에서 확정한다.
+    - 현재 사용자는 세션에서만 얻는다. 요청에 담긴 작성자·회원 번호는 무시한다(스키마에 없음).
+
+    판정 순서(docs/42 §3, 모든 엔드포인트 공통):
+    ① 로그인 필요 → 401 LOGIN_REQUIRED
+    ② 계정 상태 → 403 ACCOUNT_WITHDRAWN / EMAIL_NOT_VERIFIED / ACCOUNT_SUSPENDED
+    ③ 대상을 볼 수 있나 → 404 NOT_FOUND
+    ④ 행동 권한(소유자·관리자) → 404 NOT_FOUND
+    ⑤ 업무 규칙 → 400 / 409
+    처음 걸린 단계의 응답을 준다. 403은 계정 상태에만 쓴다.
+  x-reason-codes:
+    "401": [LOGIN_REQUIRED]
+    "403": [EMAIL_NOT_VERIFIED, ACCOUNT_WITHDRAWN, ACCOUNT_SUSPENDED]
+    "404": [NOT_FOUND]
+    "400":
+      - INVALID_VISIBILITY
+      - INVALID_CURSOR
+      - CANNOT_LIKE_OWN_POST       # 009 소유, 판정 순서는 42 §3 (2026-10-07 확정)
+      - CANNOT_REPORT_OWN          # 014 소유
+      - CANNOT_FOLLOW_SELF         # 010 소유
+      - INVALID_PROFILE_IMAGE      # 001/003 소유
+      - REPLY_TARGET_UNAVAILABLE   # 007 소유
+      - INVALID_REQUEST            # 제안(팀 확인 필요): 본문 형식 오류
+    "409": [VERSION_CONFLICT, NICKNAME_CHANGE_TOO_SOON]
+    login-failure: [ACCOUNT_SUSPENDED]   # 정지 계정 로그인 거부 (001 소유)
+
+servers:
+  - url: http://localhost:8080
+
+tags:
+  - name: visibility
+    description: 글 공개 범위 (이 기능 소유)
+  - name: settings
+    description: 새 글 기본 공개 범위 (경로 소유는 001-account-auth, 값 규칙은 004)
+  - name: pages
+    description: 서버가 상태 코드·링크 미리보기 메타를 넣는 화면 주소 (본문 화면은 005 소유, 404 규격은 004)
+  - name: admin
+    description: 관리자 경로 보호 규칙 (기능은 014 소유)
+
+security:
+  - sessionCookie: []
+
+paths:
+  /api/posts/{postId}/visibility:
+    put:
+      tags: [visibility]
+      operationId: setPostVisibility
+      summary: 글 공개 범위 지정 (다시 발행하지 않음)
+      description: |
+        작성자만 할 수 있다. 행 잠금(SELECT … FOR UPDATE) 뒤에 바꾼다.
+        - 같은 값이면 아무것도 바꾸지 않고 200을 준다(updated_at도 그대로).
+        - 임시글은 값만 저장한다(발행할 때 쓸 공개 범위).
+        - edited_at·edit_version·작업본(post_draft)·댓글·좋아요는 바뀌지 않는다.
+        - first_public_at은 처음으로 PUBLISHED + PUBLIC이 되는 순간에만 기록된다.
+        - 관리자 숨김은 유지된다.
+        - 발행된 글의 값이 실제로 바뀌면 커밋 후 PostVisibilityChanged를, first_public_at이 처음 채워지면 PostWentPublic도 발행한다(events.md).
+        메서드: 06 §4·41 §5의 PATCH 대신 O8 규약(상태 지정 = PUT)을 따른다 — research R-20, 팀 확인 필요.
+      security:
+        - sessionCookie: []
+          csrfHeader: []
+      parameters:
+        - $ref: '#/components/parameters/PostId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VisibilityChangeRequest'
+            examples:
+              toPrivate:
+                value: { visibility: PRIVATE }
+      responses:
+        '200':
+          description: 지정됨 (같은 값이어도 200)
+          headers:
+            Cache-Control:
+              schema: { type: string, const: 'private, no-store' }
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VisibilityChangeResponse'
+              examples:
+                firstPublic:
+                  summary: 비공개로 발행한 글을 처음 공개
+                  value: { visibility: PUBLIC, firstPublicAt: '2026-10-07T09:30:00.123456Z' }
+                toPrivate:
+                  value: { visibility: PRIVATE, firstPublicAt: '2026-10-01T02:00:00.000000Z' }
+                draft:
+                  summary: 임시글 (값만 저장)
+                  value: { visibility: PRIVATE, firstPublicAt: null }
+        '400':
+          description: 모르는 값, 또는 FRIENDS를 적용하지 않은 환경에서 FRIENDS (⑤단계, 소유 확인 뒤)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+              example:
+                code: INVALID_VISIBILITY
+                message: 공개 범위를 다시 선택해 주세요
+                errors: [{ field: visibility, code: INVALID_VISIBILITY, message: 허용되지 않은 공개 범위예요 }]
+                details: null
+        '401': { $ref: '#/components/responses/LoginRequired' }
+        '403': { $ref: '#/components/responses/AccountStateDenied' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /api/me/settings:
+    patch:
+      tags: [settings]
+      operationId: updateMySettings
+      summary: 새 글 기본 공개 범위 변경 (본인만)
+      description: |
+        경로와 전체 스키마는 specs/001-account-auth가 소유한다(11 §6-3). 이 계약은 004가 정하는 부분만 적는다.
+        - 비회원 401, 이메일 인증 전 회원은 허용(42 §9), 탈퇴 유예 403 ACCOUNT_WITHDRAWN.
+        - 값 허용 집합은 공개 범위 변경과 같다(등록된 VisibilityRule). 아니면 400 INVALID_VISIBILITY.
+        - 경로에 회원 번호가 없으므로 남의 설정을 바꾸는 경로가 없다.
+      x-owner: 001-account-auth
+      security:
+        - sessionCookie: []
+          csrfHeader: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                defaultVisibility: { $ref: '#/components/schemas/Visibility' }
+              additionalProperties: true
+              description: 001 소유의 다른 필드(lastActiveVisible 등)와 함께 올 수 있다.
+      responses:
+        '200':
+          description: 저장됨 (응답 본문은 001 계약을 따른다)
+        '400':
+          description: INVALID_VISIBILITY
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+        '401': { $ref: '#/components/responses/LoginRequired' }
+        '403': { $ref: '#/components/responses/AccountStateDenied' }
+
+  /@{handle}/posts/{postId}:
+    get:
+      tags: [pages]
+      operationId: postDetailPage
+      summary: 글 상세 화면 주소 (서버가 상태 코드·OG 메타를 넣음)
+      description: |
+        본문 화면과 200 응답은 specs/005-post-reading이 소유한다. 004는 접근 판정과 404 규격을 정한다.
+        - 판정은 PostAccessPolicy.canRead 하나에서 한다: 존재 & deleted_at IS NULL → 작성자 본인이면 표시 →
+          아니면 PUBLISHED & 공개 범위 규칙 통과 & hidden_at IS NULL & 작성자 withdrawn_at IS NULL.
+        - 볼 수 없는 글과 없는 글의 응답(상태 코드·본문·헤더·OG 문구)은 바이트 단위로 같아야 한다(SC-002).
+        - PUBLIC이 아닌 글은 작성자에게 200이더라도 `Cache-Control: private, no-store`.
+      security:
+        - {}
+        - sessionCookie: []
+      parameters:
+        - name: handle
+          in: path
+          required: true
+          schema: { type: string }
+        - $ref: '#/components/parameters/PostId'
+      responses:
+        '200':
+          description: 볼 수 있는 글 (005 계약). 공개 글은 `private, no-cache`, 그 밖은 `private, no-store`
+          content:
+            text/html:
+              schema: { type: string }
+        '404':
+          description: 없는 글·볼 수 없는 글 공통 페이지
+          headers:
+            Cache-Control:
+              schema: { type: string, const: 'private, no-store' }
+          content:
+            text/html:
+              schema:
+                type: string
+                description: |
+                  반드시 다음 메타를 포함한다:
+                  <meta property="og:title" content="볼 수 없는 글이에요">
+                  <meta property="og:description" content="친구 공개·비공개 글이거나 삭제된 글입니다.">
+                  <meta name="robots" content="noindex">
+
+  /api/admin/{adminPath}:
+    parameters:
+      - name: adminPath
+        in: path
+        required: true
+        schema: { type: string }
+        description: 관리자 API 하위 경로 아무거나 (있는 경로·없는 경로 모두 같은 규칙)
+    get:
+      tags: [admin]
+      operationId: adminPathGuard
+      summary: 관리자 경로 보호 규칙 (화면 /admin/** 도 같음)
+      description: |
+        /admin/** 와 /api/admin/** 전체가 인증 필요(Spring Security 경로 규칙). 경로가 있는지 확인하기 전에 적용된다.
+        - 비회원: 있는 경로·없는 경로 모두 401 LOGIN_REQUIRED (화면은 로그인 화면으로 안내).
+        - 로그인한 일반 회원: 404 NOT_FOUND.
+        - 관리자: 각 기능 계약(014)을 따른다.
+        POST·PUT·PATCH·DELETE도 같은 규칙이다. /api/admin 범위는 research R-22 제안(팀 확인 필요).
+      responses:
+        '401': { $ref: '#/components/responses/LoginRequired' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+components:
+  securitySchemes:
+    sessionCookie:
+      type: apiKey
+      in: cookie
+      name: SESSION
+      description: Spring Session Data Redis 세션 쿠키 (HttpOnly, Secure, SameSite=Lax). 14일, 마지막 활동 기준.
+    csrfHeader:
+      type: apiKey
+      in: header
+      name: X-XSRF-TOKEN
+      description: Spring Security CSRF 토큰. 헤더 이름·저장 방식은 M17에서 확정 (기본값 표기).
+
+  parameters:
+    PostId:
+      name: postId
+      in: path
+      required: true
+      schema: { type: integer, format: int64, minimum: 1 }
+
+  schemas:
+    Visibility:
+      type: string
+      description: |
+        공통 허용값은 PUBLIC, PRIVATE. FRIENDS는 공통 규격이지만 선택 구현이며(06 §6-1),
+        적용하지 않은 환경에서는 400 INVALID_VISIBILITY. PROTECTED는 쓰지 않는다.
+      enum: [PUBLIC, PRIVATE, FRIENDS]
+      x-enabled-by-default: [PUBLIC, PRIVATE]
+
+    VisibilityChangeRequest:
+      type: object
+      required: [visibility]
+      properties:
+        visibility:
+          type: string
+          description: Visibility 값. 서버가 ⑤단계에서 등록된 규칙으로 검증한다(문자열로 받음).
+          examples: [PUBLIC, PRIVATE]
+      additionalProperties: true
+      description: authorId 등 다른 필드는 무시된다(바인딩하지 않음, 42 §12 #2).
+
+    VisibilityChangeResponse:
+      type: object
+      required: [visibility, firstPublicAt]
+      properties:
+        visibility: { $ref: '#/components/schemas/Visibility' }
+        firstPublicAt:
+          type: [string, 'null']
+          format: date-time
+          description: 최초 공개 일자. 한 번도 PUBLISHED + PUBLIC이 된 적 없으면 null. 마이크로초까지 ISO-8601 UTC.
+
+    ErrorResponse:
+      type: object
+      required: [code, message]
+      properties:
+        code:
+          type: string
+          description: 대문자 이유 코드 (info.x-reason-codes)
+        message:
+          type: string
+          description: 사용자에게 보여 줄 문구. 404는 이유를 구분하지 않는 고정 문구.
+        errors:
+          type: array
+          description: 입력 검증 오류일 때만
+          items:
+            type: object
+            required: [field, code, message]
+            properties:
+              field: { type: string }
+              code: { type: string }
+              message: { type: string }
+        details:
+          description: 추가 정보(선택)
+          type: [object, 'null']
+
+  responses:
+    LoginRequired:
+      description: ① 로그인 필요 (비회원, 세션 저장소 장애로 세션을 읽지 못한 경우 포함)
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+          example:
+            code: LOGIN_REQUIRED
+            message: 로그인이 필요해요
+            errors: []
+            details: null
+    AccountStateDenied:
+      description: |
+        ② 계정 상태 거부. 대상과 무관하게 같은 응답(존재를 드러내지 않음).
+        - EMAIL_NOT_VERIFIED: details.action = RESEND_VERIFICATION
+        - ACCOUNT_WITHDRAWN: details.action = RESTORE (복구 화면)
+        - ACCOUNT_SUSPENDED: 정지 직후 남은 세션의 쓰기 요청 (H7)
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+          examples:
+            emailNotVerified:
+              value:
+                code: EMAIL_NOT_VERIFIED
+                message: 이메일 인증 후 이용할 수 있어요
+                errors: []
+                details: { action: RESEND_VERIFICATION }
+            withdrawn:
+              value:
+                code: ACCOUNT_WITHDRAWN
+                message: 탈퇴 신청한 계정이에요
+                errors: []
+                details: { action: RESTORE }
+            suspended:
+              value:
+                code: ACCOUNT_SUSPENDED
+                message: 정지된 계정이에요
+                errors: []
+                details: null
+    NotFound:
+      description: ③·④ 없음·볼 수 없음·내 것이 아님·관리자 전용. 모든 경우 본문과 헤더가 같다.
+      headers:
+        Cache-Control:
+          schema: { type: string, const: 'private, no-store' }
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+          example:
+            code: NOT_FOUND
+            message: 볼 수 없는 페이지예요
+            errors: []
+            details: null

@@ -1,0 +1,1093 @@
+openapi: 3.1.0
+info:
+  title: 계정·인증 API (001-account-auth)
+  version: 0.1.0
+  description: |
+    가입·로그인·로그아웃·이메일 인증·비밀번호 재설정/변경·소셜 가입 마무리·블로그 주소/닉네임 사용 가능 확인·
+    프로필·계정 설정·약관 재동의·친구 맺기·최근 활동 API.
+
+    공통 규약 (docs/02-architecture.md §5-1, 2026-10-07 O8):
+    - 경로는 `/api/...` 복수형 명사, 내 리소스는 `/api/me/...`. 켜고 끄는 상태는 `PUT`(지정)·`DELETE`(해제), 여러 번 보내도 결과가 같다.
+    - 인증은 세션 쿠키(Spring Session + Redis, `HttpOnly`·`Secure`·`SameSite=Lax`) + CSRF 토큰.
+      상태를 바꾸는 요청(POST·PUT·PATCH·DELETE)은 `X-XSRF-TOKEN` 헤더에 `XSRF-TOKEN` 쿠키 값을 넣는다
+      (토큰 저장 방식은 M17 미결 — research R-05 기본안).
+    - 오류 본문은 항상 `{ code, message, errors, details }`. `errors`는 입력 검증 오류일 때만, `details`는 추가 정보(선택).
+    - 목록 커서는 불투명 Base64URL 문자열. 클라이언트는 해석하지 않고 그대로 돌려준다. 잘못된 커서는 400 `INVALID_CURSOR`.
+    - 현재 사용자는 세션에서만 꺼낸다. 요청 본문·주소에 담긴 다른 회원 식별값은 무시한다.
+    - 권한 판정 순서: 로그인(401) → 계정 상태(403) → 볼 수 있나(404) → 행동 권한(404) → 업무 규칙(400/409) (42 §3).
+    - 요청 제한 초과는 429 + `Retry-After`. Redis 장애로 보안 확인을 할 수 없으면 503 `TEMPORARILY_UNAVAILABLE` (research R-12·R-30, 제안).
+
+    각 operation의 `x-origin`: `original` = 원문(docs)에 경로가 정해져 있음, `proposed` = 이 계획이 02 §5-1 규약에 맞춰 제안(팀 확인 필요),
+    `spring-security` = Spring Security 기본 경로.
+
+    API가 아닌 화면 경로(참고): `/signup`, `/login`, `/signup/social`(이 HTML 응답만 CSP `img-src`에
+    `https://lh3.googleusercontent.com https://avatars.githubusercontent.com` 추가, 전체 페이지로 진입·이탈),
+    `/verify-email?token=`, `/reset-password?token=`, `/forgot-password`, `/reagree`, `/settings`, `/terms`, `/privacy`.
+    `/@{handle}`의 대문자 301·없는 주소 404 첫 응답은 005-post-reading의 PageShellController가 만든다.
+servers:
+  - url: http://localhost:8080
+    description: 로컬 Docker Compose
+tags:
+  - name: auth
+    description: 가입·로그인·로그아웃·인증·재설정
+  - name: social
+    description: 소셜 로그인·가입 마무리
+  - name: availability
+    description: 블로그 주소·닉네임 사용 가능 확인
+  - name: me
+    description: 내 정보·프로필·설정·비밀번호·재동의
+  - name: agreements
+    description: 약관·처리방침 현재 버전
+  - name: friends
+    description: 친구 맺기·최근 활동
+
+paths:
+  /api/auth/csrf:
+    get:
+      tags: [auth]
+      operationId: issueCsrfToken
+      x-origin: proposed
+      summary: CSRF 토큰 쿠키 발급
+      description: 앱 첫 진입 때 호출해 `XSRF-TOKEN` 쿠키를 받는다. 재동의 전에도 허용된다.
+      security: []
+      responses:
+        '204':
+          description: 쿠키 발급
+          headers:
+            Set-Cookie:
+              schema: { type: string }
+              description: '`XSRF-TOKEN=...; Path=/; Secure; SameSite=Lax`'
+
+  /api/auth/signup:
+    post:
+      tags: [auth]
+      operationId: signupWithEmail
+      x-origin: proposed
+      summary: 이메일 가입 (FR-004·005·010·013·016~026)
+      description: |
+        계정(인증 전), 로그인 수단(LOCAL), 약관·처리방침 동의 2행을 한 트랜잭션에서 만든다. 성공하면 바로 로그인된다
+        (세션 ID 새로 발급). 인증 메일(24시간, 한 번만)은 커밋 후 비동기로 보낸다.
+        검사 실패는 칸별 오류를 모두 모아 400 `VALIDATION_FAILED`로 돌려주며 아무것도 만들지 않는다.
+        동시에 같은 주소·닉네임으로 가입하면 한 명만 성공하고, 진 쪽은 `HANDLE_DUPLICATE`("방금 다른 분이 이 주소를 사용했어요. `{대안}`는 어떠세요?",
+        `details.handleSuggestion`) 또는 `NICKNAME_DUPLICATE`("방금 다른 분이 이 닉네임을 사용했어요")를 받는다.
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/CsrfHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/EmailSignupRequest' }
+      responses:
+        '201':
+          description: 가입·로그인 완료 (인증 전)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SignupResult' }
+        '400':
+          description: |
+            `VALIDATION_FAILED`. `errors[].code`: `EMAIL_INVALID_FORMAT`, `EMAIL_ALREADY_REGISTERED`("이미 가입된 이메일이에요. [로그인] [비밀번호 찾기]"),
+            `HANDLE_INVALID_FORMAT`, `HANDLE_PREFIX_MISMATCH`, `HANDLE_RESERVED`, `HANDLE_BANNED_WORD`, `HANDLE_DUPLICATE`,
+            `PASSWORD_INVALID_LENGTH`, `PASSWORD_MISSING_CHAR_TYPE`, `PASSWORD_INVALID_CHAR`, `PASSWORD_CONTAINS_EMAIL`, `PASSWORD_TOO_COMMON`,
+            `PASSWORD_CONFIRM_MISMATCH`, `NICKNAME_INVALID_FORMAT`, `NICKNAME_LETTER_REQUIRED`, `NICKNAME_RESERVED`, `NICKNAME_BANNED_WORD`,
+            `NICKNAME_DUPLICATE`, `AGREEMENT_REQUIRED`, `AGREEMENT_VERSION_MISMATCH`
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+              example:
+                code: VALIDATION_FAILED
+                message: 입력값을 확인해 주세요
+                errors:
+                  - { field: handle, code: HANDLE_DUPLICATE, message: '방금 다른 분이 이 주소를 사용했어요. `kim755030_2`는 어떠세요?' }
+                  - { field: password, code: PASSWORD_MISSING_CHAR_TYPE, message: '영문·숫자·특수문자를 각각 1개 이상 넣어 주세요 (8~16자, 최대 16자)' }
+                details: { handleSuggestion: kim755030_2 }
+        '403': { $ref: '#/components/responses/CsrfRejected' }
+        '503': { $ref: '#/components/responses/TemporarilyUnavailable' }
+
+  /api/auth/login:
+    post:
+      tags: [auth]
+      operationId: loginWithEmail
+      x-origin: proposed
+      summary: 이메일 로그인 (Spring Security 폼 로그인 처리 주소, FR-034~039)
+      description: |
+        Spring Security `formLogin().loginProcessingUrl("/api/auth/login")`. 성공 시 세션 ID를 새로 발급하고
+        세션 속성 `previousLoginAt`(갱신 전 `last_login_at`)·`provider`를 담은 뒤 `last_login_at`을 갱신한다.
+        열린 정지가 만료됐으면 해제를 기록하고 로그인시킨다. 약관 버전이 바뀌었으면 `reagreementRequired: true`이고
+        재동의 전까지 허용 목록 밖 요청은 403 `REAGREEMENT_REQUIRED`.
+        실패 문구는 가입 여부·어느 칸이 틀렸는지와 무관하게 항상 같다. 실패 횟수는 이메일 기준으로 가입 여부와 상관없이 센다.
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/CsrfHeader'
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email: { type: string, maxLength: 254 }
+                password: { type: string, writeOnly: true }
+                redirect:
+                  type: string
+                  description: 로그인 후 이동할 사이트 안 상대 경로. `/`로 시작하고 `//`·`/\`로 시작하지 않을 때만 쓰고, 아니면 `/` (FR-039)
+      responses:
+        '200':
+          description: 로그인 성공
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/LoginResult' }
+        '401':
+          description: '`INVALID_CREDENTIALS` — "이메일 또는 비밀번호가 올바르지 않아요" (FR-036)'
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+        '403':
+          description: |
+            `ACCOUNT_SUSPENDED` — 비밀번호가 맞은 정지 계정. "정지된 계정이에요 (~기한). 사유: …" (FR-038).
+            `details`: `{ endsAt: date-time | null(영구), reason }`. 또는 CSRF 실패.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+              example:
+                code: ACCOUNT_SUSPENDED
+                message: '정지된 계정이에요 (~2026.11.01). 사유: 스팸 게시'
+                errors: null
+                details: { endsAt: '2026-11-01T00:00:00+09:00', reason: 스팸 게시 }
+        '429':
+          description: '`LOGIN_TEMPORARILY_LOCKED`(같은 계정 5회 연속 실패 후 15분, "잠시 후 다시 시도해 주세요(약 15분)") 또는 `TOO_MANY_REQUESTS`(같은 IP 1분 20회)'
+          headers:
+            Retry-After: { $ref: '#/components/headers/RetryAfter' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+        '503': { $ref: '#/components/responses/TemporarilyUnavailable' }
+
+  /api/auth/logout:
+    post:
+      tags: [auth]
+      operationId: logout
+      x-origin: proposed
+      summary: 로그아웃 (FR-041)
+      description: 서버 세션을 삭제한다. 화면은 응답 전후로 그 회원의 IndexedDB 임시 글·백업을 지우고 홈으로 이동한다(테마 설정은 유지).
+      parameters:
+        - $ref: '#/components/parameters/CsrfHeader'
+      responses:
+        '204': { description: 로그아웃됨 (이미 로그아웃 상태여도 204) }
+
+  /api/auth/email-verification:
+    post:
+      tags: [auth]
+      operationId: resendVerificationMail
+      x-origin: proposed
+      summary: 인증 메일 다시 보내기 (FR-006)
+      description: 로그인한 인증 전 회원만. 새 링크를 보내면 이전 링크는 무효. 회원당 1분 1번·하루 10번.
+      parameters:
+        - $ref: '#/components/parameters/CsrfHeader'
+      responses:
+        '202': { description: 발송 요청 접수 (메일은 비동기) }
+        '401': { $ref: '#/components/responses/LoginRequired' }
+        '409':
+          description: '`ALREADY_VERIFIED` — 이미 인증됨'
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+        '503': { $ref: '#/components/responses/TemporarilyUnavailable' }
+
+  /api/auth/email-verification/confirm:
+    post:
+      tags: [auth]
+      operationId: confirmEmailVerification
+      x-origin: proposed
+      summary: 인증 링크 확인 (FR-005)
+      description: |
+        메일 링크 `/verify-email?token=…` 화면이 보내는 요청. 메일 보안 검사기가 링크를 미리 열어도 토큰이 소모되지 않도록 GET이 아니라 POST다.
+        토큰은 원자적으로 꺼내 지운다(한 번만). 로그인 여부와 무관.
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/CsrfHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/TokenRequest' }
+      responses:
+        '200':
+          description: '"인증이 완료됐어요"'
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [verified]
+                properties:
+                  verified: { type: boolean, const: true }
+        '400':
+          description: '`LINK_EXPIRED` — 만료·사용됨·이전 링크. "링크가 만료됐어요. [인증 메일 다시 보내기]"'
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+        '503': { $ref: '#/components/responses/TemporarilyUnavailable' }
+
+  /api/auth/password-reset:
+    post:
+      tags: [auth]
+      operationId: requestPasswordReset
+      x-origin: proposed
+      summary: 비밀번호 찾기 (FR-042·043)
+      description: |
+        가입 여부와 무관하게 항상 202와 같은 문구("가입된 이메일이면 안내 메일을 보냈어요"). 조회·발송은 비동기.
+        메일 내용: LOCAL 계정이 있으면 30분 재설정 링크(+ 같은 이메일의 Google·GitHub 계정 안내), 소셜 계정만 있으면 "이 이메일은 Google로 가입되어 비밀번호가 없어요"만.
+        같은 이메일 1분 1번·하루 10번, 같은 IP 1시간 20번 (가입 여부와 무관하게 적용).
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/CsrfHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email]
+              properties:
+                email: { type: string, maxLength: 254 }
+      responses:
+        '202':
+          description: 접수됨
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MessageOnly' }
+              example: { message: 가입된 이메일이면 안내 메일을 보냈어요 }
+        '400':
+          description: '`VALIDATION_FAILED` (`EMAIL_INVALID_FORMAT`) — 형식만 검사, 가입 여부는 드러내지 않음'
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+        '503': { $ref: '#/components/responses/TemporarilyUnavailable' }
+
+  /api/auth/password-reset/confirm:
+    post:
+      tags: [auth]
+      operationId: confirmPasswordReset
+      x-origin: proposed
+      summary: 재설정 링크로 새 비밀번호 저장 (FR-013·044)
+      description: 성공하면 그 계정의 모든 세션을 삭제한다(모든 기기 로그아웃). 정지·탈퇴 유예 회원도 가능. 링크는 한 번만.
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/CsrfHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [token, newPassword, newPasswordConfirm]
+              properties:
+                token: { type: string }
+                newPassword: { type: string, writeOnly: true, minLength: 8, maxLength: 16 }
+                newPasswordConfirm: { type: string, writeOnly: true }
+      responses:
+        '204': { description: '저장됨, 모든 세션 삭제' }
+        '400':
+          description: '`LINK_EXPIRED` 또는 `VALIDATION_FAILED`(비밀번호 규칙 오류 코드, 가입 API와 같음). 규칙 오류일 때는 토큰을 소모하지 않는다'
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+        '503': { $ref: '#/components/responses/TemporarilyUnavailable' }
+
+  /oauth2/authorization/{registrationId}:
+    get:
+      tags: [social]
+      operationId: startSocialLogin
+      x-origin: spring-security
+      summary: 소셜 로그인 시작 (FR-030)
+      description: '`state`를 만들어 제공자로 보낸다. `redirect`는 세션에 보관했다가 콜백 뒤 같은 검사(사이트 안 상대 경로)를 한다.'
+      security: []
+      parameters:
+        - name: registrationId
+          in: path
+          required: true
+          schema: { type: string, enum: [google, github] }
+        - name: redirect
+          in: query
+          required: false
+          schema: { type: string }
+      responses:
+        '302': { description: Google·GitHub 인증 화면으로 이동 }
+        '503': { $ref: '#/components/responses/TemporarilyUnavailable' }
+
+  /login/oauth2/code/{registrationId}:
+    get:
+      tags: [social]
+      operationId: socialLoginCallback
+      x-origin: spring-security
+      summary: 소셜 로그인 콜백 (FR-003·008·030·032)
+      description: |
+        `state`가 다르면 거부. `(provider, 고유 ID)`로 연결된 계정이 있으면 로그인(세션 ID 재발급, previousLoginAt 저장, 정지·재동의 판정은 이메일 로그인과 같음) 후
+        보관한 `redirect`로 302. 처음이면 계정을 만들지 않고 소셜 인증 정보를 세션에 10분 보관한 뒤 전체 페이지 `/signup/social`로 302.
+        정지 계정이면 오류 본문(`ACCOUNT_SUSPENDED`, `details {endsAt, reason}`)을 세션에 한 번만 보관하고 `/login?error=social`로 302 —
+        로그인 화면이 `GET /api/auth/social-login-error`로 읽어 표시한다.
+      security: []
+      parameters:
+        - name: registrationId
+          in: path
+          required: true
+          schema: { type: string, enum: [google, github] }
+        - { name: code, in: query, required: true, schema: { type: string } }
+        - { name: state, in: query, required: true, schema: { type: string } }
+      responses:
+        '302': { description: '기존 계정이면 원래 페이지, 처음이면 `/signup/social`' }
+
+  /api/auth/social-login-error:
+    get:
+      tags: [social]
+      operationId: popSocialLoginError
+      x-origin: proposed
+      summary: 소셜 로그인 콜백에서 생긴 오류 한 번 읽기
+      description: 콜백이 세션에 보관한 오류(정지 계정 등)를 돌려주고 지운다. 없으면 204.
+      security: []
+      responses:
+        '200':
+          description: 보관된 오류
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+        '204': { description: 보관된 오류 없음 }
+
+  /api/auth/social-signup:
+    get:
+      tags: [social]
+      operationId: getSocialSignupDraft
+      x-origin: proposed
+      summary: 소셜 가입 마무리 화면의 미리 채운 값 (FR-027·031·033)
+      security: []
+      responses:
+        '200':
+          description: 대기 중인 소셜 가입 정보
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SocialSignupDraft' }
+        '410': { $ref: '#/components/responses/SocialSignupExpired' }
+    post:
+      tags: [social]
+      operationId: completeSocialSignup
+      x-origin: proposed
+      summary: 소셜 가입 마무리 (FR-008·010·030)
+      description: |
+        계정·로그인 수단·동의 2행을 한 트랜잭션에서 만들고 로그인시킨다. Google·GitHub(확인된 이메일) 계정은 가입 시각으로 인증,
+        GitHub에서 이메일을 직접 입력한 계정은 인증 전 + 인증 메일 발송.
+        `useProfilePhoto`가 true이고 사진 주소가 있으면 응답의 `profilePhotoUrl`을 브라우저가 5초 제한으로 받아
+        256×256으로 바꿔 003 업로드 흐름(presign {purpose: PROFILE} → 업로드 → complete) 뒤 `PATCH /api/me/profile {profileImageId}`로 연결한다.
+        실패해도 가입은 성공(기본 이미지 + "소셜 사진을 가져오지 못했어요. 설정에서 직접 올릴 수 있어요").
+        가입 완료 후 화면은 전체 페이지 이동으로 나간다.
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/CsrfHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SocialSignupRequest' }
+      responses:
+        '201':
+          description: 가입·로그인 완료
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SocialSignupResult' }
+        '400':
+          description: '`VALIDATION_FAILED` — 주소 본문·닉네임·약관·(GitHub 입력) 이메일 오류 코드는 이메일 가입과 같음'
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+        '410': { $ref: '#/components/responses/SocialSignupExpired' }
+        '503': { $ref: '#/components/responses/TemporarilyUnavailable' }
+
+  /api/handles/availability:
+    get:
+      tags: [availability]
+      operationId: checkHandleAvailability
+      x-origin: original
+      summary: 블로그 주소 사용 가능 확인 (08 §4-2, FR-020)
+      description: 사용 중 여부·거부 이유·대안 주소만 알려준다. 같은 IP 1분 30번. 최종 판정은 가입 요청 때 다시 한다. 접두어(`go-`·`gi-`) 포함 전체 주소를 보낸다.
+      security: []
+      parameters:
+        - name: handle
+          in: query
+          required: true
+          schema: { type: string, maxLength: 64 }
+      responses:
+        '200':
+          description: 판정 결과
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/HandleAvailability' }
+              examples:
+                available: { value: { available: true, reason: null, suggestion: null } }
+                reserved: { value: { available: false, reason: HANDLE_RESERVED, suggestion: admin_2 } }
+                taken: { value: { available: false, reason: HANDLE_DUPLICATE, suggestion: kim755030_2 } }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+
+  /api/nicknames/availability:
+    get:
+      tags: [availability]
+      operationId: checkNicknameAvailability
+      x-origin: original
+      summary: 닉네임 사용 가능 확인 (09 §6, FR-026)
+      description: 09 §3 검사 순서 ①~⑥. 로그인한 회원이면 자기 자신은 중복에서 제외(대소문자만 바꾸기). 같은 IP 1분 30번.
+      security: []
+      parameters:
+        - name: nickname
+          in: query
+          required: true
+          schema: { type: string, maxLength: 64 }
+      responses:
+        '200':
+          description: 판정 결과
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/NicknameAvailability' }
+              example: { available: false, code: NICKNAME_RESERVED }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+
+  /api/me:
+    get:
+      tags: [me]
+      operationId: getMe
+      x-origin: proposed
+      summary: 현재 로그인 상태 요약 (화면 머리말·라우팅용)
+      description: 재동의 전에도 허용. 비로그인이면 401.
+      responses:
+        '200':
+          description: 로그인한 회원
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MeSummary' }
+        '401': { $ref: '#/components/responses/LoginRequired' }
+
+  /api/me/profile:
+    get:
+      tags: [me]
+      operationId: getMyProfile
+      x-origin: proposed
+      summary: 내 프로필 (설정 화면 프로필 영역, FR-046)
+      responses:
+        '200':
+          description: 내 프로필
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MyProfile' }
+        '401': { $ref: '#/components/responses/LoginRequired' }
+        '403': { $ref: '#/components/responses/AccountState' }
+    patch:
+      tags: [me]
+      operationId: updateMyProfile
+      x-origin: original
+      summary: 프로필 저장 — 닉네임·소개·사진을 한 번에 (11 §5, FR-028·047~052)
+      description: |
+        바꾸려는 칸만 보낸다. `profileImageId: null`은 기본 이미지로. 대상은 로그인한 본인뿐이며 본문의 다른 필드(예: `memberId`)는 무시한다.
+        닉네임·소개·사진을 모두 검사해 하나라도 실패하면 아무것도 저장하지 않고 실패한 칸을 모두 돌려준다.
+        닉네임 30일 제한 중 닉네임 변경이 들어 있으면 전체 409. 같은 닉네임 재저장은 변경이 아니다.
+        한 트랜잭션: `member FOR UPDATE` → 검사 → 저장 → (사진) 이전 사진 `detached_at` 기록 → 새 사진 ATTACHED.
+        인증 전 회원도 닉네임·소개는 바꿀 수 있다(사진은 업로드 단계에서 003이 403).
+      parameters:
+        - $ref: '#/components/parameters/CsrfHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ProfileUpdateRequest' }
+            example: { nickname: 김민서, bio: 백엔드 개발을 공부하고 있어요., profileImageId: 87 }
+      responses:
+        '200':
+          description: 저장됨
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MyProfile' }
+        '400':
+          description: |
+            `VALIDATION_FAILED` — `errors[].code`: `NICKNAME_INVALID_FORMAT`, `NICKNAME_LETTER_REQUIRED`, `NICKNAME_RESERVED`, `NICKNAME_BANNED_WORD`,
+            `NICKNAME_DUPLICATE`, `BIO_TOO_LONG`("소개는 200자까지 쓸 수 있어요"), `BIO_TOO_MANY_LINES`("소개는 4줄까지 쓸 수 있어요"),
+            `BIO_BANNED_WORD`("사용할 수 없는 단어가 들어 있어요"), `INVALID_PROFILE_IMAGE`(남의 사진·글용 사진·없는 사진)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+              example:
+                code: VALIDATION_FAILED
+                message: 입력값을 확인해 주세요
+                errors:
+                  - { field: bio, code: BIO_TOO_LONG, message: 소개는 200자까지 쓸 수 있어요 }
+                details: null
+        '401': { $ref: '#/components/responses/LoginRequired' }
+        '403': { $ref: '#/components/responses/AccountState' }
+        '409':
+          description: '`NICKNAME_CHANGE_TOO_SOON` — `details.nextChangeAvailableAt`'
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+
+  /api/me/settings:
+    get:
+      tags: [me]
+      operationId: getMySettings
+      x-origin: proposed
+      summary: 계정 설정 (이메일·로그인 수단·직전 로그인·기본 공개 범위·최근 활동 공개, FR-046·058)
+      responses:
+        '200':
+          description: 내 계정 설정
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MySettings' }
+        '401': { $ref: '#/components/responses/LoginRequired' }
+        '403': { $ref: '#/components/responses/AccountState' }
+    patch:
+      tags: [me]
+      operationId: updateMySettings
+      x-origin: original
+      summary: 새 글 기본 공개 범위·최근 활동 공개 변경 (11 §6-3·§6-4, FR-053·061)
+      description: 보낸 칸만 바꾼다. 인증 전 회원도 가능. `FRIENDS`는 친구 공개 규격 적용자의 CHECK 교체 후에만 허용.
+      parameters:
+        - $ref: '#/components/parameters/CsrfHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SettingsUpdateRequest' }
+            example: { lastActiveVisible: false }
+      responses:
+        '200':
+          description: 저장됨
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MySettings' }
+        '400':
+          description: '`VALIDATION_FAILED` (`INVALID_VISIBILITY`)'
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+        '401': { $ref: '#/components/responses/LoginRequired' }
+        '403': { $ref: '#/components/responses/AccountState' }
+
+  /api/me/password:
+    post:
+      tags: [me]
+      operationId: changeMyPassword
+      x-origin: original
+      summary: 비밀번호 변경 — 이메일 가입만 (11 §6-2, FR-045)
+      description: |
+        현재 비밀번호 확인 → FR-013 규칙 → 현재와 같으면 거부. 성공하면 다른 기기의 세션을 모두 삭제하고 지금 세션은 유지(세션 ID 새로 발급),
+        "비밀번호가 변경됐어요. 본인이 아니라면 [비밀번호 재설정]" 알림 메일(커밋 후 비동기). 현재 비밀번호 5회 연속 실패 → 15분 잠금.
+      parameters:
+        - $ref: '#/components/parameters/CsrfHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [currentPassword, newPassword, newPasswordConfirm]
+              properties:
+                currentPassword: { type: string, writeOnly: true }
+                newPassword: { type: string, writeOnly: true, minLength: 8, maxLength: 16 }
+                newPasswordConfirm: { type: string, writeOnly: true }
+      responses:
+        '204': { description: 변경됨 }
+        '400':
+          description: |
+            `PASSWORD_NOT_SUPPORTED`(소셜 계정), `CURRENT_PASSWORD_MISMATCH`, `PASSWORD_SAME_AS_CURRENT`,
+            또는 `VALIDATION_FAILED`(비밀번호 규칙 오류 코드)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+        '401': { $ref: '#/components/responses/LoginRequired' }
+        '403': { $ref: '#/components/responses/AccountState' }
+        '429':
+          description: '`PASSWORD_CHANGE_TEMPORARILY_LOCKED` — 현재 비밀번호 5회 연속 실패 후 15분'
+          headers:
+            Retry-After: { $ref: '#/components/headers/RetryAfter' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+
+  /api/me/agreements:
+    put:
+      tags: [me]
+      operationId: reagree
+      x-origin: proposed
+      summary: 약관·처리방침 재동의 (FR-012)
+      description: 현재 버전으로 `member_agreement`의 `version`·`agreed_at`을 갱신하고 세션의 재동의 표시를 지운다. 같은 버전으로 다시 보내도 결과가 같다.
+      parameters:
+        - $ref: '#/components/parameters/CsrfHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/AgreementConsent' }
+      responses:
+        '204': { description: 재동의 완료 }
+        '400':
+          description: '`VALIDATION_FAILED` (`AGREEMENT_REQUIRED`, `AGREEMENT_VERSION_MISMATCH` — 보낸 버전이 현재 버전이 아님)'
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+        '401': { $ref: '#/components/responses/LoginRequired' }
+
+  /api/agreements/current:
+    get:
+      tags: [agreements]
+      operationId: getCurrentAgreements
+      x-origin: proposed
+      summary: 이용약관·개인정보 처리방침 현재 버전·시행일 (FR-011)
+      security: []
+      responses:
+        '200':
+          description: 현재 버전
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [terms, privacy]
+                properties:
+                  terms: { $ref: '#/components/schemas/AgreementDocument' }
+                  privacy: { $ref: '#/components/schemas/AgreementDocument' }
+
+  /api/members/{handle}/friend:
+    parameters:
+      - $ref: '#/components/parameters/Handle'
+    get:
+      tags: [friends]
+      operationId: getFriendship
+      x-origin: proposed
+      summary: 나와 이 회원의 친구 관계 + 최근 활동 (FR-054·060)
+      description: |
+        블로그 머리말의 [친구 요청] 버튼 상태와 최근 활동 표시용. `lastActive`는 친구(ACCEPTED) + 두 사람 모두 공개 + 값 있음일 때만 들어가고,
+        아니면 **키 자체가 없다**. 정확한 시각은 어떤 경우에도 없다.
+      responses:
+        '200':
+          description: 관계 상태
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/FriendshipView' }
+              examples:
+                friends: { value: { status: FRIENDS, lastActive: { bucket: DAYS_AGO, days: 3 } } }
+                pending: { value: { status: REQUEST_SENT } }
+        '401': { $ref: '#/components/responses/LoginRequired' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    put:
+      tags: [friends]
+      operationId: requestOrAcceptFriendship
+      x-origin: proposed
+      summary: 친구 요청 / 받은 요청 수락 (FR-054·055)
+      description: |
+        관계가 없으면 요청(PENDING), 상대가 이미 보낸 요청이 있으면 바로 수락(ACCEPTED), 이미 친구이거나 내가 보낸 요청이면 변화 없음.
+        동시에 서로 요청해도 관계는 하나. 받은 요청 목록의 [수락]도 이 요청이다. 이메일 인증은 필요 없다(spec 가정).
+      parameters:
+        - $ref: '#/components/parameters/CsrfHeader'
+      responses:
+        '200':
+          description: 처리 후 상태
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/FriendshipView' }
+        '400':
+          description: '`CANNOT_FRIEND_SELF`'
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+        '401': { $ref: '#/components/responses/LoginRequired' }
+        '403': { $ref: '#/components/responses/AccountState' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    delete:
+      tags: [friends]
+      operationId: removeFriendship
+      x-origin: proposed
+      summary: 받은 요청 거절 / 보낸 요청 취소 / 친구 끊기 (FR-055·056)
+      description: 관계 행을 지운다. 상대에게 알리지 않고 이벤트도 없다. 관계가 없어도 200(같은 결과). 끊은 순간부터 서로의 최근 활동이 보이지 않는다.
+      parameters:
+        - $ref: '#/components/parameters/CsrfHeader'
+      responses:
+        '200':
+          description: 관계 없음
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/FriendshipView' }
+              example: { status: NONE }
+        '401': { $ref: '#/components/responses/LoginRequired' }
+        '403': { $ref: '#/components/responses/AccountState' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /api/me/friends:
+    get:
+      tags: [friends]
+      operationId: listMyFriends
+      x-origin: proposed
+      summary: 내 친구 목록 — 본인만 (FR-056)
+      description: 주소에 회원 값이 없다. 다른 회원의 친구 목록을 보는 경로는 없다. 페이지당 SQL 1번(회원·프로필 사진 JOIN).
+      parameters:
+        - $ref: '#/components/parameters/Cursor'
+      responses:
+        '200':
+          description: 친구 목록 (수락 일자 최신순)
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items, nextCursor]
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: '#/components/schemas/FriendItem' }
+                  nextCursor: { type: [string, 'null'] }
+        '400': { $ref: '#/components/responses/InvalidCursor' }
+        '401': { $ref: '#/components/responses/LoginRequired' }
+        '403': { $ref: '#/components/responses/AccountState' }
+
+  /api/me/friend-requests:
+    get:
+      tags: [friends]
+      operationId: listReceivedFriendRequests
+      x-origin: proposed
+      summary: 받은 친구 요청 목록 (설정 화면, FR-055)
+      parameters:
+        - $ref: '#/components/parameters/Cursor'
+      responses:
+        '200':
+          description: 받은 요청 (요청 일자 최신순)
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items, nextCursor]
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: '#/components/schemas/FriendRequestItem' }
+                  nextCursor: { type: [string, 'null'] }
+        '400': { $ref: '#/components/responses/InvalidCursor' }
+        '401': { $ref: '#/components/responses/LoginRequired' }
+        '403': { $ref: '#/components/responses/AccountState' }
+
+components:
+  securitySchemes:
+    sessionCookie:
+      type: apiKey
+      in: cookie
+      name: SESSION
+      description: Spring Session 세션 쿠키 (HttpOnly, Secure, SameSite=Lax). 14일, 마지막 활동부터.
+
+  parameters:
+    CsrfHeader:
+      name: X-XSRF-TOKEN
+      in: header
+      required: true
+      description: '`XSRF-TOKEN` 쿠키 값 (M17 미결 — research R-05 기본안). 없거나 다르면 403'
+      schema: { type: string }
+    Handle:
+      name: handle
+      in: path
+      required: true
+      description: 블로그 주소 (`go-`·`gi-` 접두어 포함, 소문자)
+      schema: { type: string, pattern: '^((go|gi)-)?[a-z0-9][a-z0-9_]{1,34}[a-z0-9]$' }
+    Cursor:
+      name: cursor
+      in: query
+      required: false
+      description: 불투명 Base64URL 커서. 해석하지 말고 그대로 돌려준다
+      schema: { type: string }
+
+  headers:
+    RetryAfter:
+      description: 다시 시도할 수 있을 때까지의 초
+      schema: { type: integer, minimum: 1 }
+
+  responses:
+    LoginRequired:
+      description: '`LOGIN_REQUIRED` — 비로그인(세션을 읽지 못한 Redis 장애 포함). 화면은 로그인 화면으로 안내'
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+          example: { code: LOGIN_REQUIRED, message: 로그인이 필요해요, errors: null, details: null }
+    AccountState:
+      description: |
+        계정 상태 거부 또는 CSRF 실패. `ACCOUNT_SUSPENDED`(남은 세션), `ACCOUNT_WITHDRAWN`(탈퇴 유예, 015),
+        `REAGREEMENT_REQUIRED`(재동의 전, 허용 목록 밖 요청 — 제안), `EMAIL_NOT_VERIFIED`(콘텐츠 쓰기 — 이 기능의 API에는 해당 없음, 다른 모듈이 `AccountStatusGuard`로 사용)
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+    CsrfRejected:
+      description: CSRF 토큰 없음·불일치
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+    NotFound:
+      description: '`NOT_FOUND` — 없는 주소, 탈퇴 유예·익명 처리된 회원 (존재 여부를 드러내지 않음)'
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+    InvalidCursor:
+      description: '`INVALID_CURSOR`'
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+    TooManyRequests:
+      description: '`TOO_MANY_REQUESTS` — 요청 제한 초과 ("잠시 후 다시 시도해 주세요")'
+      headers:
+        Retry-After: { $ref: '#/components/headers/RetryAfter' }
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+    TemporarilyUnavailable:
+      description: '`TEMPORARILY_UNAVAILABLE` — Redis 장애로 새 로그인·토큰 확인·토큰 발급을 할 수 없음 ("잠시 후 다시 시도해 주세요", 02 §2-1, 제안 코드)'
+      headers:
+        Retry-After: { $ref: '#/components/headers/RetryAfter' }
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+    SocialSignupExpired:
+      description: '`SOCIAL_SIGNUP_EXPIRED` — 대기 중인 소셜 가입 정보가 없거나 10분이 지남. 다시 소셜 로그인 (제안 코드)'
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+
+  schemas:
+    ErrorResponse:
+      type: object
+      description: 공통 오류 본문 (02 §5-1, O8)
+      required: [code, message, errors, details]
+      properties:
+        code:
+          type: string
+          description: 대문자 이유 코드
+          examples: [VALIDATION_FAILED, LOGIN_REQUIRED, EMAIL_NOT_VERIFIED, ACCOUNT_SUSPENDED, NOT_FOUND]
+        message: { type: string }
+        errors:
+          type: [array, 'null']
+          description: 입력 검증 오류일 때만
+          items: { $ref: '#/components/schemas/FieldError' }
+        details:
+          type: [object, 'null']
+          additionalProperties: true
+    FieldError:
+      type: object
+      required: [field, code, message]
+      properties:
+        field: { type: string }
+        code: { type: string }
+        message: { type: string }
+    MessageOnly:
+      type: object
+      required: [message]
+      properties:
+        message: { type: string }
+    TokenRequest:
+      type: object
+      required: [token]
+      properties:
+        token: { type: string, description: 32바이트 난수 Base64URL }
+    Provider:
+      type: string
+      enum: [LOCAL, GOOGLE, GITHUB]
+    Visibility:
+      type: string
+      enum: [PUBLIC, PRIVATE]
+      description: 친구 공개 규격 적용자는 FRIENDS 추가 (선택 구현)
+    AgreementConsent:
+      type: object
+      required: [termsVersion, privacyVersion]
+      description: 동의한 문서 버전. 현재 버전과 같아야 한다
+      properties:
+        termsVersion: { type: string, maxLength: 20 }
+        privacyVersion: { type: string, maxLength: 20 }
+    AgreementDocument:
+      type: object
+      required: [version, effectiveDate, path]
+      properties:
+        version: { type: string }
+        effectiveDate: { type: string, format: date }
+        path: { type: string, examples: [/terms, /privacy] }
+    EmailSignupRequest:
+      type: object
+      required: [email, handle, password, passwordConfirm, nickname, agreements]
+      properties:
+        email: { type: string, maxLength: 254, description: 앞뒤 공백 제거·소문자로 저장 }
+        handle:
+          type: string
+          description: 접두어 없는 주소. 영문 소문자·숫자·`_` 3~36자, 처음·끝은 영문 소문자나 숫자
+        password: { type: string, writeOnly: true, minLength: 8, maxLength: 16 }
+        passwordConfirm: { type: string, writeOnly: true }
+        nickname: { type: string, description: 서버가 앞뒤 공백 제거·NFC 정규화 후 검사·저장 }
+        agreements: { $ref: '#/components/schemas/AgreementConsent' }
+    SignupResult:
+      type: object
+      required: [handle, nickname, emailVerified]
+      properties:
+        handle: { type: string }
+        nickname: { type: string }
+        emailVerified: { type: boolean }
+    LoginResult:
+      type: object
+      required: [redirectTo, reagreementRequired, accountStatus]
+      properties:
+        redirectTo: { type: string, description: 검사를 통과한 사이트 안 상대 경로 또는 `/` }
+        reagreementRequired: { type: boolean, description: true면 화면은 `/reagree`로 이동 }
+        accountStatus:
+          type: string
+          enum: [ACTIVE, WITHDRAWN]
+          description: WITHDRAWN(탈퇴 유예)이면 화면은 복구 화면으로 (015)
+    SocialSignupDraft:
+      type: object
+      required: [provider, handlePrefix, suggestedHandleBody, suggestedNickname, emailRequired, existingAccountNotice, expiresAt]
+      properties:
+        provider: { type: string, enum: [GOOGLE, GITHUB] }
+        handlePrefix: { type: string, enum: [go-, gi-], description: 화면에 고칠 수 없는 고정 글자로 표시 }
+        suggestedHandleBody: { type: string, description: 08 §3 ①~⑩ 결과에서 접두어를 뺀 본문 }
+        suggestedNickname:
+          type: [string, 'null']
+          description: 소셜 이름에서 허용되지 않는 문자를 지우고 10자로 자른 값. 09 §3 검사를 통과하지 못하면 null("닉네임을 입력해 주세요")
+        email: { type: [string, 'null'], description: 제공자가 확인한 이메일 (읽기 전용 표시) }
+        emailRequired: { type: boolean, description: GitHub에 확인된 대표 이메일이 없으면 true — 이메일 입력 칸 표시 }
+        profilePhotoUrl:
+          type: [string, 'null']
+          description: |
+            미리보기용 소셜 사진 주소. 서버가 HTTPS + `lh3.googleusercontent.com`/`avatars.githubusercontent.com`인지 확인한 경우만,
+            크기 매개변수(Google `=s256-c`, GitHub `&s=256`) 포함. `emailRequired`이면 null(인증 전이라 업로드 불가, research R-20)
+        existingAccountNotice:
+          type: boolean
+          description: 제공자가 확인한 이메일과 같은 이메일의 다른 수단 계정이 있으면 true → "이 이메일로 가입한 계정이 이미 있어요" + [기존 계정으로 로그인]·[새 계정 만들기] (FR-033)
+        expiresAt: { type: string, format: date-time, description: 대기 정보 만료 시각(10분) }
+    SocialSignupRequest:
+      type: object
+      required: [handleBody, nickname, agreements, useProfilePhoto]
+      properties:
+        handleBody: { type: string, description: 접두어를 뺀 본문만. 서버가 가입 수단의 접두어를 붙인다 }
+        nickname: { type: string }
+        email: { type: [string, 'null'], maxLength: 254, description: '`emailRequired`일 때만 필수, 아니면 무시' }
+        useProfilePhoto: { type: boolean, default: true }
+        agreements: { $ref: '#/components/schemas/AgreementConsent' }
+    SocialSignupResult:
+      type: object
+      required: [handle, nickname, emailVerified, redirectTo]
+      properties:
+        handle: { type: string }
+        nickname: { type: string }
+        emailVerified: { type: boolean }
+        profilePhotoUrl:
+          type: [string, 'null']
+          description: '`useProfilePhoto`가 true이고 가져올 수 있을 때만. 브라우저가 이 주소를 받아 003 흐름으로 복사한다. 서버는 이 주소를 저장하지 않는다'
+        redirectTo: { type: string }
+    HandleAvailability:
+      type: object
+      required: [available, reason, suggestion]
+      properties:
+        available: { type: boolean }
+        reason:
+          type: [string, 'null']
+          enum: [HANDLE_INVALID_FORMAT, HANDLE_RESERVED, HANDLE_BANNED_WORD, HANDLE_DUPLICATE, null]
+        suggestion:
+          type: [string, 'null']
+          description: 예약어·중복일 때 `_2`, `_3` … 중 비어 있는 첫 번호를 붙인 대안 주소
+    NicknameAvailability:
+      type: object
+      required: [available, code]
+      properties:
+        available: { type: boolean }
+        code:
+          type: [string, 'null']
+          enum: [NICKNAME_INVALID_FORMAT, NICKNAME_LETTER_REQUIRED, NICKNAME_RESERVED, NICKNAME_BANNED_WORD, NICKNAME_DUPLICATE, null]
+    MeSummary:
+      type: object
+      required: [handle, nickname, role, status, provider, emailVerified, reagreementRequired, profileImageUrl]
+      properties:
+        handle: { type: string }
+        nickname: { type: string }
+        role: { type: string, enum: [USER, ADMIN] }
+        status: { type: string, enum: [ACTIVE, WITHDRAWN] }
+        provider: { $ref: '#/components/schemas/Provider' }
+        emailVerified: { type: boolean }
+        reagreementRequired: { type: boolean }
+        profileImageUrl: { type: [string, 'null'], description: null이면 화면이 기본 아바타(닉네임 첫 글자 + 8색)를 그린다 }
+    MyProfile:
+      type: object
+      required: [handle, nickname, bio, profileImageId, profileImageUrl, nicknameChangeAvailableAt]
+      properties:
+        handle: { type: string, description: 읽기 전용 }
+        nickname: { type: string }
+        bio: { type: [string, 'null'] }
+        profileImageId: { type: [integer, 'null'], format: int64 }
+        profileImageUrl: { type: [string, 'null'] }
+        nicknameChangeAvailableAt:
+          type: [string, 'null']
+          format: date-time
+          description: null이면 지금 바꿀 수 있음. 아니면 "다음 변경 가능일"로 표시하고 닉네임 칸 비활성화
+    ProfileUpdateRequest:
+      type: object
+      description: 바꾸려는 칸만 보낸다. 알 수 없는 필드(예 `memberId`)는 무시
+      minProperties: 1
+      properties:
+        nickname: { type: string }
+        bio: { type: [string, 'null'], description: '코드 포인트 0~200, 줄 4개 이하' }
+        profileImageId: { type: [integer, 'null'], format: int64, description: null이면 기본 이미지로 }
+    MySettings:
+      type: object
+      required: [email, provider, previousLogin, defaultVisibility, lastActiveVisible, passwordChangeAvailable]
+      properties:
+        email: { type: [string, 'null'], description: 읽기 전용 }
+        provider: { $ref: '#/components/schemas/Provider' }
+        previousLogin:
+          description: 이번 로그인 바로 전 로그인. null이면 "첫 로그인"
+          oneOf:
+            - type: 'null'
+            - type: object
+              required: [at, provider]
+              properties:
+                at: { type: string, format: date-time }
+                provider: { $ref: '#/components/schemas/Provider' }
+        defaultVisibility: { $ref: '#/components/schemas/Visibility' }
+        lastActiveVisible: { type: boolean }
+        passwordChangeAvailable: { type: boolean, description: 'LOCAL만 true — 아니면 [비밀번호 변경] 버튼을 보이지 않음' }
+    SettingsUpdateRequest:
+      type: object
+      minProperties: 1
+      properties:
+        defaultVisibility: { $ref: '#/components/schemas/Visibility' }
+        lastActiveVisible: { type: boolean }
+    LastActive:
+      type: object
+      description: 정확한 시각은 넣지 않는다. Asia/Seoul 달력 날짜 기준
+      required: [bucket]
+      properties:
+        bucket: { type: string, enum: [TODAY, YESTERDAY, DAYS_AGO, OVER_A_WEEK] }
+        days: { type: integer, minimum: 2, maximum: 6, description: bucket이 DAYS_AGO일 때만 }
+    FriendshipView:
+      type: object
+      required: [status]
+      properties:
+        status:
+          type: string
+          enum: [SELF, NONE, REQUEST_SENT, REQUEST_RECEIVED, FRIENDS]
+        lastActive:
+          $ref: '#/components/schemas/LastActive'
+          description: 표시 조건을 만족할 때만 존재하는 키 (FR-060)
+    FriendItem:
+      type: object
+      required: [handle, nickname, profileImageUrl, friendsSince]
+      properties:
+        handle: { type: string }
+        nickname: { type: string }
+        profileImageUrl: { type: [string, 'null'] }
+        friendsSince: { type: string, format: date-time }
+        lastActive:
+          $ref: '#/components/schemas/LastActive'
+          description: 표시 조건을 만족할 때만 존재하는 키
+    FriendRequestItem:
+      type: object
+      required: [handle, nickname, profileImageUrl, requestedAt]
+      properties:
+        handle: { type: string }
+        nickname: { type: string }
+        profileImageUrl: { type: [string, 'null'] }
+        requestedAt: { type: string, format: date-time }
+
+security:
+  - sessionCookie: []

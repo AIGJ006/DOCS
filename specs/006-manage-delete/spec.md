@@ -221,7 +221,7 @@
 - **API** ([41 §5](../../docs/41-manage-posts.md), [13 §2-4](../../docs/13-delete-withdraw.md), [06 §4](../../docs/06-visibility.md)):
   - `GET /api/me/posts?tab=drafts|published|trash&visibility=…&cursor=…` → `{ items, nextCursor, counts: { drafts, published, trash } }`. 응답 항목 `id, title, status, visibility, editing, hidden, updatedAt, publishedAt, editedAt, deletedAt, purgeAt, viewCount, likeCount, commentCount`, `content_md`·`content_html`은 읽지 않음
   - `DELETE /api/posts/{postId}` → 200 `{ trashed: true, purgeAt }` 또는 `{ purged: true }`, `POST /api/posts/{postId}/restore`, `DELETE /api/posts/{postId}/permanent`, `GET /api/me/trash?cursor=…` → `{ items: [{ id, title, deletedAt, purgeAt }], nextCursor }`
-  - 공개 범위 변경은 `PATCH /api/posts/{postId}/visibility` (06 §4). 2026-10-07 O8의 "상태 지정은 PUT·DELETE" 규약과의 관계는 004 plan에서 정리
+  - 공개 범위 변경은 `PUT /api/posts/{postId}/visibility` (004 plan R-20: 2026-10-07 O8 규약에 따라 06 §4의 PATCH를 PUT으로 바꿈).
 - **페이지·커서**: 20개, 21개를 조회해 마지막 판단, 클라이언트 크기 무시. 커서 임시·발행 `(updated_at, id)`, 휴지통 `(deleted_at, id)`. 커서는 불투명 Base64URL(마이크로초), 잘못된 커서 400 `INVALID_CURSOR` ([02 §5-1](../../docs/02-architecture.md), O8). `counts`는 첫 요청에만 `GROUP BY` 한 번
 - **쿼리·인덱스**: 목록 1번 + (첫 요청) 개수 1번, 작업본 유무는 `post_draft` LEFT JOIN. `ix_post_manage (author_id, status, updated_at DESC) WHERE deleted_at IS NULL`, `ix_post_trash (author_id, deleted_at DESC) WHERE deleted_at IS NOT NULL`. 공개/비공개 필터는 `ix_post_manage`로 좁힌 뒤 거름 ([41 §6·ERD](../../docs/41-manage-posts.md), [51 §3 post](../../docs/51-erd-unified.md))
 - **삭제 컬럼**: `post.deleted_at`(휴지통), `post.hidden_at`(관리자 숨김, 43). 모든 요청은 `author_id = 현재 사용자` 조건으로 `SELECT … FOR UPDATE` 후 처리 ([13 §2-4](../../docs/13-delete-withdraw.md))

@@ -12,24 +12,24 @@
 
 ## 기능 스펙
 
-| # | 스펙 | 원문 | 단계 |
-|---|---|---|---|
-| 001 | [account-auth](specs/001-account-auth/spec.md) 로그인·블로그 주소·닉네임·프로필·친구·최근 활동 | 07, 08, 09, 11 | Tier A |
-| 002 | [post-authoring](specs/002-post-authoring/spec.md) 글 작성·자동 저장·발행·본문 정화 | 04, 05, 12 | Tier A |
-| 003 | [image-upload](specs/003-image-upload/spec.md) 이미지 업로드 | 04, 23 | Tier B |
-| 004 | [visibility-permission](specs/004-visibility-permission/spec.md) 공개 범위·권한 매트릭스 | 06, 42 | Tier A |
-| 005 | [post-reading](specs/005-post-reading/spec.md) 전체 글 목록·개인 블로그·글 상세 | 10, 40 | Tier A |
-| 006 | [manage-delete](specs/006-manage-delete/spec.md) 내 글 관리·삭제·휴지통 | 41, 13 | Tier A |
-| 007 | [comment](specs/007-comment/spec.md) 댓글·답글 | 21 | Tier B |
-| 008 | [tag](specs/008-tag/spec.md) 태그·태그별 글 목록 | 22 | Tier B |
-| 009 | [like-view](specs/009-like-view/spec.md) 좋아요·조회수 | 30, 31 | Tier B |
-| 010 | [follow-feed](specs/010-follow-feed/spec.md) 팔로우·피드 | 24 | Tier C |
-| 011 | [notification](specs/011-notification/spec.md) 도메인 이벤트·인앱 알림 | 20, 25 | Tier C |
-| 012 | [trending-search](specs/012-trending-search/spec.md) 트렌딩·검색 | 32, 33 | Tier C |
-| 013 | [ai-tag-suggest](specs/013-ai-tag-suggest/spec.md) AI 태그 추천 | 34 | Tier C |
-| 014 | [report-hide](specs/014-report-hide/spec.md) 신고·관리자 숨김 | 43 | Tier C |
-| 015 | [withdraw](specs/015-withdraw/spec.md) 회원 탈퇴·복구 | 44, 13 | Tier C |
-| 016 | [dark-mode](specs/016-dark-mode/spec.md) 다크 모드 | 45 | Tier C |
+| # | 스펙 | 원문 | 단계 | 진행 |
+|---|---|---|---|---|
+| 001 | [account-auth](specs/001-account-auth/spec.md) 로그인·블로그 주소·닉네임·프로필·친구·최근 활동 | 07, 08, 09, 11 | Tier A | plan ✓ |
+| 002 | [post-authoring](specs/002-post-authoring/spec.md) 글 작성·자동 저장·발행·본문 정화 | 04, 05, 12 | Tier A | plan ✓ |
+| 003 | [image-upload](specs/003-image-upload/spec.md) 이미지 업로드 | 04, 23 | Tier B | spec |
+| 004 | [visibility-permission](specs/004-visibility-permission/spec.md) 공개 범위·권한 매트릭스 | 06, 42 | Tier A | plan ✓ |
+| 005 | [post-reading](specs/005-post-reading/spec.md) 전체 글 목록·개인 블로그·글 상세 | 10, 40 | Tier A | plan ✓ |
+| 006 | [manage-delete](specs/006-manage-delete/spec.md) 내 글 관리·삭제·휴지통 | 41, 13 | Tier A | plan ✓ |
+| 007 | [comment](specs/007-comment/spec.md) 댓글·답글 | 21 | Tier B | spec |
+| 008 | [tag](specs/008-tag/spec.md) 태그·태그별 글 목록 | 22 | Tier B | spec |
+| 009 | [like-view](specs/009-like-view/spec.md) 좋아요·조회수 | 30, 31 | Tier B | spec |
+| 010 | [follow-feed](specs/010-follow-feed/spec.md) 팔로우·피드 | 24 | Tier C | spec |
+| 011 | [notification](specs/011-notification/spec.md) 도메인 이벤트·인앱 알림 | 20, 25 | Tier C | spec |
+| 012 | [trending-search](specs/012-trending-search/spec.md) 트렌딩·검색 | 32, 33 | Tier C | spec |
+| 013 | [ai-tag-suggest](specs/013-ai-tag-suggest/spec.md) AI 태그 추천 | 34 | Tier C | spec |
+| 014 | [report-hide](specs/014-report-hide/spec.md) 신고·관리자 숨김 | 43 | Tier C | spec |
+| 015 | [withdraw](specs/015-withdraw/spec.md) 회원 탈퇴·복구 | 44, 13 | Tier C | spec |
+| 016 | [dark-mode](specs/016-dark-mode/spec.md) 다크 모드 | 45 | Tier C | spec |
 
 ERD(03, 51)는 각 스펙의 Implementation Notes에서 참조하며, `/speckit-plan` 단계의 `data-model.md`로 옮겨 갑니다. 카테고리·주제 등은 공통이 아닌 개인 확장(01 §2-4)이라 공통 스펙에 없습니다.
 
@@ -64,6 +64,19 @@ ERD(03, 51)는 각 스펙의 Implementation Notes에서 참조하며, `/speckit-
 
 원문끼리 충돌한 부분은 더 최근 결정(2026-10-07 회의 > 10-06 > 이전)과 51·02를 따랐고, 각 스펙의 Assumptions와 체크리스트 Notes에 기록했습니다.
 
+## Tier A plan에서 정한 공통 설계 (팀 확인 필요)
+
+각 plan의 `research.md`에 "제안(팀 확인 필요)"로 표시된 항목 중 여러 기능에 걸치는 것만 모았습니다.
+
+- 공개 범위 변경은 `PUT /api/posts/{postId}/visibility` (06 §4의 PATCH 대신 O8 규약, 004 R-20)
+- CSRF: `XSRF-TOKEN` 쿠키 + `X-XSRF-TOKEN` 헤더, 첫 진입 때 `GET /api/auth/csrf` (M17 기본안, 001)
+- 세션: Spring Session 인덱스 저장소로 "회원의 모든 세션 삭제" 지원, Redis 장애 시 비로그인 처리 (001·004)
+- 커서: 불투명 Base64URL 안에 목록 구분 필드를 넣어 다른 목록의 커서를 400으로 거부 (005 R-24, 006 R16)
+- 배치 잠금: ShedLock JDBC + `shedlock` 테이블 추가 제안, 정리 배치는 03:30 KST (002·006)
+- 완전 삭제 확장점 `PostPurgeStep`: 신고·사진 모듈이 각자 구현 (006 R10, 015의 `WithdrawalPurgeStep`과 같은 방식)
+- 자동·수동 저장은 Redis 키가 있어도 DB에서 작성자·휴지통 여부를 확인 (04 §2-3 보완, 002·006)
+- 상세 API `GET /api/posts/{postId}`와 블로그 머리말 API `GET /api/members/{handle}` 추가 (원문에 없음, 005)
+
 ## 알려진 누락
 
 - 원문이 참조하는 `erd/V1__common_schema.sql`, `erd/erdcloud-export.sql`은 아직 이 저장소에 없습니다.
@@ -74,7 +87,7 @@ ERD(03, 51)는 각 스펙의 Implementation Notes에서 참조하며, `/speckit-
 uv tool install specify-cli --from git+https://github.com/github/spec-kit.git@v1.1.1   # 처음 한 번
 ```
 
-Claude Code에서 기능 하나를 골라 진행합니다 (Tier A부터 권장):
+Tier A(001·002·004·005·006)는 plan까지 끝났습니다. 다음은 `/speckit-tasks`입니다. 기능 하나씩:
 
 1. `/speckit-clarify` — 위 질문을 정리해 spec에 반영
 2. `/speckit-plan` — constitution 검사, data-model·API 계약 작성
