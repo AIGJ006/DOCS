@@ -173,15 +173,12 @@ class SecurityFoundationIntegrationTest extends IntegrationTestBase {
     }
 
     // ⑦ SPA 대체 경로
+    // 005 T038·T050이 `/@{handle}`·`/@{handle}/posts/{postId}`를 더 구체적인 매핑(`PageShellController`)으로
+    // 가져갔다 — 그 경로는 서버가 링크 미리보기 메타와 404 상태를 넣으므로 여기서 index.html로 넘기지 않는다
+    // (005 PostPageShellReaderIntegrationTest·BlogPageShellIntegrationTest가 확인한다).
     @Test
     void 화면_경로는_index_html로_넘기고_없는_API는_404_공통_본문() throws Exception {
-        for (String path :
-                List.of(
-                        "/",
-                        "/settings",
-                        "/signup/social",
-                        "/@kim755030",
-                        "/@kim755030/posts/12")) {
+        for (String path : List.of("/", "/settings", "/signup/social", "/write/new")) {
             mockMvc.perform(get(path))
                     .andExpect(status().isOk())
                     .andExpect(forwardedUrl("/index.html"));

@@ -165,3 +165,27 @@ export function listHomePosts(cursor?: string | null): Promise<PostCardPage> {
 export function getPostDetail(postId: number | string): Promise<PostDetail> {
   return apiGet<PostDetail>(`/api/posts/${postId}`);
 }
+
+/**
+ * 조회 기록 (005 FR-041). 응답을 기다리지 않고 실패도 무시한다 — 재시도하지 않는다.
+ * `keepalive: true`라 화면을 떠나도 요청이 이어진다.
+ *
+ * (구현 메모) `/api/posts/{id}/views`는 009 좋아요·조회수 기능 소유다 — 아직 없으면 404가 오고 그대로 무시한다.
+ */
+export function recordPostView(postId: number | string): void {
+  const headers: Record<string, string> = { Accept: 'application/json' };
+  const token = readCookie(CSRF_COOKIE);
+  if (token) {
+    headers[CSRF_HEADER] = token;
+  }
+  try {
+    void fetch(`/api/posts/${postId}/views`, {
+      method: 'POST',
+      headers,
+      credentials: 'same-origin',
+      keepalive: true,
+    }).catch(() => undefined);
+  } catch {
+    // 조회 기록 실패는 상세 화면에 영향이 없다 (원칙 V).
+  }
+}

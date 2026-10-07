@@ -62,7 +62,37 @@ test.describe('본문의 스크립트는 실행되지 않는다', () => {
     expect(await popup.evaluate(() => window.opener)).toBeNull();
   });
 
-  test.fixme('005 글 상세 화면에서도 알림창 0번', async () => {
-    // 005 글 상세 화면(/@{handle}/posts/{id})이 이 브랜치에 없다. 005가 들어오면 같은 32개 글을 상세 화면으로 연다.
+  test('005 글 상세 화면에서도 알림창 0번', async ({ page }, testInfo) => {
+    // 발행 요청이 32번이라 한 프로젝트에서만 돌린다. 정화 결과는 화면 폭과 무관하다.
+    test.skip(testInfo.project.name !== 'desktop', '발행 횟수 — desktop 프로젝트에서만 실행');
+    test.setTimeout(180_000);
+    const dialogs: string[] = [];
+    page.on('dialog', async (dialog) => {
+      dialogs.push(dialog.message());
+      await dialog.dismiss();
+    });
+    await login(page);
+
+    const corpus = xssCorpus();
+    expect(corpus).toHaveLength(32);
+    const urls: string[] = [];
+    for (const { name, markdown } of corpus) {
+      const postId = await createPost(page);
+      const { url } = await publish(page, postId, `XSS 상세 ${name}`, markdown);
+      urls.push(url);
+    }
+
+    for (const [index, url] of urls.entries()) {
+      await page.goto(url);
+      // 상세 화면이 그려졌는지(제목은 글자 그대로) 확인한 뒤 본문 자리를 본다
+      await expect(page.getByRole('heading', { level: 1 })).toContainText(
+        `XSS 상세 ${corpus[index].name}`,
+      );
+      await expect(page.getByTestId('post-content')).toBeAttached();
+      // 상세에는 인라인 스크립트가 없다 (FR-037)
+      await expect(page.locator('article script')).toHaveCount(0);
+      await page.waitForTimeout(100);
+    }
+    expect(dialogs).toEqual([]);
   });
 });

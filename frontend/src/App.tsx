@@ -7,6 +7,7 @@ import EditorPage, { NewPostPage } from './pages/EditorPage';
 import HomePage from './pages/HomePage';
 import LoginPage from './pages/LoginPage';
 import NotFoundPage from './pages/NotFoundPage';
+import PostDetailPage from './pages/PostDetailPage';
 import PrivacyPage from './pages/PrivacyPage';
 import SignupPage from './pages/SignupPage';
 import TermsPage from './pages/TermsPage';
@@ -44,6 +45,8 @@ export default function App() {
           <Route path="/privacy" element={<PrivacyPage />} />
           <Route path="/write/new" element={<NewPostPage />} />
           <Route path="/write/:postId" element={<EditorPage />} />
+          {/* 005 글 상세 — react-router는 `/@:handle`처럼 구간 일부만 파라미터로 받지 못해 `@`는 화면이 떼어 낸다 */}
+          <Route path="/:handle/posts/:postId" element={<PostDetailPage />} />
           <Route path="*" element={<NotFoundPage />} />
         </Routes>
       )}
