@@ -1,14 +1,53 @@
 package com.team.blog.account.web;
 
+import com.team.blog.account.application.EmailVerificationService;
+import com.team.blog.account.application.LoginOutcome;
+import com.team.blog.account.application.LoginService;
+import com.team.blog.account.application.SignedUpMember;
+import com.team.blog.account.application.SignupService;
+import com.team.blog.account.infra.security.SessionLogin;
+import com.team.blog.account.web.dto.EmailSignupRequest;
+import com.team.blog.account.web.dto.SignupResult;
+import com.team.blog.account.web.dto.TokenRequest;
+import com.team.blog.account.web.dto.VerificationResult;
+import com.team.blog.shared.error.ApiException;
+import com.team.blog.shared.error.CommonReasonCode;
+import com.team.blog.shared.security.CurrentUser;
+import com.team.blog.shared.security.LoginRequired;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
-/** 인증 API. 가입·로그인·인증·재설정 경로는 US1·US4에서 더한다 (contracts/openapi.yaml). */
+/**
+ * 인증 API (contracts/openapi.yaml). 로그인·로그아웃({@code POST /api/auth/login}·{@code /logout})은 Spring
+ * Security가 처리한다({@code AccountSecurityCustomizer}). 비밀번호 재설정은 US4에서 더한다.
+ */
 @RestController
 @RequestMapping("/api/auth")
 public class AuthController {
+
+    private final SignupService signupService;
+    private final EmailVerificationService emailVerificationService;
+    private final LoginService loginService;
+    private final SessionLogin sessionLogin;
+
+    public AuthController(
+            SignupService signupService,
+            EmailVerificationService emailVerificationService,
+            LoginService loginService,
+            SessionLogin sessionLogin) {
+        this.signupService = signupService;
+        this.emailVerificationService = emailVerificationService;
+        this.loginService = loginService;
+        this.sessionLogin = sessionLogin;
+    }
 
     /**
      * CSRF 토큰 쿠키 발급 ({@code issueCsrfToken}). 앱 첫 진입 때 호출하며 재동의 전·탈퇴 유예 중에도 허용된다. 쿠키는 공통
@@ -17,5 +56,48 @@ public class AuthController {
     @GetMapping("/csrf")
     public ResponseEntity<Void> issueCsrfToken() {
         return ResponseEntity.noContent().build();
+    }
+
+    /**
+     * 이메일 가입 ({@code signupWithEmail}) → 201. 성공하면 세션 ID를 새로 발급하고 바로 로그인 상태가 된다(인증 전). 인증 메일은 커밋 후
+     * 비동기로 간다.
+     */
+    @PostMapping("/signup")
+    @ResponseStatus(HttpStatus.CREATED)
+    public SignupResult signup(
+            @RequestBody EmailSignupRequest body,
+            HttpServletRequest request,
+            HttpServletResponse response) {
+        SignedUpMember member = signupService.signupWithEmail(body.toCommand());
+        LoginOutcome outcome = loginService.onSuccess(member.memberId());
+        sessionLogin.login(
+                member.memberId(),
+                member.role().name(),
+                member.provider(),
+                outcome,
+                request,
+                response);
+        return new SignupResult(member.handle(), member.nickname(), member.emailVerified());
+    }
+
+    /** 인증 메일 다시 보내기 ({@code resendVerificationMail}) → 202. 1분 1번·하루 10번. */
+    @PostMapping("/email-verification")
+    @LoginRequired
+    @ResponseStatus(HttpStatus.ACCEPTED)
+    public void resendVerification(@CurrentUser Long memberId) {
+        emailVerificationService.resend(memberId);
+    }
+
+    /**
+     * 인증 링크 확인 ({@code confirmEmailVerification}). 메일 보안 검사기가 링크를 미리 열어도 토큰이 소모되지 않게 화면이 POST로 보낸다.
+     * 로그인 여부와 무관.
+     */
+    @PostMapping("/email-verification/confirm")
+    public VerificationResult confirmVerification(@RequestBody TokenRequest body) {
+        if (body == null) {
+            throw new ApiException(CommonReasonCode.MALFORMED_REQUEST);
+        }
+        emailVerificationService.confirm(body.token());
+        return new VerificationResult(true);
     }
 }
