@@ -11,7 +11,6 @@ import com.team.blog.support.IntegrationTestBase;
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.springframework.test.web.servlet.MvcResult;
 
@@ -62,7 +61,6 @@ class HomeCursorValidationIntegrationTest extends IntegrationTestBase {
     }
 
     @Test
-    @Disabled("US3 블로그 목록 API(T049)가 생기면 켠다")
     void 블로그_목록에서_받은_커서를_홈에_보내면_거부한다() throws Exception {
         MvcResult blog = api().blogPosts(null, PostReadingFixture.A_HANDLE, null);
         String blogCursor = nextCursor(blog);
@@ -72,7 +70,6 @@ class HomeCursorValidationIntegrationTest extends IntegrationTestBase {
     }
 
     @Test
-    @Disabled("US3 블로그 목록 API(T049)가 생기면 켠다")
     void 홈_커서를_블로그_목록에_보내면_거부한다() throws Exception {
         String homeCursor = nextCursor(api().home(null, null));
 
@@ -80,12 +77,12 @@ class HomeCursorValidationIntegrationTest extends IntegrationTestBase {
     }
 
     @Test
-    @Disabled("US3 블로그 목록 API(T049)가 생기면 켠다")
     void 다른_사람_블로그의_커서도_거부한다() throws Exception {
-        String bCursor = nextCursor(api().blogPosts(null, PostReadingFixture.B_HANDLE, null));
-        assertThat(bCursor).isNotBlank();
+        // 회원 B 블로그는 공개 글 8개로 커서가 없으므로 A 블로그의 커서를 B 블로그에 보낸다
+        String aCursor = nextCursor(api().blogPosts(null, PostReadingFixture.A_HANDLE, null));
+        assertThat(aCursor).isNotBlank();
 
-        expectInvalidCursor(api().blogPosts(null, PostReadingFixture.A_HANDLE, bCursor));
+        expectInvalidCursor(api().blogPosts(null, PostReadingFixture.B_HANDLE, aCursor));
     }
 
     @Test

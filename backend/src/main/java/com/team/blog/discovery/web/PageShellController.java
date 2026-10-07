@@ -1,9 +1,15 @@
 package com.team.blog.discovery.web;
 
+import com.team.blog.account.application.BlogOwner;
 import com.team.blog.account.application.MemberQueryService;
+import com.team.blog.discovery.application.BlogQueryService;
+import com.team.blog.discovery.application.ReadingProperties;
+import com.team.blog.media.application.ImageUrlResolver;
+import com.team.blog.media.application.ProfileImageQuery;
 import com.team.blog.post.application.PostQueryService;
 import com.team.blog.post.domain.PostNotFoundException;
 import com.team.blog.post.infra.PostDetailRow;
+import com.team.blog.shared.error.NotFoundException;
 import com.team.blog.shared.security.Viewer;
 import com.team.blog.shared.web.CacheControlPolicy;
 import com.team.blog.shared.web.NotFoundPageRenderer;
@@ -43,16 +49,91 @@ public class PageShellController {
             new MediaType(MediaType.TEXT_HTML, StandardCharsets.UTF_8);
 
     private final PostQueryService postQueryService;
+    private final BlogQueryService blogQueryService;
+    private final ProfileImageQuery profileImages;
+    private final ImageUrlResolver imageUrls;
+    private final ReadingProperties properties;
     private final SpaShellRenderer shell;
     private final NotFoundPageRenderer notFoundPage;
 
     public PageShellController(
             PostQueryService postQueryService,
+            BlogQueryService blogQueryService,
+            ProfileImageQuery profileImages,
+            ImageUrlResolver imageUrls,
+            ReadingProperties properties,
             SpaShellRenderer shell,
             NotFoundPageRenderer notFoundPage) {
         this.postQueryService = postQueryService;
+        this.blogQueryService = blogQueryService;
+        this.profileImages = profileImages;
+        this.imageUrls = imageUrls;
+        this.properties = properties;
         this.shell = shell;
         this.notFoundPage = notFoundPage;
+    }
+
+    /**
+     * 블로그 주소의 첫 응답 (005 T050, FR-022, research R-27): ① 대문자 handle → 301 소문자(쿼리 유지) → ② 없는 블로그·탈퇴
+     * 유예·익명 처리 → 공통 404 화면 → ③ 200 셸 + 블로그 미리보기 메타.
+     */
+    @GetMapping("/@{handle}")
+    public ResponseEntity<byte[]> blogShell(
+            @PathVariable String handle, HttpServletRequest request) {
+        String normalized = MemberQueryService.normalizeHandle(handle);
+        if (!handle.equals(normalized)) {
+            return movedPermanently("/@" + normalized, request);
+        }
+        BlogOwner owner;
+        try {
+            owner = blogQueryService.requireOwner(handle);
+        } catch (NotFoundException e) {
+            return notFoundPage.render();
+        }
+        return html(shell.render(blogMeta(owner)), CacheControlPolicy.NO_CACHE);
+    }
+
+    /**
+     * 블로그 미리보기 메타 (40 §5): {@code <title>{닉네임} (@{handle})}, description은 소개 앞 {@code
+     * blog.seo.description-length}자, canonical은 {@code blog.site.base-url}+{@code /@handle}, {@code
+     * og:type=profile}, {@code og:image}는 프로필 사진 <b>원본</b>(없으면 기본 이미지).
+     */
+    private LinkPreviewMeta blogMeta(BlogOwner owner) {
+        String title = owner.nickname() + " (@" + owner.handle() + ")";
+        String description = shorten(owner.bio(), properties.seo().descriptionLength());
+        String originalKey =
+                profileImages.currentKeys(owner.id()).map(keys -> keys.original()).orElse(null);
+        String image =
+                originalKey == null
+                        ? properties.seo().defaultOgImageUrl()
+                        : imageUrls.publicUrl(originalKey);
+        return new LinkPreviewMeta(
+                title,
+                description,
+                properties.site().baseUrl() + "/@" + owner.handle(),
+                "profile",
+                title,
+                description,
+                image,
+                null,
+                null,
+                false);
+    }
+
+    /**
+     * 소개 → 미리보기 설명. 줄바꿈·연속 공백은 한 칸으로 모으고 앞 {@code max}자만 쓴다. 값이 없으면 {@code null}(태그를 만들지 않는다).
+     *
+     * <p>(구현 메모) spec은 "소개 앞 160자"만 정했다. 메타 속성 값에 줄바꿈을 그대로 넣지 않으려고 공백으로 모은다.
+     */
+    static String shorten(String text, int max) {
+        if (text == null) {
+            return null;
+        }
+        String flat = text.replaceAll("\\s+", " ").strip();
+        if (flat.isEmpty()) {
+            return null;
+        }
+        return flat.length() <= max ? flat : flat.substring(0, max);
     }
 
     @GetMapping("/@{handle}/posts/{postId}")

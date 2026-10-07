@@ -6,6 +6,7 @@ import SessionBar from './features/auth/SessionBar';
 import EditorPage, { NewPostPage } from './pages/EditorPage';
 import HomePage from './pages/HomePage';
 import LoginPage from './pages/LoginPage';
+import BlogPage from './pages/BlogPage';
 import NotFoundPage from './pages/NotFoundPage';
 import PostDetailPage from './pages/PostDetailPage';
 import PrivacyPage from './pages/PrivacyPage';
@@ -47,6 +48,7 @@ export default function App() {
           <Route path="/write/:postId" element={<EditorPage />} />
           {/* 005 글 상세 — react-router는 `/@:handle`처럼 구간 일부만 파라미터로 받지 못해 `@`는 화면이 떼어 낸다 */}
           <Route path="/:handle/posts/:postId" element={<PostDetailPage />} />
+          <Route path="/:handle" element={<BlogPage />} />
           <Route path="*" element={<NotFoundPage />} />
         </Routes>
       )}
