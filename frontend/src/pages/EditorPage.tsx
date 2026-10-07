@@ -5,10 +5,12 @@ import {
   autosave,
   autosaveKeepalive,
   createPost,
+  discardWorkingCopy,
   saveWorkingCopy,
   type PublishResponse,
   type ServerCopy,
 } from '../api/posts';
+import ConfirmDialog from '../components/editor/ConfirmDialog';
 import PreviewPane from '../components/editor/PreviewPane';
 import PublishDialog, { type PublishContent } from '../components/editor/PublishDialog';
 import SaveStatus from '../components/editor/SaveStatus';
@@ -23,6 +25,8 @@ import NotFoundPage from './NotFoundPage';
 import './editor.css';
 
 const CONFLICT_NOTICE = '다른 곳에서 수정된 글이에요. 이 기기에 있던 내용은 따로 보관해 두었어요';
+/** [변경 취소] 확인 문구 (006 `confirmDialogs.ts`가 생기면 그쪽 문구로 바꾼다). */
+export const DISCARD_CONFIRM = '고치던 내용을 버리고 발행한 내용으로 돌아갈까요?';
 
 /** `/write/new` — 임시글을 만들고 `/write/{postId}`로 바꾼다 (FR-001, B-1). */
 export function NewPostPage() {
@@ -62,7 +66,7 @@ function fieldError(errors: FieldError[], field: string): FieldError | undefined
   return errors.find((e) => e.field === field);
 }
 
-/** `/write/{postId}` — 에디터 (FR-002·007~014·025·026, US1·US2·US3). */
+/** `/write/{postId}` — 에디터 (FR-002·007~014·025·026·034·035, US1~US4). */
 export default function EditorPage() {
   const params = useParams();
   const postId = Number(params.postId);
@@ -81,6 +85,12 @@ export default function EditorPage() {
   const [fieldErrors, setFieldErrors] = useState<FieldError[]>([]);
   const [publishing, setPublishing] = useState(false);
   const [saving, setSaving] = useState(false);
+  /** 발행 글을 고치는 중인가 (작업본 또는 서버 쪽 보관분이 있음, FR-034). */
+  const [editing, setEditing] = useState(false);
+  const [confirmingDiscard, setConfirmingDiscard] = useState(false);
+  const [discarding, setDiscarding] = useState(false);
+  /** 바뀌면 서버에서 다시 연다 ([변경 취소] 뒤). */
+  const [reloadKey, setReloadKey] = useState(0);
   const queueRef = useRef<AutosaveQueue | null>(null);
   const latest = useRef({ title: '', contentMd: '' });
 
@@ -99,7 +109,9 @@ export default function EditorPage() {
         if (cancelled) {
           return;
         }
+        const published = result.server.status === 'PUBLISHED';
         setOpened(result);
+        setEditing(published && (result.server.editing || result.dirty));
         setTitle(result.initial.title);
         setContentMd(result.initial.contentMd);
         latest.current = { title: result.initial.title, contentMd: result.initial.contentMd };
@@ -114,6 +126,11 @@ export default function EditorPage() {
           saveLocal: (draft) => saveDraft(memberId, postId, draft),
           onStatus: setStatus,
           onConflict: () => setNotice('다른 탭이나 기기에서 이 글이 수정되었어요'),
+          onSaved: () => {
+            if (published) {
+              setEditing(true);
+            }
+          },
           isOnline: () => (typeof navigator === 'undefined' ? true : navigator.onLine !== false),
         });
         queueRef.current = queue;
@@ -149,7 +166,7 @@ export default function EditorPage() {
       cleanups.forEach((cleanup) => cleanup());
       queueRef.current = null;
     };
-  }, [loading, memberId, postId, validId, navigate]);
+  }, [loading, memberId, postId, validId, navigate, reloadKey]);
 
   const onTitle = (value: string) => {
     setTitle(value);
@@ -181,6 +198,9 @@ export default function EditorPage() {
         baseVersion: queue.baseVersion,
       });
       queue.markSaved(response, snapshot);
+      if (opened?.server.status === 'PUBLISHED') {
+        setEditing(true);
+      }
     } catch (e) {
       if (e instanceof ApiError && e.code === 'VERSION_CONFLICT') {
         queue.reportConflict();
@@ -215,6 +235,33 @@ export default function EditorPage() {
     window.location.assign(response.url);
   };
 
+  /** [변경 취소] 확인 뒤 — 작업본을 버리고 이 기기 초안을 지운 다음 발행본으로 다시 연다 (FR-035, US4 #3). */
+  const onDiscard = async () => {
+    const queue = queueRef.current;
+    setDiscarding(true);
+    setMessage(null);
+    if (queue) {
+      await queue.pause();
+    }
+    try {
+      await discardWorkingCopy(postId);
+      queue?.dispose();
+      if (memberId !== null) {
+        await removeDraft(memberId, postId).catch(() => undefined);
+      }
+      setConfirmingDiscard(false);
+      setNotice(null);
+      setFieldErrors([]);
+      setReloadKey((key) => key + 1);
+    } catch (e) {
+      queue?.resume();
+      setConfirmingDiscard(false);
+      setMessage(e instanceof ApiError ? e.message : '변경을 취소하지 못했어요');
+    } finally {
+      setDiscarding(false);
+    }
+  };
+
   const onPublishConflict = (server: ServerCopy) => {
     queueRef.current?.reportConflict();
     setNotice(`다른 곳에서 먼저 저장했어요 (버전 ${server.version})`);
@@ -244,8 +291,18 @@ export default function EditorPage() {
   return (
     <main className="editor-page">
       <header className="editor-toolbar">
-        <SaveStatus status={status} />
+        <div className="editor-state">
+          {opened.server.status === 'PUBLISHED' && editing ? (
+            <span className="editing-badge">수정 중</span>
+          ) : null}
+          <SaveStatus status={status} />
+        </div>
         <div className="editor-actions">
+          {opened.server.status === 'PUBLISHED' && editing ? (
+            <button type="button" onClick={() => setConfirmingDiscard(true)} disabled={discarding}>
+              변경 취소
+            </button>
+          ) : null}
           <button type="button" onClick={onSave} disabled={saving}>
             저장
           </button>
@@ -295,6 +352,17 @@ export default function EditorPage() {
         </div>
         <PreviewPane contentMd={contentMd} />
       </div>
+
+      {confirmingDiscard ? (
+        <ConfirmDialog
+          message={DISCARD_CONFIRM}
+          confirmLabel="버리기"
+          cancelLabel="계속 고치기"
+          busy={discarding}
+          onConfirm={() => void onDiscard()}
+          onCancel={() => setConfirmingDiscard(false)}
+        />
+      ) : null}
 
       {publishing ? (
         <PublishDialog

@@ -170,6 +170,24 @@ public class Post {
                 null, publishedAt, firstPublicAt, editedAt, editVersion, firstPublish, wentPublic);
     }
 
+    /**
+     * [변경 취소] (FR-035, research B-3 ⑤, data-model §2 "수정 중 → 발행됨"). 발행본(본문·HTML·요약·시각)은 그대로 두고
+     * {@code edit_version = currentVersion + 1}, {@code updated_at = now}만 바꾼다. 버전이 뒤로 가지 않으므로 버린
+     * 작업본을 들고 있던 다른 탭·늦게 도착한 반영이 작업본을 되살리지 못한다. 작업본({@code post_draft}) 삭제와 Redis 정리는 호출하는 쪽이 한다.
+     *
+     * @param currentVersion 현재 편집 버전 = max(Redis, {@code post_draft}, {@code post})
+     * @return 새 편집 버전
+     * @throws IllegalStateException 임시글 (호출하는 쪽이 409 {@code NOT_PUBLISHED}로 먼저 거른다)
+     */
+    public long discardWorkingCopy(long currentVersion, Instant now) {
+        if (!isPublished()) {
+            throw new IllegalStateException("발행하지 않은 글의 변경 취소");
+        }
+        this.editVersion = Math.max(currentVersion, this.editVersion) + 1;
+        this.updatedAt = Objects.requireNonNull(now, "now");
+        return this.editVersion;
+    }
+
     public boolean isDraft() {
         return status == PostStatus.DRAFT;
     }

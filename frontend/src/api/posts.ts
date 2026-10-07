@@ -2,7 +2,7 @@
  * 글 작성·임시 저장·발행 API (002, contracts/openapi.yaml). 001 `client.ts`(CSRF 헤더·오류 본문) 위에 둔다.
  * 004의 공개 범위 변경 함수 등 다른 기능의 함수는 이 파일에 더한다.
  */
-import { apiGet, apiPost, apiPut, CSRF_COOKIE, CSRF_HEADER } from './client';
+import { apiDelete, apiGet, apiPost, apiPut, CSRF_COOKIE, CSRF_HEADER } from './client';
 
 export type Visibility = 'PUBLIC' | 'PRIVATE';
 export type PostStatus = 'DRAFT' | 'PUBLISHED';
@@ -99,6 +99,11 @@ export function autosave(postId: number, body: SaveRequest, signal?: AbortSignal
 /** 수동 저장 — 즉시 DB 반영. */
 export function saveWorkingCopy(postId: number, body: SaveRequest) {
   return apiPut<SaveResponse>(`/api/posts/${postId}/working-copy`, body);
+}
+
+/** [변경 취소] — 발행 글의 작업본을 버린다(204). 작업본이 없어도 성공, 임시글은 409 NOT_PUBLISHED. */
+export function discardWorkingCopy(postId: number): Promise<void> {
+  return apiDelete<void>(`/api/posts/${postId}/working-copy`);
 }
 
 function readCookie(name: string): string | null {

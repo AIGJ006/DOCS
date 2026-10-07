@@ -1,12 +1,14 @@
 package com.team.blog.post.application;
 
 import com.team.blog.account.application.MemberQueryService;
+import com.team.blog.post.application.exception.NotPublishedException;
 import com.team.blog.post.application.exception.VersionConflictException;
 import com.team.blog.post.config.PostAuthoringProperties;
 import com.team.blog.post.domain.Post;
 import com.team.blog.post.domain.PostNotFoundException;
 import com.team.blog.post.domain.PostReasonCode;
 import com.team.blog.post.domain.Visibility;
+import com.team.blog.post.infra.PostDraftRepository;
 import com.team.blog.post.infra.PostEditRepository.EditState;
 import com.team.blog.post.infra.PostRepository;
 import com.team.blog.post.infra.RedisAutosaveStore;
@@ -27,7 +29,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionTemplate;
 
-/** 글 쓰기 명령: 새 글(T048), 수동 저장(T079). */
+/** 글 쓰기 명령: 새 글(T048), 수동 저장(T079), 변경 취소(T093). */
 @Service
 public class PostCommandService {
 
@@ -36,6 +38,7 @@ public class PostCommandService {
     private final AccountStatusGuard accountStatusGuard;
     private final MemberQueryService members;
     private final PostRepository posts;
+    private final PostDraftRepository drafts;
     private final PostAuthoringProperties properties;
     private final Clock clock;
     private final AutosaveService autosaveService;
@@ -47,6 +50,7 @@ public class PostCommandService {
             AccountStatusGuard accountStatusGuard,
             MemberQueryService members,
             PostRepository posts,
+            PostDraftRepository drafts,
             PostAuthoringProperties properties,
             Clock clock,
             AutosaveService autosaveService,
@@ -56,6 +60,7 @@ public class PostCommandService {
         this.accountStatusGuard = accountStatusGuard;
         this.members = members;
         this.posts = posts;
+        this.drafts = drafts;
         this.properties = properties;
         this.clock = clock;
         this.autosaveService = autosaveService;
@@ -130,6 +135,42 @@ public class PostCommandService {
                     autosaveService.saveToDatabase(postId, memberId, t, md, baseVersion, now);
         };
     }
+
+    /**
+     * 변경 취소 (T093, FR-035, B-3 ⑤, data-model §2). 판정 순서: 403 계정 상태 → 404 소유(행 잠금) → 409 임시글. 트랜잭션
+     * 안에서 행을 잠그고 현재 버전 = max(Redis, {@code post_draft}, {@code post})를 확인한 뒤 작업본을 지우고 {@code
+     * edit_version = 현재 + 1}로 올린다. 작업본이 없어도 같은 처리를 한다(204, 멱등). 커밋 후 같은 스레드에서 Redis 보관분을 조건부로
+     * 정리한다({@code autosave-release.lua}: 확인한 버전 이하면 지우고, 그 사이 다른 탭이 저장했으면 새 버전 다음 번호로 남긴다). 이벤트 없음.
+     */
+    public void discard(long postId, long memberId) {
+        accountStatusGuard.requireActive(memberId, ActionKind.CONTENT_WRITE);
+        Discarded discarded =
+                tx.execute(
+                        status -> {
+                            Post post =
+                                    posts.findForUpdateByIdAndAuthorId(postId, memberId)
+                                            .orElseThrow(
+                                                    () ->
+                                                            new PostNotFoundException(
+                                                                    "변경 취소: 내 글 아님"));
+                            if (!post.isPublished()) {
+                                throw new NotPublishedException();
+                            }
+                            EditState state = autosaveService.requireOwned(postId, memberId);
+                            long current =
+                                    EditorQueryService.currentCopy(state, store.find(postId))
+                                            .version();
+                            long newVersion = post.discardWorkingCopy(current, now(clock));
+                            posts.saveAndFlush(post);
+                            // 벌크 삭제는 영속성 컨텍스트를 비우므로 글을 먼저 반영한 뒤 지운다
+                            drafts.deleteByPostId(postId);
+                            return new Discarded(current, newVersion);
+                        });
+        // 커밋 후 ⑨와 같은 정리 (실패는 경고 로그 — RedisGuard)
+        store.release(postId, discarded.checkedVersion(), discarded.newVersion());
+    }
+
+    private record Discarded(long checkedVersion, long newVersion) {}
 
     private void applyNow(
             EditState state,

@@ -1,5 +1,6 @@
 package com.team.blog.post.integration.permission;
 
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
@@ -23,8 +24,9 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 
 /**
- * 002 권한 매트릭스 실행기 (T042·T070). {@code post-write.csv}의 {@code owner=002} 행을 실행한다. 쓰기 요청 본문은 그 행동이
- * 성공할 수 있는 값(유효한 제목·본문, 현재 버전)으로 채워 거부 이유가 권한뿐이게 한다. 요청 본문의 {@code authorId}는 서버가 무시해야 한다(원칙 III).
+ * 002 권한 매트릭스 실행기 (T042·T070·T090). {@code post-write.csv}의 {@code owner=002} 행을 실행한다. 쓰기 요청 본문은 그
+ * 행동이 성공할 수 있는 값(유효한 제목·본문, 현재 버전)으로 채워 거부 이유가 권한뿐이게 한다. 요청 본문의 {@code authorId}는 서버가 무시해야 한다(원칙
+ * III).
  */
 public final class PostAuthoringPermissionActions {
 
@@ -249,6 +251,58 @@ public final class PostAuthoringPermissionActions {
         @Override
         String path() {
             return "/api/posts/{postId}/working-copy";
+        }
+    }
+
+    /**
+     * 변경 취소 {@code DELETE /api/posts/{id}/working-copy} (T090). 거부되면 작업본({@code post_draft})도 그대로인지
+     * 확인한다(하네스의 {@code post} 스냅샷 비교에 더함).
+     */
+    @Profile("test")
+    @Component
+    public static class DiscardAction implements PermissionAction {
+        private final JdbcTemplate jdbc;
+
+        public DiscardAction(JdbcTemplate jdbc) {
+            this.jdbc = jdbc;
+        }
+
+        @Override
+        public String name() {
+            return "post.discard";
+        }
+
+        @Override
+        public String owner() {
+            return OWNER;
+        }
+
+        @Override
+        public ActionResult perform(MockMvc mockMvc, Cookie session, Long postId) throws Exception {
+            List<Map<String, Object>> before =
+                    jdbc.queryForList(
+                            "SELECT title, content_md, edit_version FROM post_draft WHERE post_id = ?",
+                            postId);
+            ActionResult result =
+                    ActionResult.of(
+                            mockMvc.perform(
+                                            TestLogin.withCsrf(
+                                                    delete(
+                                                            "/api/posts/{postId}/working-copy",
+                                                            postId),
+                                                    session))
+                                    .andReturn());
+            if (result.status() >= 400) {
+                List<Map<String, Object>> after =
+                        jdbc.queryForList(
+                                "SELECT title, content_md, edit_version FROM post_draft"
+                                        + " WHERE post_id = ?",
+                                postId);
+                if (!after.equals(before)) {
+                    throw new AssertionError("거부된 변경 취소가 작업본을 바꿨습니다: " + before + " → " + after);
+                }
+            }
+            return result;
         }
     }
 }

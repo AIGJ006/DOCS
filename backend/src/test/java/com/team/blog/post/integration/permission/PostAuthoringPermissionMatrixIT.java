@@ -13,9 +13,9 @@ import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
 /**
- * 002 권한 매트릭스 러너 (T042·T070, FR-036, SC-008). {@code post-write.csv}에서 {@code owner=002} 행만 실행한다.
- * 다른 기능의 행은 그 기능의 러너(004 T045 {@code PermissionMatrixIT})가 맡는다. 실행기가 아직 없는 002 행(US4 변경 취소)은 하네스가
- * {@code pending: 002}로 건너뛴다.
+ * 002 권한 매트릭스 러너 (T042·T070·T090, FR-036, SC-008). {@code post-write.csv}에서 {@code owner=002} 행만
+ * 실행한다(새 글·에디터 열기·자동 저장·수동 저장·발행·변경 취소). 다른 기능의 행은 그 기능의 러너(004 T045 {@code PermissionMatrixIT})가
+ * 맡는다.
  */
 class PostAuthoringPermissionMatrixIT extends AbstractPermissionMatrixIT {
 
