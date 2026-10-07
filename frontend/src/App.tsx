@@ -1,7 +1,10 @@
-import { Route, Routes } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { Route, Routes, useLocation } from 'react-router-dom';
+import { onNotFound } from './api/client';
 import { SessionProvider } from './features/auth/SessionProvider';
 import SessionBar from './features/auth/SessionBar';
 import LoginPage from './pages/LoginPage';
+import NotFoundPage from './pages/NotFoundPage';
 import PrivacyPage from './pages/PrivacyPage';
 import SignupPage from './pages/SignupPage';
 import TermsPage from './pages/TermsPage';
@@ -13,22 +16,33 @@ function Placeholder({ name }: { name: string }) {
 }
 
 export default function App() {
+  const location = useLocation();
+  // API가 404 NOT_FOUND를 주면 지금 화면 대신 공통 404 화면을 보인다(004 T024·T025). 다른 주소로 옮기면 풀린다.
+  const [notFoundAt, setNotFoundAt] = useState<string | null>(null);
+
+  useEffect(() => onNotFound(() => setNotFoundAt(location.key)), [location.key]);
+
   return (
     <SessionProvider>
       <SessionBar />
-      <Routes>
-        <Route path="/" element={<Placeholder name="home" />} />
-        <Route path="/signup" element={<SignupPage />} />
-        <Route path="/signup/social" element={<Placeholder name="signup-social" />} />
-        <Route path="/login" element={<LoginPage />} />
-        <Route path="/verify-email" element={<VerifyEmailPage />} />
-        <Route path="/forgot-password" element={<Placeholder name="forgot-password" />} />
-        <Route path="/reset-password" element={<Placeholder name="reset-password" />} />
-        <Route path="/reagree" element={<Placeholder name="reagree" />} />
-        <Route path="/settings" element={<Placeholder name="settings" />} />
-        <Route path="/terms" element={<TermsPage />} />
-        <Route path="/privacy" element={<PrivacyPage />} />
-      </Routes>
+      {notFoundAt !== null && notFoundAt === location.key ? (
+        <NotFoundPage />
+      ) : (
+        <Routes>
+          <Route path="/" element={<Placeholder name="home" />} />
+          <Route path="/signup" element={<SignupPage />} />
+          <Route path="/signup/social" element={<Placeholder name="signup-social" />} />
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/verify-email" element={<VerifyEmailPage />} />
+          <Route path="/forgot-password" element={<Placeholder name="forgot-password" />} />
+          <Route path="/reset-password" element={<Placeholder name="reset-password" />} />
+          <Route path="/reagree" element={<Placeholder name="reagree" />} />
+          <Route path="/settings" element={<Placeholder name="settings" />} />
+          <Route path="/terms" element={<TermsPage />} />
+          <Route path="/privacy" element={<PrivacyPage />} />
+          <Route path="*" element={<NotFoundPage />} />
+        </Routes>
+      )}
     </SessionProvider>
   );
 }

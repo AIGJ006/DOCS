@@ -28,3 +28,7 @@ coverage/
 Thumbs.db
 *.tmp
 *.swp
+
+# Playwright 결과
+test-results/
+playwright-report/

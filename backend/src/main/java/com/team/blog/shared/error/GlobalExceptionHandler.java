@@ -1,5 +1,6 @@
 package com.team.blog.shared.error;
 
+import com.team.blog.shared.web.CacheControlPolicy;
 import jakarta.validation.ConstraintViolationException;
 import java.util.ArrayList;
 import java.util.List;
@@ -51,6 +52,10 @@ public class GlobalExceptionHandler {
         }
         HttpHeaders headers = new HttpHeaders();
         ex.headers().forEach(headers::set);
+        if (ex instanceof NotFoundException) {
+            // 모든 NotFoundException 하위 타입이 같은 본문·같은 헤더 (004 T019, research R-26·R-30)
+            headers.setCacheControl(CacheControlPolicy.notFound());
+        }
         return ResponseEntity.status(ex.status()).headers(headers).body(ex.toResponse());
     }
 
@@ -191,6 +196,11 @@ public class GlobalExceptionHandler {
 
     private static ResponseEntity<ErrorResponse> respond(
             CommonReasonCode reason, ErrorResponse body) {
+        if (reason == CommonReasonCode.NOT_FOUND) {
+            return ResponseEntity.status(reason.status())
+                    .header(HttpHeaders.CACHE_CONTROL, CacheControlPolicy.notFound())
+                    .body(body);
+        }
         return ResponseEntity.status(reason.status()).body(body);
     }
 
