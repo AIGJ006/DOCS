@@ -1,0 +1,27 @@
+# 공통 설정. 수치는 설정값으로 둔다 (constitution VII). 비밀값은 환경 변수로만 (constitution IV).
+spring:
+  application:
+    name: blog
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+  flyway:
+    enabled: true
+  jackson:
+    time-zone: UTC
+    datatype:
+      datetime:
+        # Jackson 3에서 WRITE_DATES_AS_TIMESTAMPS는 DateTimeFeature로 옮겨졌다 (Spring Boot 4)
+        write-dates-as-timestamps: false
+  data:
+    redis:
+      # 장애를 빨리 판정해 비로그인·통과 경로로 넘긴다 (02 §2-1)
+      timeout: 500ms
+      connect-timeout: 1s
+  mail:
+    host: ${SPRING_MAIL_HOST:localhost}
+    port: ${SPRING_MAIL_PORT:1025}
+
+server:
+  shutdown: graceful

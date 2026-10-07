@@ -1,0 +1,94 @@
+# 로컬 개발·통합 확인용 실행 환경 (constitution "실행": app + PostgreSQL + Redis + MinIO, 개발용 Mailpit).
+# 비밀값은 .env(커밋하지 않음)로만 주입한다. .env.example을 복사해 쓴다: cp .env.example .env
+# 이미지 태그는 backend 통합 테스트(Testcontainers)와 같게 둔다: postgres:18-alpine, redis:7-alpine.
+name: blog
+
+services:
+  postgres:
+    image: postgres:18-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-blog}
+      POSTGRES_USER: ${POSTGRES_USER:-blog}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD를 .env에 넣어 주세요}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  redis:
+    image: redis:7-alpine
+    # 02 §2: AOF everysec, noeviction (세션·자동 저장 버퍼를 지우지 않음)
+    command: ["redis-server", "--appendonly", "yes", "--appendfsync", "everysec", "--maxmemory-policy", "noeviction"]
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  minio:
+    # 공식 MinIO 이미지 배포 중단으로 커뮤니티 포크를 쓴다 (04 §6-1)
+    image: pgsty/silo:RELEASE.2026-09-16T00-00-00Z
+    command: ["server", "/data", "--console-address", ":9001"]
+    environment:
+      MINIO_ROOT_USER: ${STORAGE_ROOT_USER:?STORAGE_ROOT_USER를 .env에 넣어 주세요}
+      MINIO_ROOT_PASSWORD: ${STORAGE_ROOT_PASSWORD:?STORAGE_ROOT_PASSWORD를 .env에 넣어 주세요}
+      MINIO_API_CORS_ALLOW_ORIGIN: http://localhost:8080
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio-data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fs http://localhost:9000/minio/health/live || wget -qO- http://localhost:9000/minio/health/live || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  mailpit:
+    # 개발용 메일 확인 (SMTP 1025, 웹 8025) — 02 §2
+    image: axllent/mailpit
+    ports:
+      - "1025:1025"
+      - "8025:8025"
+    healthcheck:
+      test: ["CMD", "/mailpit", "readyz"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  app:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    env_file: .env
+    environment:
+      SPRING_PROFILES_ACTIVE: local
+      DB_HOST: postgres
+      REDIS_HOST: redis
+      SPRING_MAIL_HOST: mailpit
+      SPRING_MAIL_PORT: "1025"
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+      mailpit:
+        condition: service_healthy
+
+volumes:
+  postgres-data:
+  redis-data:
+  minio-data:

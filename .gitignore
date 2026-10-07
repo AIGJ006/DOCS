@@ -1,0 +1,30 @@
+# Java / Maven
+target/
+*.class
+*.jar
+!backend/.mvn/wrapper/maven-wrapper.jar
+.gradle/
+build/
+
+# React 빌드 결과를 backend 정적 경로로 복사한 것 (backend/Dockerfile이 만든다)
+backend/src/main/resources/static/
+
+# Node
+node_modules/
+dist/
+coverage/
+*.log
+
+# 비밀값
+.env
+.env.*
+!.env.example
+
+# IDE / OS
+*.iml
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+*.tmp
+*.swp

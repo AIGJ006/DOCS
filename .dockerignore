@@ -1,0 +1,14 @@
+.git/
+**/node_modules/
+**/dist/
+**/target/
+**/coverage/
+**/*.log
+.env
+.env.*
+!.env.example
+backend/src/main/resources/static/
+Dockerfile*
+.dockerignore
+docs/
+specs/
