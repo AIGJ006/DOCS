@@ -102,9 +102,55 @@ blog:
     privacy:
       version: ${BLOG_AGREEMENT_PRIVACY_VERSION:2026-10-07}
       effective-date: ${BLOG_AGREEMENT_PRIVACY_EFFECTIVE_DATE:2026-10-07}
+  # 글 작성·자동 저장·발행 (002 plan Constraints, data-model §4)
+  autosave:
+    redis-ttl: 24h
+    flush-interval: 1m
+    rate-limit:
+      limit: 1
+      window: 5s
+    max-request-bytes: 1048576
+  post:
+    max-tags: 10
+    title-max: 100
+    content-max: 100000
+  publish:
+    idempotency-ttl: 600s
+  # 본문 렌더러 (12 §7-5~§7-7, 002 research A-10·B-7)
+  markdown:
+    render-timeout: 1s
+    max-nesting: 20
+    render-threads: 4
+    preview-rate-limit:
+      limit: 60
+      window: 1m
+    rerender-batch-size: 100
+    rerender-interval: 10m
+  # 빈 임시글 정리 (002 research B-4·B-9 제안)
+  cleanup:
+    empty-draft-cron: "0 30 3 * * *"
+    zone: Asia/Seoul
+    empty-draft-age: 24h
   policy:
     reserved-handles: classpath:policy/reserved-handles.txt
     reserved-nicknames: classpath:policy/reserved-nicknames.txt
     banned-words: classpath:policy/banned-words.txt
     banned-words-exceptions: classpath:policy/banned-words-exceptions.txt
     common-passwords: classpath:policy/common-passwords.txt
+
+# ---------------------------------------------------------------------------
+# Redis 회로 차단기 (002 research B-5): 연결 실패·시간 초과 비율 50%/최근 20회 → 30초 열림 → 반열림 5회 시험
+# 실패로 세는 예외는 shared.infra.redis.RedisGuard가 직접 고른다(OOM은 세지 않음).
+# ---------------------------------------------------------------------------
+resilience4j:
+  circuitbreaker:
+    instances:
+      redis:
+        sliding-window-type: COUNT_BASED
+        sliding-window-size: 20
+        minimum-number-of-calls: 20
+        failure-rate-threshold: 50
+        wait-duration-in-open-state: 30s
+        permitted-number-of-calls-in-half-open-state: 5
+        automatic-transition-from-open-to-half-open-enabled: false
+        register-health-indicator: false
