@@ -56,7 +56,7 @@
         <dependency>
             <groupId>org.postgresql</groupId>
             <artifactId>postgresql</artifactId>
-            <scope>runtime</scope>
+            <!-- compile 범위: shared.infra.db.UniqueViolations가 PSQLException에서 제약 이름을 읽는다 -->
         </dependency>
         <!-- 보안·세션 -->
         <dependency>
