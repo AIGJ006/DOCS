@@ -146,4 +146,21 @@ public class AuthIdentity {
     public Instant getLastLoginAt() {
         return lastLoginAt;
     }
+
+    /** 이메일 인증 완료(인증 링크 확인). 이미 인증됐으면 그대로 둔다 — 되돌아가는 전이는 없다(data-model §4-2). */
+    public void verifyEmail(Instant now) {
+        if (emailVerifiedAt == null) {
+            emailVerifiedAt = Objects.requireNonNull(now, "now");
+        }
+    }
+
+    /**
+     * 로그인 성공 기록. 갱신하기 <b>전</b> 값을 돌려준다 — 세션 {@code previousLoginAt}으로 쓴다(FR-057, 07 §6). 첫 로그인이면
+     * null.
+     */
+    public Instant recordLogin(Instant now) {
+        Instant previous = lastLoginAt;
+        lastLoginAt = Objects.requireNonNull(now, "now");
+        return previous;
+    }
 }
