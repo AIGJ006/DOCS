@@ -4,6 +4,7 @@ import { onNotFound } from './api/client';
 import { SessionProvider } from './features/auth/SessionProvider';
 import SessionBar from './features/auth/SessionBar';
 import EditorPage, { NewPostPage } from './pages/EditorPage';
+import HomePage from './pages/HomePage';
 import LoginPage from './pages/LoginPage';
 import NotFoundPage from './pages/NotFoundPage';
 import PrivacyPage from './pages/PrivacyPage';
@@ -30,7 +31,7 @@ export default function App() {
         <NotFoundPage />
       ) : (
         <Routes>
-          <Route path="/" element={<Placeholder name="home" />} />
+          <Route path="/" element={<HomePage />} />
           <Route path="/signup" element={<SignupPage />} />
           <Route path="/signup/social" element={<Placeholder name="signup-social" />} />
           <Route path="/login" element={<LoginPage />} />

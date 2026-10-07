@@ -8,8 +8,11 @@ import type { PostCard, PostCardPage } from '../../api/types/reading';
  * - 이어 붙일 때 이미 있는 글 번호는 건너뛴다(보는 도중 발행·삭제가 있어도 중복 없음).
  * - `nextCursor`가 null이면 `done` — 버튼을 없애고 "모든 글을 다 봤어요".
  * - 실패하면 `status: 'error'`로 두고 커서를 그대로 유지해 `retry()`가 같은 위치를 다시 요청한다.
+ * - `load` 함수가 바뀌면(예: 블로그 주소가 바뀌면) 처음부터 다시 받는다.
  */
 export type CursorListStatus = 'idle' | 'loading' | 'error';
+
+export type LoadPage = (cursor?: string | null) => Promise<PostCardPage>;
 
 export interface CursorList {
   items: PostCard[];
@@ -23,77 +26,98 @@ export interface CursorList {
   retry: () => Promise<void>;
 }
 
-export type LoadPage = (cursor?: string | null) => Promise<PostCardPage>;
+interface ListState {
+  items: PostCard[];
+  nextCursor: string | null;
+  status: CursorListStatus;
+  loadedOnce: boolean;
+  done: boolean;
+}
+
+const INITIAL: ListState = {
+  items: [],
+  nextCursor: null,
+  status: 'loading',
+  loadedOnce: false,
+  done: false,
+};
+
+/** 이미 있는 글 번호는 건너뛰고 이어 붙인다 (FR-005). */
+function append(previous: ListState, page: PostCardPage): ListState {
+  const seen = new Set(previous.items.map((item) => item.id));
+  return {
+    items: [...previous.items, ...page.items.filter((item) => !seen.has(item.id))],
+    nextCursor: page.nextCursor,
+    done: page.nextCursor === null,
+    loadedOnce: true,
+    status: 'idle',
+  };
+}
 
 export function useCursorList(load: LoadPage): CursorList {
-  const [items, setItems] = useState<PostCard[]>([]);
-  const [nextCursor, setNextCursor] = useState<string | null>(null);
-  const [status, setStatus] = useState<CursorListStatus>('loading');
-  const [loadedOnce, setLoadedOnce] = useState(false);
-  const [done, setDone] = useState(false);
-  const loading = useRef(false);
-  const alive = useRef(true);
+  const [state, setState] = useState<ListState>(INITIAL);
+  const [source, setSource] = useState<LoadPage>(() => load);
+  const inFlight = useRef(false);
 
+  // load가 바뀌면 렌더 중에 처음 상태로 돌린다(효과 안에서 초기화하지 않는다).
+  if (source !== load) {
+    setSource(() => load);
+    setState(INITIAL);
+  }
+
+  // 첫 페이지 (load가 바뀌면 다시)
   useEffect(() => {
-    alive.current = true;
+    let cancelled = false;
+    inFlight.current = true;
+    void (async () => {
+      try {
+        const page = await load();
+        if (!cancelled) {
+          setState((previous) => append(previous, page));
+        }
+      } catch {
+        if (!cancelled) {
+          setState((previous) => ({ ...previous, status: 'error' }));
+        }
+      } finally {
+        inFlight.current = false;
+      }
+    })();
     return () => {
-      alive.current = false;
+      cancelled = true;
+      inFlight.current = false;
     };
-  }, []);
+  }, [load]);
 
   const fetchPage = useCallback(
     async (cursor: string | null) => {
-      if (loading.current) {
+      if (inFlight.current) {
         return;
       }
-      loading.current = true;
-      setStatus('loading');
+      inFlight.current = true;
+      setState((previous) => ({ ...previous, status: 'loading' }));
       try {
         const page = await load(cursor ?? undefined);
-        if (!alive.current) {
-          return;
-        }
-        setItems((previous) => {
-          const seen = new Set(previous.map((item) => item.id));
-          return [...previous, ...page.items.filter((item) => !seen.has(item.id))];
-        });
-        setNextCursor(page.nextCursor);
-        setDone(page.nextCursor === null);
-        setLoadedOnce(true);
-        setStatus('idle');
+        setState((previous) => append(previous, page));
       } catch {
-        if (alive.current) {
-          setStatus('error');
-        }
+        setState((previous) => ({ ...previous, status: 'error' }));
       } finally {
-        loading.current = false;
+        inFlight.current = false;
       }
     },
     [load],
   );
 
-  // 첫 페이지 (load가 바뀌면 — 예: 블로그 주소가 바뀌면 — 처음부터 다시)
-  useEffect(() => {
-    setItems([]);
-    setNextCursor(null);
-    setDone(false);
-    setLoadedOnce(false);
-    void fetchPage(null);
-  }, [fetchPage]);
-
   const loadMore = useCallback(async () => {
-    if (status === 'loading' || loading.current) {
+    if (state.loadedOnce && state.nextCursor === null) {
       return;
     }
-    if (loadedOnce && nextCursor === null) {
-      return;
-    }
-    await fetchPage(nextCursor);
-  }, [fetchPage, loadedOnce, nextCursor, status]);
+    await fetchPage(state.nextCursor);
+  }, [fetchPage, state.loadedOnce, state.nextCursor]);
 
   const retry = useCallback(async () => {
-    await fetchPage(loadedOnce ? nextCursor : null);
-  }, [fetchPage, loadedOnce, nextCursor]);
+    await fetchPage(state.loadedOnce ? state.nextCursor : null);
+  }, [fetchPage, state.loadedOnce, state.nextCursor]);
 
-  return { items, nextCursor, done, status, loadedOnce, loadMore, retry };
+  return { ...state, loadMore, retry };
 }
