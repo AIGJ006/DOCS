@@ -223,6 +223,15 @@ public class RedisAutosaveStore {
         }
     }
 
+    /**
+     * 이 글의 Redis 보관분이 있을 수 있는가 ({@code EXISTS autosave:post:{postId}}). Redis 장애면 "있을 수 있음"(참)으로 답해
+     * 지우는 쪽이 멈추게 한다(빈 임시글 정리 T117).
+     */
+    public boolean mayHaveEntry(long postId) {
+        return redisGuard.call(
+                () -> Boolean.TRUE.equals(redis.hasKey(AutosaveKeys.post(postId))), () -> true);
+    }
+
     private static String loadScript(String path) {
         try {
             return new ClassPathResource(path)
