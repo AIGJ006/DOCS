@@ -103,6 +103,69 @@ public class PostEditRepository {
                 .optional();
     }
 
+    /**
+     * 임시글 반영 (B-3 ③): {@code status = 'DRAFT' AND edit_version < :v}일 때만. {@code deleted_at} 조건
+     * 없음(휴지통 글도 반영, B-3 ⑥). 바꾼 행 수.
+     */
+    public int updateDraftPostIfNewer(
+            long postId, String title, String contentMd, long version, Instant savedAt) {
+        return jdbc.sql(
+                        """
+                        UPDATE post SET title = :title, content_md = :md, edit_version = :v,
+                                        updated_at = :at
+                         WHERE id = :id AND status = 'DRAFT' AND edit_version < :v
+                        """)
+                .param("id", postId)
+                .param("title", title)
+                .param("md", contentMd)
+                .param("v", version)
+                .param("at", Timestamp.from(savedAt))
+                .update();
+    }
+
+    /**
+     * 발행 글 작업본 반영 (DM §1-2, B-3 ③): 글이 {@code PUBLISHED}이고 {@code post.edit_version < :v}일 때만, 작업본은
+     * {@code post_draft.edit_version < EXCLUDED.edit_version}일 때만 바꾼다. {@code deleted_at} 조건 없음. 바꾼
+     * 행 수.
+     */
+    public int upsertWorkingCopyIfNewer(
+            long postId, String title, String contentMd, long version, Instant savedAt) {
+        return jdbc.sql(
+                        """
+                        INSERT INTO post_draft (post_id, title, content_md, edit_version,
+                                                created_at, updated_at)
+                        SELECT p.id, :title, :md, :v, :at, :at
+                          FROM post p
+                         WHERE p.id = :id AND p.status = 'PUBLISHED' AND p.edit_version < :v
+                        ON CONFLICT (post_id) DO UPDATE
+                           SET title = EXCLUDED.title, content_md = EXCLUDED.content_md,
+                               edit_version = EXCLUDED.edit_version,
+                               updated_at = EXCLUDED.updated_at
+                         WHERE post_draft.edit_version < EXCLUDED.edit_version
+                        """)
+                .param("id", postId)
+                .param("title", title)
+                .param("md", contentMd)
+                .param("v", version)
+                .param("at", Timestamp.from(savedAt))
+                .update();
+    }
+
+    /** 반영 대상 글의 작성자·상태 (휴지통 포함 — 1분 반영·006 즉시 반영용). 행이 없으면 빈 값. */
+    public Optional<FlushTarget> findFlushTarget(long postId) {
+        return jdbc.sql("SELECT author_id, status FROM post WHERE id = ?")
+                .param(postId)
+                .query(
+                        (rs, n) ->
+                                new FlushTarget(
+                                        rs.getLong("author_id"),
+                                        PostStatus.valueOf(rs.getString("status"))))
+                .optional();
+    }
+
+    /** 반영 대상 글 요약. */
+    public record FlushTarget(long authorId, PostStatus status) {}
+
     private static EditState toEditState(ResultSet rs, int n) throws SQLException {
         long draftVersion = rs.getLong("d_version");
         boolean hasDraft = !rs.wasNull();

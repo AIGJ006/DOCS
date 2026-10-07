@@ -6,3 +6,8 @@ logging:
     com.team.blog: INFO
     org.flywaydb: WARN
     org.springframework.security: WARN
+# 002: 1분 반영 배치(AutosaveFlushJob)가 시험 중에 스스로 돌아 Redis·DB 단언을 흔들지 않게 주기를 길게 둔다.
+# 배치 시험은 메서드를 직접 부른다(AutosaveFlushJobIT).
+blog:
+  autosave:
+    flush-interval: 1h

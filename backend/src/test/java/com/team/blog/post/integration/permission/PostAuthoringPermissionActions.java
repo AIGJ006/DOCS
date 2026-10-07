@@ -2,17 +2,20 @@ package com.team.blog.post.integration.permission;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 
 import com.team.blog.post.support.EditorApi;
 import com.team.blog.support.TestLogin;
 import com.team.blog.support.permission.ActionResult;
 import com.team.blog.support.permission.PermissionAction;
 import jakarta.servlet.http.Cookie;
+import java.time.Instant;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import org.springframework.context.annotation.Profile;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
@@ -148,6 +151,104 @@ public final class PostAuthoringPermissionActions {
                                             .contentType(MediaType.APPLICATION_JSON)
                                             .content(EditorApi.json(body)))
                             .andReturn());
+        }
+    }
+
+    /**
+     * 자동 저장·수동 저장 공통: 휴지통 글이면 Redis 보관분을 미리 넣어 "키가 있어도 404"를 재현하고, 거부되면 Redis Hash가 그대로인지
+     * 확인한다(SC-008 — 하네스의 DB 스냅샷 비교에 Redis를 더함).
+     */
+    abstract static class SaveAction implements PermissionAction {
+        private final JdbcTemplate jdbc;
+        private final StringRedisTemplate redis;
+
+        SaveAction(JdbcTemplate jdbc, StringRedisTemplate redis) {
+            this.jdbc = jdbc;
+            this.redis = redis;
+        }
+
+        abstract String path();
+
+        @Override
+        public String owner() {
+            return OWNER;
+        }
+
+        @Override
+        public ActionResult perform(MockMvc mockMvc, Cookie session, Long postId) throws Exception {
+            String key = "autosave:post:" + postId;
+            List<Long> trashedAuthor =
+                    jdbc.queryForList(
+                            "SELECT author_id FROM post WHERE id = ? AND deleted_at IS NOT NULL",
+                            Long.class,
+                            postId);
+            if (!trashedAuthor.isEmpty()) {
+                redis.opsForHash()
+                        .putAll(
+                                key,
+                                Map.of(
+                                        "memberId", String.valueOf(trashedAuthor.get(0)),
+                                        "title", "휴지통 전 입력",
+                                        "contentMd", "본문",
+                                        "version", "9",
+                                        "savedAt", Instant.now().toString()));
+            }
+            Map<Object, Object> before = redis.opsForHash().entries(key);
+            long version = currentVersion(jdbc, postId);
+            Map<String, Object> body = EditorApi.saveBody("권한 매트릭스", "본문", version);
+            body.put("authorId", 999_999L);
+            ActionResult result =
+                    ActionResult.of(
+                            mockMvc.perform(
+                                            TestLogin.withCsrf(put(path(), postId), session)
+                                                    .contentType(MediaType.APPLICATION_JSON)
+                                                    .content(EditorApi.json(body)))
+                                    .andReturn());
+            if (result.status() >= 400) {
+                Map<Object, Object> after = redis.opsForHash().entries(key);
+                if (!after.equals(before)) {
+                    throw new AssertionError("거부된 요청이 Redis 보관분을 바꿨습니다: " + before + " → " + after);
+                }
+            }
+            return result;
+        }
+    }
+
+    /** 자동 저장 {@code PUT /api/posts/{id}/autosave}. */
+    @Profile("test")
+    @Component
+    public static class AutosaveAction extends SaveAction {
+        public AutosaveAction(JdbcTemplate jdbc, StringRedisTemplate redis) {
+            super(jdbc, redis);
+        }
+
+        @Override
+        public String name() {
+            return "post.autosave";
+        }
+
+        @Override
+        String path() {
+            return "/api/posts/{postId}/autosave";
+        }
+    }
+
+    /** 수동 저장 {@code PUT /api/posts/{id}/working-copy}. */
+    @Profile("test")
+    @Component
+    public static class ManualSaveAction extends SaveAction {
+        public ManualSaveAction(JdbcTemplate jdbc, StringRedisTemplate redis) {
+            super(jdbc, redis);
+        }
+
+        @Override
+        public String name() {
+            return "post.save";
+        }
+
+        @Override
+        String path() {
+            return "/api/posts/{postId}/working-copy";
         }
     }
 }
