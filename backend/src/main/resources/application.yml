@@ -1,0 +1,110 @@
+# 공통 설정. 수치는 설정값으로 둔다 (constitution VII). 비밀값은 환경 변수로만 (constitution IV).
+spring:
+  application:
+    name: blog
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+  flyway:
+    enabled: true
+  jackson:
+    time-zone: UTC
+    datatype:
+      datetime:
+        # Jackson 3에서 WRITE_DATES_AS_TIMESTAMPS는 DateTimeFeature로 옮겨졌다 (Spring Boot 4)
+        write-dates-as-timestamps: false
+  data:
+    redis:
+      # 장애를 빨리 판정해 비로그인·통과 경로로 넘긴다 (02 §2-1)
+      timeout: 500ms
+      connect-timeout: 1s
+  mail:
+    host: ${SPRING_MAIL_HOST:localhost}
+    port: ${SPRING_MAIL_PORT:1025}
+
+server:
+  shutdown: graceful
+  # 클라이언트 IP·HTTPS 판별 (FR-037, R-13, H4): 신뢰 프록시(사설 대역 기본)에서 온 요청만 X-Forwarded-For의
+  # 가장 오른쪽 신뢰 밖 주소를 getRemoteAddr()로 쓴다. 운영 LB 대역은 BLOG_TRUSTED_PROXIES(정규식 또는 CIDR 목록)로 준다.
+  forward-headers-strategy: native
+  tomcat:
+    remoteip:
+      internal-proxies: ${BLOG_TRUSTED_PROXIES:10\.\d+\.\d+\.\d+|192\.168\.\d+\.\d+|172\.(1[6-9]|2\d|3[01])\.\d+\.\d+|127\.\d+\.\d+\.\d+}
+      remote-ip-header: x-forwarded-for
+      protocol-header: x-forwarded-proto
+  servlet:
+    session:
+      # 실제 세션 쿠키는 shared.security.session.SessionConfig가 만든다 (같은 값)
+      timeout: ${blog.auth.session-timeout}
+      cookie:
+        name: SESSION
+        http-only: true
+        secure: true
+        same-site: lax
+        path: /
+
+# ---------------------------------------------------------------------------
+# 서비스 설정값 (blog.*) — constitution VII
+# ---------------------------------------------------------------------------
+blog:
+  time-zone: Asia/Seoul
+  image:
+    # 공개 버킷 직접 주소. CSP(img-src·connect-src)와 이미지 주소·정화 허용 목록이 이 값 하나를 쓴다 (12 §8, H3)
+    public-base-url: ${BLOG_IMAGE_PUBLIC_BASE_URL:http://localhost:9000/blog}
+  scheduling:
+    pool-size: 2
+  async:
+    event:
+      core-size: 2
+      max-size: 4
+      queue-capacity: 500
+    mail:
+      core-size: 1
+      max-size: 2
+      queue-capacity: 500
+
+  # 계정 (data-model §6)
+  auth:
+    session-timeout: 14d
+    login:
+      max-failures: 5
+      lock-duration: 15m
+      ip-limit-per-minute: 20
+    verify:
+      token-ttl: 24h
+      resend-interval: 1m
+      resend-daily-limit: 10
+    reset:
+      token-ttl: 30m
+      email-interval: 1m
+      email-daily-limit: 10
+      ip-limit-per-hour: 20
+    password-change:
+      max-failures: 5
+      lock-duration: 15m
+    social:
+      pending-ttl: 10m
+      photo-hosts: lh3.googleusercontent.com,avatars.githubusercontent.com
+  availability:
+    ip-limit-per-minute: 30
+  member:
+    nickname-change-interval: 30d
+    bio:
+      max-length: 200
+      max-lines: 4
+    last-active:
+      touch-interval: 1h
+  agreement:
+    terms:
+      version: ${BLOG_AGREEMENT_TERMS_VERSION:2026-10-07}
+      effective-date: ${BLOG_AGREEMENT_TERMS_EFFECTIVE_DATE:2026-10-07}
+    privacy:
+      version: ${BLOG_AGREEMENT_PRIVACY_VERSION:2026-10-07}
+      effective-date: ${BLOG_AGREEMENT_PRIVACY_EFFECTIVE_DATE:2026-10-07}
+  policy:
+    reserved-handles: classpath:policy/reserved-handles.txt
+    reserved-nicknames: classpath:policy/reserved-nicknames.txt
+    banned-words: classpath:policy/banned-words.txt
+    banned-words-exceptions: classpath:policy/banned-words-exceptions.txt
+    common-passwords: classpath:policy/common-passwords.txt

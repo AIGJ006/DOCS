@@ -1,0 +1,8 @@
+# 통합 테스트 프로필. DB·Redis 접속 정보는 Testcontainers @ServiceConnection이 넣는다(support/IntegrationTestBase).
+# 메일은 끄지 않고 support/CapturingMailSender(@Primary JavaMailSender)가 받는다.
+logging:
+  level:
+    root: WARN
+    com.team.blog: INFO
+    org.flywaydb: WARN
+    org.springframework.security: WARN

@@ -1,0 +1,10 @@
+# docker-compose(저장소 루트) 접속 정보. app 컨테이너 안에서는 DB_HOST=postgres, REDIS_HOST=redis.
+spring:
+  datasource:
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${POSTGRES_DB:blog}
+    username: ${POSTGRES_USER:blog}
+    password: ${POSTGRES_PASSWORD:}
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
