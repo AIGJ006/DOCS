@@ -45,6 +45,13 @@ public class ProbeController {
         return Map.of("ok", true);
     }
 
+    /** 탈퇴 유예 필터(T042a)가 요청 attribute에 둔 회원 정보. */
+    @GetMapping("/api/me/__access-info")
+    public Object accessInfo(jakarta.servlet.http.HttpServletRequest request) {
+        return request.getAttribute(
+                com.team.blog.account.application.MemberAccessInfo.REQUEST_ATTRIBUTE);
+    }
+
     /** /api/me 밖이지만 @LoginRequired로 로그인을 요구한다. */
     @LoginRequired
     @GetMapping("/api/__login-required-probe")
