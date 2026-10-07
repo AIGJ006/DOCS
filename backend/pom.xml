@@ -24,6 +24,10 @@
         <shedlock.version>7.10.1</shedlock.version>
         <spotless.version>3.10.3</spotless.version>
         <google-java-format.version>1.28.0</google-java-format.version>
+        <!-- 002: Markdown 렌더링·정화 (12 S-3), Redis 장애 판정 (B-5) -->
+        <commonmark.version>0.30.0</commonmark.version>
+        <owasp-html-sanitizer.version>20260924.2</owasp-html-sanitizer.version>
+        <resilience4j.version>2.4.0</resilience4j.version>
     </properties>
 
     <dependencies>
@@ -90,6 +94,48 @@
             <groupId>net.javacrumbs.shedlock</groupId>
             <artifactId>shedlock-provider-jdbc-template</artifactId>
             <version>${shedlock.version}</version>
+        </dependency>
+        <!-- 002 본문 렌더링·정화: commonmark-java + GFM 확장, OWASP Java HTML Sanitizer (12 §1 S-1·S-3) -->
+        <dependency>
+            <groupId>org.commonmark</groupId>
+            <artifactId>commonmark</artifactId>
+            <version>${commonmark.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.commonmark</groupId>
+            <artifactId>commonmark-ext-gfm-tables</artifactId>
+            <version>${commonmark.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.commonmark</groupId>
+            <artifactId>commonmark-ext-gfm-strikethrough</artifactId>
+            <version>${commonmark.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.commonmark</groupId>
+            <artifactId>commonmark-ext-task-list-items</artifactId>
+            <version>${commonmark.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.commonmark</groupId>
+            <artifactId>commonmark-ext-autolink</artifactId>
+            <version>${commonmark.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.googlecode.owasp-java-html-sanitizer</groupId>
+            <artifactId>owasp-java-html-sanitizer</artifactId>
+            <version>${owasp-html-sanitizer.version}</version>
+        </dependency>
+        <!-- 002 Redis 장애 판정 CircuitBreaker (B-5). Spring Boot 4용 모듈(resilience4j-spring-boot3는 Boot 3 전용) -->
+        <dependency>
+            <groupId>io.github.resilience4j</groupId>
+            <artifactId>resilience4j-spring-boot4</artifactId>
+            <version>${resilience4j.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>io.github.resilience4j</groupId>
+            <artifactId>resilience4j-circuitbreaker</artifactId>
+            <version>${resilience4j.version}</version>
         </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>
