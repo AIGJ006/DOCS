@@ -18,4 +18,13 @@ public class BusinessRuleException extends ApiException {
             ReasonCode reasonCode, String message, Map<String, Object> details) {
         super(reasonCode, message, List.of(), details, Map.of());
     }
+
+    /** 칸 오류({@code errors[]})를 함께 싣는 업무 규칙 위반 (예: 004 {@code INVALID_VISIBILITY}). */
+    public BusinessRuleException(
+            ReasonCode reasonCode,
+            String message,
+            List<FieldError> errors,
+            Map<String, Object> details) {
+        super(reasonCode, message, errors, details, Map.of());
+    }
 }
