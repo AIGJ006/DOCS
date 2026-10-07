@@ -213,12 +213,14 @@ stateDiagram-v2
   WITHDRAWN --> [*] : 30일 뒤 익명 처리(deleted_at, 015)
 ```
 
-| 상태 × 행동 | 로그인 | 쓰기(글·댓글·사진·좋아요·신고) | 계정 쓰기(닉네임·소개·비밀번호·기본 공개·친구) | 비밀번호 재설정 |
-|---|---|---|---|---|
-| ACTIVE + 인증 전 | ✅ | 403 `EMAIL_NOT_VERIFIED` | ✅ (사진 업로드 제외) | ✅ |
-| ACTIVE + 인증 완료 | ✅ | ✅ | ✅ | ✅ |
-| SUSPENDED | 403 `ACCOUNT_SUSPENDED` | 403 `ACCOUNT_SUSPENDED`(남은 세션) | 403 `ACCOUNT_SUSPENDED` | ✅ |
-| WITHDRAWN(유예) | 015 복구 화면 | 403 `ACCOUNT_WITHDRAWN` | 403 `ACCOUNT_WITHDRAWN` | ✅(13 §3-2) |
+| 상태 × 행동 | 로그인 | 쓰기(글·댓글·사진·좋아요·신고) `CONTENT_WRITE` | 계정 쓰기(닉네임·소개·비밀번호·기본 공개·친구) `ACCOUNT_WRITE` | 자기 글·댓글 삭제·복구·관리 목록 `CONTENT_CLEANUP` | 비밀번호 재설정 |
+|---|---|---|---|---|---|
+| ACTIVE + 인증 전 | ✅ | 403 `EMAIL_NOT_VERIFIED` | ✅ (사진 업로드 제외) | ✅ | ✅ |
+| ACTIVE + 인증 완료 | ✅ | ✅ | ✅ | ✅ | ✅ |
+| SUSPENDED | 403 `ACCOUNT_SUSPENDED` | 403 `ACCOUNT_SUSPENDED`(남은 세션) | 403 `ACCOUNT_SUSPENDED` | 403 `ACCOUNT_SUSPENDED` | ✅ |
+| WITHDRAWN(유예) | 015 복구 화면 | 403 `ACCOUNT_WITHDRAWN` | 403 `ACCOUNT_WITHDRAWN` | 403 `ACCOUNT_WITHDRAWN` | ✅(13 §3-2) |
+
+탈퇴 유예 회원은 쓰기뿐 아니라 허용 목록(`POST /api/me/restore`, `POST /api/auth/logout`, `GET /api/me`, `GET /api/auth/csrf`) 밖 모든 `/api/**` 요청이 403 `ACCOUNT_WITHDRAWN`이다(spec 004 FR-031, tasks T042a).
 
 ### 4-2. 이메일 인증 (`auth_identity.email_verified_at`)
 

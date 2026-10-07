@@ -83,16 +83,17 @@ backend/src/main/java/com/team/blog/
 ├── post/
 │   ├── web/            PostDetailController       GET /api/posts/{postId}
 │   ├── application/    PostQueryService.getDetail(), PostDetailView, PostDetailAssembler
-│   ├── domain/         PostAccessPolicy, VisibilityFilter, VisibilityRule  ← 004 소유, 이 기능은 사용만
-│   └── infra/          PostRepository (상세용 글+작성자 조회 메서드 추가)
+│   ├── domain/         PostAccessPolicy, VisibilityRule, Visibility        ← 004 소유, 이 기능은 사용만
+│   └── infra/          VisibilityFilter(004 소유, 사용만), PostQueryRepository(004 소유, 상세 행 findDetailRow 추가 — tasks T034)
 ├── account/application/ MemberQueryService.findReadableBlogOwner(handle)   ← 공개 Service 사용
-├── media/application/   ImageUrlResolver (public-base-url + key), OgImageResolver(썸네일 키 → 원본)
+├── media/application/   ImageUrlResolver (public-base-url + key), ProfileImageQuery(ProfileImageKeys: 머리말은 display(), og:image는 original() — 001 T040),
+│                        OgImageResolver(썸네일 키 → 원본)
 ├── tag/application/     TagService.findNamesInOrder(postId)                ← 008, 없으면 빈 목록
 ├── interaction/application/ LikeService.isLikedBy(), CommentService      ← 009·007
 └── shared/
     ├── web/cursor/     CursorCodec, CursorPayload, ListScope, InvalidCursorException
     ├── web/shell/      SpaShellRenderer (index.html의 <head> 자리 표시자에 메타 삽입), LinkPreviewMeta
-    ├── web/            CacheControlSupport
+    ├── web/            CacheControlPolicy, NotFoundPageRenderer (004 T019·T020 소유, 사용만)
     ├── security/       CurrentUser / Viewer (기존)
     └── error/          GlobalExceptionHandler (INVALID_CURSOR·NOT_FOUND 매핑, 기존)
 
@@ -108,7 +109,7 @@ backend/src/test/java/com/team/blog/
 └── post/               PostDetailIntegrationTest, PostDetailPermissionMatrixTest    (integration)
 
 frontend/src/
-├── pages/              HomePage, BlogPage, PostDetailPage, NotFoundPage
+├── pages/              HomePage, BlogPage, PostDetailPage (NotFoundPage는 004 T025 소유, 사용만)
 ├── components/         PostCard, PostCardGrid, LoadMoreButton, RelativeTime, AuthorChip,
 │                       AuthorCard, ReactionBar, TagList, AuthorStatusBanner
 ├── features/

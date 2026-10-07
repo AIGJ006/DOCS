@@ -6,7 +6,7 @@
 
 공통 규칙(20 EV-1·EV-3·EV-4·EV-7):
 
-- `shared/domain/event` 패키지의 불변 Java `record`. 필드는 `long` ID·enum·`Instant`만. 제목·본문 같은 글자는 넣지 않는다.
+- `shared/event` 패키지(001·004·006과 같은 공통 위치)의 불변 Java `record`. 필드는 `long` ID·enum·`Instant`만. 제목·본문 같은 글자는 넣지 않는다.
 - 발행 트랜잭션 안에서 `ApplicationEventPublisher.publishEvent`로 **발행만** 한다. 처리는 구독하는 쪽의 `@TransactionalEventListener(AFTER_COMMIT)` + `@Async("eventExecutor")`. 롤백되면 버려진다.
 - 상태가 실제로 바뀐 경우에만 한 번. 리스너 실패는 발행 응답에 영향이 없다(원칙 V). 유실 허용(EV-2).
 - 멱등 키로 저장된 응답을 다시 돌려줄 때(같은 키 재전송)는 이벤트를 다시 발행하지 않는다.
@@ -53,7 +53,7 @@
 | 작업 | 주기 | 대상·조건 | 처리 | 실패·장애 |
 |---|---|---|---|---|
 | `AutosaveFlushJob` (`autosave-flush`) | 1분(`blog.autosave.flush-interval`) | `SMEMBERS autosave:dirty` → 각 `autosave:post:{id}` | 임시글: `UPDATE post SET title, content_md, edit_version = :v, updated_at = now() WHERE id = :id AND status = 'DRAFT' AND edit_version < :v`. 발행 글: `post_draft` UPSERT `WHERE post_draft.edit_version < EXCLUDED.edit_version`, 단 `post.edit_version < :v`일 때만. **`deleted_at` 조건을 넣지 않는다**(휴지통 직전 받은 내용 보존, 13 D-3). 글이 완전 삭제돼 행이 없거나 UPSERT가 FK 위반(23503)이면 그 Redis 키·dirty 항목을 버린다. 반영 뒤 사진 연결은 003 FR-022. 반영 후 `SREM` (키가 그 사이 바뀌었으면 다음 회차에 다시). Redis 키는 지우지 않는다 | 글 하나 실패는 로그 후 다음 글. Redis 장애면 그 회차 건너뜀(자동 저장이 DB 직접 저장 중) |
-| `EmptyDraftCleanupJob` (`empty-draft-cleanup`) | 매일 03:30 Asia/Seoul (제안) | `status = 'DRAFT' AND btrim(title) = '' AND btrim(content_md) = '' AND created_at < now() - 24h AND updated_at < now() - 24h AND deleted_at IS NULL` | 후보를 `FOR UPDATE SKIP LOCKED`로 100개씩 잡고 Redis `EXISTS autosave:post:{id}`가 0인 글만 `DELETE`(CASCADE, 휴지통 없음) | Redis 장애면 그날 건너뜀(보관분 유무를 확인할 수 없음). 이벤트 없음 |
+| `EmptyDraftCleanupJob` (`empty-draft-cleanup`) | 매일 03:30 Asia/Seoul (제안) | `status = 'DRAFT' AND btrim(title, E' \t\r\n') = '' AND btrim(content_md, E' \t\r\n') = '' AND created_at < now() - 24h AND updated_at < now() - 24h AND deleted_at IS NULL` | 후보를 `FOR UPDATE SKIP LOCKED`로 100개씩 잡고 Redis `EXISTS autosave:post:{id}`가 0인 글만 `DELETE`(CASCADE, 휴지통 없음) | Redis 장애면 그날 건너뜀(보관분 유무를 확인할 수 없음). 이벤트 없음 |
 | `RerenderJob` (`post-rerender`) | 10분마다 확인 (제안) | `status = 'PUBLISHED' AND render_version < RENDER_VERSION` PK 순 100개 | 글 작성자 기준으로 `ContentRenderer` 다시 실행 → `UPDATE post SET content_html, excerpt, render_version WHERE id = :id AND edit_version = :읽은 버전 AND render_version < :cur` (`edited_at`·`edit_version`·`updated_at` 유지) | 렌더링 실패(`CONTENT_TOO_COMPLEX` 포함)는 그 글을 건너뛰고 경고 로그 + 남은 건수 지표. 0건이면 즉시 종료 |
 
 ## 4. 다른 모듈에 제공하는 공개 메서드
@@ -61,5 +61,5 @@
 | 메서드 | 호출하는 쪽 | 계약 |
 |---|---|---|
 | `AutosaveService.flushNow(postId)` | 006 휴지통 이동 직전(13 §2 "자동 저장") | 그 글의 Redis 보관분을 위 반영 규칙(`deleted_at` 조건 없음)으로 즉시 DB에 쓰고, 커밋 후 키 삭제는 호출한 쪽 트랜잭션의 커밋 후 처리에 등록 |
-| `EmptyDraftPolicy.isEmpty(title, contentMd)` | 006 빈 임시글 바로 삭제(13 D-2) | `btrim` 기준 둘 다 비었는지 (research B-9). 006과 같은 함수를 쓴다 |
+| `EmptyDraftPolicy.isEmpty(title, contentMd)` | 006 빈 임시글 바로 삭제(13 D-2) | 공백 문자 집합 `" \t\r\n"`으로 앞뒤를 지운 뒤 둘 다 비었는지(SQL은 `btrim(x, E' \t\r\n')`, research B-9). 006과 같은 함수를 쓴다 |
 | `ContentRenderer.render(contentMd, ImageContext)` | 012 등 다시 렌더링이 필요한 기능 | 발행·미리보기·다시 렌더링과 같은 결과 |

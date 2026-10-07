@@ -14,12 +14,12 @@
 
 | # | 스펙 | 원문 | 단계 | 진행 |
 |---|---|---|---|---|
-| 001 | [account-auth](specs/001-account-auth/spec.md) 로그인·블로그 주소·닉네임·프로필·친구·최근 활동 | 07, 08, 09, 11 | Tier A | plan ✓ |
-| 002 | [post-authoring](specs/002-post-authoring/spec.md) 글 작성·자동 저장·발행·본문 정화 | 04, 05, 12 | Tier A | plan ✓ |
+| 001 | [account-auth](specs/001-account-auth/spec.md) 로그인·블로그 주소·닉네임·프로필·친구·최근 활동 | 07, 08, 09, 11 | Tier A | tasks ✓ |
+| 002 | [post-authoring](specs/002-post-authoring/spec.md) 글 작성·자동 저장·발행·본문 정화 | 04, 05, 12 | Tier A | tasks ✓ |
 | 003 | [image-upload](specs/003-image-upload/spec.md) 이미지 업로드 | 04, 23 | Tier B | spec |
-| 004 | [visibility-permission](specs/004-visibility-permission/spec.md) 공개 범위·권한 매트릭스 | 06, 42 | Tier A | plan ✓ |
-| 005 | [post-reading](specs/005-post-reading/spec.md) 전체 글 목록·개인 블로그·글 상세 | 10, 40 | Tier A | plan ✓ |
-| 006 | [manage-delete](specs/006-manage-delete/spec.md) 내 글 관리·삭제·휴지통 | 41, 13 | Tier A | plan ✓ |
+| 004 | [visibility-permission](specs/004-visibility-permission/spec.md) 공개 범위·권한 매트릭스 | 06, 42 | Tier A | tasks ✓ |
+| 005 | [post-reading](specs/005-post-reading/spec.md) 전체 글 목록·개인 블로그·글 상세 | 10, 40 | Tier A | tasks ✓ |
+| 006 | [manage-delete](specs/006-manage-delete/spec.md) 내 글 관리·삭제·휴지통 | 41, 13 | Tier A | tasks ✓ |
 | 007 | [comment](specs/007-comment/spec.md) 댓글·답글 | 21 | Tier B | spec |
 | 008 | [tag](specs/008-tag/spec.md) 태그·태그별 글 목록 | 22 | Tier B | spec |
 | 009 | [like-view](specs/009-like-view/spec.md) 좋아요·조회수 | 30, 31 | Tier B | spec |
@@ -87,7 +87,7 @@ ERD(03, 51)는 각 스펙의 Implementation Notes에서 참조하며, `/speckit-
 uv tool install specify-cli --from git+https://github.com/github/spec-kit.git@v1.1.1   # 처음 한 번
 ```
 
-Tier A(001·002·004·005·006)는 plan까지 끝났습니다. 다음은 `/speckit-tasks`입니다. 기능 하나씩:
+Tier A(001·002·004·005·006)는 tasks와 analyze까지 끝났습니다(작업 504개, FR 커버리지 97.5%). 교차 분석 결과와 팀 결정이 필요한 8가지는 [specs/ANALYSIS-tier-a.md](specs/ANALYSIS-tier-a.md)에 있습니다. 구현 순서는 001 Phase 1·2(공통 기반) → 004·002 Foundational → 각 기능의 P1 스토리입니다. 나머지 기능은 하나씩:
 
 1. `/speckit-clarify` — 위 질문을 정리해 spec에 반영
 2. `/speckit-plan` — constitution 검사, data-model·API 계약 작성

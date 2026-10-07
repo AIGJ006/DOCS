@@ -135,7 +135,7 @@ backend/
 │   │   └── CommentQueryService.java            # (공개 메서드 추가) commentIdsOfPost(postId) — 신고 종료용
 │   └── shared/
 │       ├── event/                              # PostTrashed, PostRestored, PostPurged (record)
-│       ├── web/cursor/CursorCodec.java         # {"v":1,"k":[…]} Base64URL — 005와 공용
+│       ├── web/cursor/CursorCodec.java         # (001 T021 소유) {"v":1,"l":"manage:{tab}[:{filter}]","k":[…]} Base64URL — ListScope 공용
 │       └── error/                              # NotFoundException→404, INVALID_CURSOR 등 (공통)
 │   # 신고 모듈(014 소관, 패키지 이름은 014 plan이 정함)에 ReportPostPurgeStep(order 10)을 둔다 — research R11
 ├── src/main/resources/

@@ -183,7 +183,7 @@ spec.md에 `[NEEDS CLARIFICATION]`은 없다. 아래는 (A) 원문·회의에서
 
 ### B-9. 빈 임시글 판정과 정리 경쟁 — 제안(팀 확인 필요)
 
-- **Decision**: "빈" = `btrim(title) = '' AND btrim(content_md) = ''`(발행 검증의 "공백뿐이면 비었음"과 같은 기준). 배치는 후보를 `FOR UPDATE SKIP LOCKED`로 잡고 각 글의 Redis 키가 없을 때만 삭제한다. 13 D-2(사용자가 직접 지우는 빈 임시글)와 **같은 판정 함수(`EmptyDraftPolicy.isEmpty`, btrim 기준)를 006과 공유**한다(006 plan과 합의).
+- **Decision**: "빈" = 공백 문자 집합 `" \t\r\n"`으로 앞뒤를 지운 제목·본문이 둘 다 빈 문자열(Java `EmptyDraftPolicy.WHITESPACE`, SQL `btrim(title, E' \t\r\n') = '' AND btrim(content_md, E' \t\r\n') = ''` — 인자 없는 `btrim`은 공백(U+0020)만 지우므로 쓰지 않는다. 발행 검증의 "공백뿐이면 비었음"과 같은 기준). 배치는 후보를 `FOR UPDATE SKIP LOCKED`로 잡고 각 글의 Redis 키가 없을 때만 삭제한다. 13 D-2(사용자가 직접 지우는 빈 임시글)와 **같은 판정 함수(`EmptyDraftPolicy.isEmpty`, `" \t\r\n"` 기준)를 006과 공유**한다(006 plan과 합의).
 - **Rationale**: 04 §2-5·13 D-2는 "비어 있으면"만 적었다.
 - **Alternatives considered**: `= ''`만(공백만 친 빈 글이 남음).
 
@@ -223,7 +223,7 @@ spec.md에 `[NEEDS CLARIFICATION]`은 없다. 아래는 (A) 원문·회의에서
 
 | 대상 | 이 기능이 기대하는 것 |
 |---|---|
-| 001 account-auth | 세션·CSRF·`EMAIL_NOT_VERIFIED`·`ACCOUNT_WITHDRAWN` 판정, `MemberQueryService.defaultVisibility`, 로그아웃 시 화면이 `clearLocalDrafts(memberId)` 호출 |
+| 001 account-auth | 세션·CSRF(`XSRF-TOKEN` 쿠키 + `X-XSRF-TOKEN` 헤더)·`AccountStatusGuard.requireActive(memberId, CONTENT_WRITE)`(`EMAIL_NOT_VERIFIED`·`ACCOUNT_SUSPENDED`·`ACCOUNT_WITHDRAWN`) 판정, `MemberQueryService.defaultVisibility`, 로그아웃 시 화면이 `clearMemberDrafts(memberId)` 호출(001 T072, 002 T083) |
 | 003 image-upload | `ImageReferenceResolver` 구현(`keyOf`, 작성자 사진 판별, 썸네일 키), `ImageService.syncPostImages`(발행·수동 저장·DB 반영 때, 003 FR-022), `local:` 임시 표시 규칙 |
 | 004 visibility-permission | `Visibility` 값·`PUT /api/posts/{postId}/visibility`(004가 정한 경로, 공개 범위만 바꿀 때 `first_public_at` 규칙 공유) |
 | 005 post-reading | 상세가 `content_html`·`edited_at`("수정됨")을 그대로 출력, 임시글 404 |

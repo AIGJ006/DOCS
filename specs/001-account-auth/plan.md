@@ -93,27 +93,30 @@ backend/src/main/java/com/team/blog/
 │   │                   LoginService(성공·실패 처리, 정지 확인·만료 해제, 재동의 판정, previousLoginAt),
 │   │                   SocialLoginService(PendingSocialSignup), ProfileService, AccountSettingsService,
 │   │                   AgreementService, FriendshipService, LastActiveService,
-│   │                   AccountStatusGuard, SessionTerminator, MemberQueryService,      ← 다른 모듈에 공개
+│   │                   AccountStatusGuardService(포트 shared/security/AccountStatusGuard·ActionKind),
+│   │                   SessionTerminator, MemberQueryService,                          ← 다른 모듈에 공개
 │   │                   FriendshipQueryService, LastActiveQueryService, SuspensionService ← 다른 모듈에 공개
 │   │                   policy/ HandlePolicy, HandleSuggester, NicknamePolicy, BioPolicy, PasswordPolicy,
 │   │                           BannedWordFilter, ReservedWords
 │   │                   mail/   AccountMailService(@Async, 커밋 후), MailTemplates
-│   ├── domain/         Member, MemberStatus, Role, Visibility(PUBLIC·PRIVATE), AuthIdentity, Provider,
+│   ├── domain/         Member(default_visibility는 String, 004 VisibilityRegistry로 검증), MemberStatus, Role, AuthIdentity, Provider,
 │   │                   MemberAgreement, AgreementType, MemberSuspension, Friendship, FriendshipStatus,
 │   │                   LastActiveBucket, PreviousLogin
 │   └── infra/          MemberRepository, AuthIdentityRepository, MemberAgreementRepository,
 │                       MemberSuspensionRepository, FriendshipRepository(ON CONFLICT 네이티브 쿼리),
-│                       FriendListQueryRepository(회원·사진 JOIN 1번),
-│                       security/ SecurityConfig, JsonLoginSuccessHandler, JsonLoginFailureHandler,
+│                       FriendListQueryRepository(회원 JOIN 1번, 사진은 media ProfileImageQuery 1번),
+│                       security/ AccountSecurityCustomizer(shared/security SecurityConfig에 붙음), JsonLoginSuccessHandler, JsonLoginFailureHandler,
 │                                 LoginRateLimitFilter, MemberUserDetailsService, OAuth2MemberUserService,
 │                                 OidcMemberUserService, OAuth2LoginSuccessHandler, SafeRedirectResolver,
-│                                 ReagreementGateFilter, LastActiveTouchFilter, ResilientSessionRepository
-│                       redis/    AuthTokenStore, RateLimiter, LoginFailureCounter, ActiveTouchThrottle
+│                                 ReagreementGateFilter, WithdrawnAccountGateFilter, LastActiveTouchFilter
+│                       redis/    AuthTokenStore, LoginFailureCounter, ActiveTouchThrottle (RateLimiter는 shared/infra/ratelimit)
 ├── media/application/  ProfileImageService.attach(memberId, imageId)·detach(memberId),
-│                       ImageUrlResolver                                  ← 003 소유, 이 기능은 호출만
+│                       ImageUrlResolver, ProfileImageQuery(ProfileImageKeys 원본·썸네일) ← 003 소유, 이 기능은 호출만
 └── shared/
     ├── error/          ErrorResponse{code,message,errors,details}, GlobalExceptionHandler (기존 공용)
-    ├── security/       CurrentUser (세션의 회원 번호), @LoginRequired (기존 공용)
+    ├── security/       CurrentUser (세션의 회원 번호), @LoginRequired, SecurityConfig·SecurityFilterChainCustomizer,
+    │                   AccountStatusGuard·ActionKind(CONTENT_WRITE·ACCOUNT_WRITE·CONTENT_CLEANUP), session/ResilientSessionRepository
+    ├── infra/          redis/RedisGuard, ratelimit/RateLimiter
     ├── web/            ClientIp (RemoteIpValve 결과 사용), RetryAfter
     └── event/          FriendRequested, FriendAccepted (record)
 
@@ -145,11 +148,12 @@ frontend/src/
 │                       ProfileImageCropper, FriendButton, LastActiveBadge
 ├── features/
 │   ├── auth/           useSession, logout(→ 002 clearMemberDrafts 호출 후 홈 이동), safeRedirect,
-│   │                   csrf(XSRF-TOKEN 쿠키 → X-XSRF-TOKEN 헤더)
+│   │                   (CSRF: XSRF-TOKEN 쿠키 → X-XSRF-TOKEN 헤더는 api/client.ts가 붙임)
 │   ├── handle/         prefillHandleFromEmail (08 §3 ①~⑧, 서버와 같은 예시로 테스트)
 │   ├── profile/        socialPhotoImport (5초 제한, 가운데 정사각형 256×256 WebP → 003 업로드)
 │   └── friends/        friend 상태·목록 훅
-└── api/                auth.ts, me.ts, friends.ts, availability.ts
+└── api/                client.ts(공통 클라이언트, 이 기능 T042 소유 · 004 T024가 404 분기 추가),
+                        auth.ts, me.ts, friends.ts, availability.ts
 
 docker-compose.yml       app + PostgreSQL + Redis + MinIO (+ 개발용 mailpit 서비스, 02 §2 "개발: Mailpit(Docker)")
 ```

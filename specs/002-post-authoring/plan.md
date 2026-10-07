@@ -120,17 +120,17 @@ backend/
 │       │   ├── LinkAttributeProvider.java       # 외부 링크 target·rel, img loading·decoding
 │       │   ├── SanitizerPolicy.java             # 12 §4 PolicyFactory
 │       │   └── ExcerptExtractor.java            # 요약 200자
-│       ├── infra/redis/RedisGuard.java          # CircuitBreaker 래퍼 (Redis 장애 판정)
-│       ├── infra/ratelimit/RateLimiter.java     # Redis 고정 창 카운터 (장애 시 통과)
-│       ├── web/SecurityHeadersConfig.java       # CSP·nosniff·Referrer-Policy (001의 SecurityFilterChain에 연결)
-│       ├── web/error/                           # ErrorResponse{code,message,errors,details}, GlobalExceptionHandler (공통)
-│       └── domain/event/PostPublished.java, PostEdited.java, PostWentPublic.java
+│       ├── infra/redis/RedisGuard.java          # (001 T023 소유) Redis 장애 판정 — 002는 CircuitBreaker·OOM 처리만 더함(T032)
+│       ├── infra/ratelimit/RateLimiter.java     # (001 T023 소유) Redis 고정 창 카운터 (장애 시 통과) — 002는 사용만
+│       ├── web/SecurityHeadersFilter.java       # (001 T029 소유) CSP·nosniff·Referrer-Policy — 002는 검증 테스트만
+│       ├── error/                               # ErrorResponse{code,message,errors,details}, GlobalExceptionHandler (001 T018 소유, 공통)
+│       └── event/PostPublished.java, PostEdited.java, PostWentPublic.java(004와 공유)
 ├── src/main/resources/
 │   ├── application.yml                          # blog.autosave.*, blog.post.*, blog.markdown.*, blog.image.*, blog.publish.*
 │   ├── redis/autosave-save.lua, redis/autosave-release.lua
 │   └── db/migration/
 │       ├── V1__common_schema.sql                # 51 SQL 블록 그대로 (공통 기준선, 001과 공유)
-│       └── V{n}__shedlock.sql                   # 추가 제안: ShedLock 실행 잠금 테이블
+│       └── V2__shedlock.sql                     # (001 T012 소유) ShedLock 실행 잠금 테이블
 └── src/test/java/com/team/blog/
     ├── post/unit/                               # TitleNormalizer, PublishValidator, Post.publish 시각 규칙
     ├── post/integration/                        # 권한 매트릭스, 자동 저장·충돌, 발행·재발행, 멱등 20건, Redis 장애, 배치

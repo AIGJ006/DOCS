@@ -54,7 +54,7 @@
 
 - **Decision**: 판정 순서는 42 §3을 따른다. 처음 걸린 단계의 응답을 준다.
   1. 로그인 확인 → 비회원은 401 `LOGIN_REQUIRED`
-  2. 계정 상태 확인 → 탈퇴 유예 회원은 403 `ACCOUNT_WITHDRAWN`. **이메일 인증 전 회원은 삭제·복구·영구 삭제·관리 목록을 허용한다**(42 §5-2·§10). 정지 회원은 로그인할 수 없으므로 이 단계까지 오지 않는다(P-7)
+  2. 계정 상태 확인 → 001 `AccountStatusGuard.requireActive(me, ActionKind.CONTENT_CLEANUP)`(001 T037). 탈퇴 유예 회원은 403 `ACCOUNT_WITHDRAWN`. **이메일 인증 전 회원은 삭제·복구·영구 삭제·관리 목록을 허용한다**(42 §5-2·§10). 정지 회원은 새로 로그인할 수 없지만(P-7), 정지 직후 남은 세션의 요청은 403 `ACCOUNT_SUSPENDED`(H7)
   3. 볼 수 있는가 + 4. 권한이 있는가 → `author_id = :me` 조회 한 번으로 판단하며, 없으면 404
   4. 업무 규칙 → 복구·영구 삭제인데 휴지통 글이 아니면 404(13 §2-4, 42 §5-2 "휴지통 글만, 아니면 404")
 - **Rationale**: README 결정 표(2026-10-07)에 "판정 순서는 로그인 → 계정 상태 → 볼 수 있나 → 자기 글 → 요청 횟수(42 §3)"로 확정되어 있다. 이 기능에는 요청 횟수 제한이 없다.
@@ -90,9 +90,9 @@
 
 - **Decision**: `status = 'DRAFT'`이고 R7 반영 **뒤의** 값이 다음을 만족하면 휴지통을 거치지 않고 `PostPurgeService`로 바로 완전 삭제한다.
   ```sql
-  length(btrim(title)) = 0 AND length(btrim(content_md)) = 0
+  length(btrim(title, E' \t\r\n')) = 0 AND length(btrim(content_md, E' \t\r\n')) = 0
   ```
-  응답은 `{ purged: true }`이고 이벤트는 없다. 발행 글은 이 판정을 하지 않는다. 판정식(공백만 있으면 빈 것으로 봄)은 제안(팀 확인 필요)이다. spec Assumptions에 따라 002의 빈 임시글 정리 배치(04 §2-5)와 **같은 함수**(`Post.isEmptyDraft()`)를 쓰도록 002 plan과 맞춘다.
+  응답은 `{ purged: true }`이고 이벤트는 없다. 발행 글은 이 판정을 하지 않는다. 판정식(공백만 있으면 빈 것으로 봄)은 제안(팀 확인 필요)이다. spec Assumptions에 따라 002의 빈 임시글 정리 배치(04 §2-5)와 **같은 함수**(002 `EmptyDraftPolicy.isEmpty(title, contentMd)`, 002 T020 — 공백 문자 집합 `" \t\r\n"`)를 쓴다. PostgreSQL 인자 없는 `btrim`은 U+0020만 지우므로 SQL은 `btrim(x, E' \t\r\n')`로 쓴다.
 - **Rationale**: 13 D-2, FR-020, 20 §3-1(아무에게도 보인 적 없는 글이라 이벤트 없음). 반영 뒤에 판정해야, 다른 탭에서 방금 입력한 내용이 있는 글을 빈 글로 잘못 지우지 않는다.
 - **Alternatives considered**: 원문 그대로 빈 문자열(`''`)만 빈 것으로 보는 방식. 공백만 있는 글이 휴지통에 쌓인다. 04 배치와 기준이 다르면 결과가 엇갈린다.
 
@@ -214,11 +214,11 @@
 - **Decision**:
   - 한 번에 20개를 보낸다. 서버는 21개를 조회해 다음 페이지가 있는지 판단하고, 클라이언트가 보낸 `size`는 무시한다(41 M-6·§5).
   - 커서는 10 §4-2·02 §5-1(O8) 형식이다. JSON을 Base64URL(패딩 없음)로 감싼 불투명 값이고, 시각은 epoch **마이크로초**다.
-    - 임시글·발행 글: `{"v":1,"k":[updatedAtµs, id],"t":"drafts|published","f":"all|public|private"}`
-    - 휴지통: `{"v":1,"k":[deletedAtµs, id],"t":"trash"}`
-  - 다음은 모두 400 `INVALID_CURSOR`다: 풀리지 않는 값, 모르는 `v`, 필드 누락·타입 오류, `t`·`f`가 요청의 탭·필터와 다른 커서.
+    - 임시글·발행 글: `{"v":1,"l":"manage:drafts:all|manage:published:all|manage:published:public|manage:published:private","k":[updatedAtµs, id]}`
+    - 휴지통: `{"v":1,"l":"manage:trash","k":[deletedAtµs, id]}`
+    - 목록 구분은 001 공용 `CursorCodec`+`ListScope`(001 T021)의 `l` 필드 하나로 한다(`l = manage:{tab}[:{filter}]`). 처음 제안한 `t`·`f` 필드는 쓰지 않는다(Tier A 교차 분석 2026-10-07).
+  - 다음은 모두 400 `INVALID_CURSOR`다: 풀리지 않는 값, 모르는 `v`, 필드 누락·타입 오류, `l`이 요청의 탭·필터와 다른 커서.
   - 키 비교는 `(updated_at, id) < (:t, :id)` 행 비교를 쓴다.
-  - `t`·`f` 필드 이름은 제안(팀 확인 필요)이다.
 - **Rationale**: 10 §4-2에 따르면 기능에 필요한 값은 같은 JSON에 필드를 더한다. 다른 목록의 커서는 `INVALID_CURSOR`로 거부한다. 탭이나 필터를 바꾼 뒤 옛 커서가 섞이지 않게 커서 안에 탭·필터를 넣는다.
 - **Alternatives considered**: 오프셋 페이지. 자동 저장으로 `updated_at`이 바뀌면 중복·누락이 생겨 기각한다(41 §5).
 

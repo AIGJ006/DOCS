@@ -142,7 +142,7 @@ stateDiagram-v2
 | 전이 | 사전 조건 (잠금 후 판정) | 변경 | 사후 조건 | 실패 |
 |---|---|---|---|---|
 | 휴지통으로 | 내 글, `deleted_at IS NULL`, 빈 임시글 아님 | 자동 저장 반영(있으면) → `deleted_at = now()` | 모든 공개 목록·상세에서 제외, 반응·작업본·태그·사진 연결 보존 | 남의 글·없는 글 404 |
-| 빈 임시글 즉시 삭제 | 내 글, `status = DRAFT`, 반영 후 `btrim(title) = '' AND btrim(content_md) = ''` | `PostPurgeService.purge` (이벤트 없음) | 행 없음 | 〃 |
+| 빈 임시글 즉시 삭제 | 내 글, `status = DRAFT`, 반영 후 `btrim(title, E' \t\r\n') = '' AND btrim(content_md, E' \t\r\n') = ''`(002 `EmptyDraftPolicy`와 같은 문자 집합) | `PostPurgeService.purge` (이벤트 없음) | 행 없음 | 〃 |
 | 다시 삭제 | 내 글, `deleted_at IS NOT NULL` | 없음 | `purgeAt` 그대로 | 〃 |
 | 복구 | 내 글, `deleted_at IS NOT NULL` | `deleted_at = NULL` | 원래 탭·원래 위치. 숨김 유지 | 휴지통 아님·남의 글·없는 글 404 |
 | 영구 삭제 | 내 글, `deleted_at IS NOT NULL` | `PostPurgeService.purge` | 행·연관 행 없음, 신고 사건 종료, 사진 정리 대상 | 〃 |

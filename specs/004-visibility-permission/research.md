@@ -128,10 +128,10 @@
 
 ### R-23 계정 상태(②) 검사 위치와 데이터 출처 — 제안(팀 확인 필요)
 
-- **Decision**: 세션에는 `memberId`만 둔다. 인증된 요청마다 `ViewerResolver`가 PK 조회 한 번으로 `Viewer(id, role, status, emailVerified)`를 만든다(`member` + `auth_identity.email_verified_at`, account 모듈의 공개 Service를 통해). ② 검사는 `shared/security`의 `AccountStateFilter`(전역)와 `@RequiresVerifiedEmail` 애너테이션이 맡는다.
-  - `WITHDRAWN`이면 허용 목록(`POST /api/me/restore`, `POST /api/logout`, `GET /api/me`의 상태 확인, CSRF 토큰 조회)을 뺀 모든 `/api/**` 요청에 403 `ACCOUNT_WITHDRAWN`.
-  - `SUSPENDED`이면 상태를 바꾸는 요청(POST·PUT·PATCH·DELETE)에 403 `ACCOUNT_SUSPENDED`. 세션 삭제와 경쟁해 남은 세션 대비, H7.
-  - 이메일 인증 전이면 FR-032의 차단 대상 행동에 403 `EMAIL_NOT_VERIFIED`.
+- **Decision**: 세션에는 `memberId`만 둔다. 인증된 요청마다 `ViewerResolver`가 PK 조회 한 번으로 `Viewer(id, role, status, emailVerified)`를 만든다(`member` + `auth_identity.email_verified_at`, account 모듈의 공개 Service를 통해). ② 검사는 001이 소유한 두 장치가 맡는다(Tier A 교차 분석 2026-10-07로 정합화): 쓰기 Service 첫머리의 `AccountStatusGuard.requireActive(memberId, ActionKind)`(001 T037, `shared/security` 포트)와 탈퇴 유예 전용 필터 `WithdrawnAccountGateFilter`(001 T042a). 이 기능은 새 필터·애너테이션을 만들지 않는다.
+  - `WITHDRAWN`이면 허용 목록(`POST /api/me/restore`, `POST /api/auth/logout`, `GET /api/me`의 상태 확인, `GET /api/auth/csrf`)을 뺀 모든 `/api/**` 요청에 403 `ACCOUNT_WITHDRAWN`(FR-031, 001 T042a 필터).
+  - `SUSPENDED`이면 쓰기 요청에 403 `ACCOUNT_SUSPENDED`(각 쓰기 Service가 `AccountStatusGuard`를 호출, `ActionKind` 종류와 무관). 세션 삭제와 경쟁해 남은 세션 대비, H7.
+  - 이메일 인증 전이면 FR-032의 차단 대상 행동(`ActionKind.CONTENT_WRITE`)에 403 `EMAIL_NOT_VERIFIED`. `ACCOUNT_WRITE`·`CONTENT_CLEANUP`(자기 글 삭제·복구·관리 목록)은 통과.
 - **Rationale**: 상태를 세션에 복사해 두면 이메일 인증·복구·정지 때 세션을 갱신해야 하고 누락 위험이 있다. PK 조회 하나는 300ms 기준에 영향이 없다. 정지·탈퇴 때는 Redis 세션 삭제(R-08)가 1차 방어이고, 이 필터가 2차 방어다.
 - **Alternatives considered**: 세션 속성에 상태를 캐시(갱신 누락 위험), 컨트롤러마다 수동 검사(순서 불일치 위험, P-2 위반).
 

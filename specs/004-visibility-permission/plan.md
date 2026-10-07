@@ -17,7 +17,7 @@
 - **공개 범위 변경**: `PUT /api/posts/{postId}/visibility`(O8 규약, R-20). 행 잠금 → `first_public_at`은 처음 공개될 때만 기록 → 커밋 후 `PostVisibilityChanged`(+ 처음 공개면 `PostWentPublic`).
 - **권한 공통 장치**(`shared/security`·`shared/error`):
   - 세션에서만 얻는 `Viewer`
-  - 계정 상태 필터(403 `EMAIL_NOT_VERIFIED`·`ACCOUNT_WITHDRAWN`·`ACCOUNT_SUSPENDED`)
+  - 계정 상태 검사(403 `EMAIL_NOT_VERIFIED`·`ACCOUNT_WITHDRAWN`·`ACCOUNT_SUSPENDED`): 쓰기는 001 `AccountStatusGuard.requireActive(memberId, ActionKind)`(001 T037), 탈퇴 유예 회원의 허용 목록 외 모든 요청은 001 `WithdrawnAccountGateFilter`(001 T042a)
   - 하나로 통일한 404 `NOT_FOUND`와 공통 404 화면(OG 문구 + `noindex` + `no-store`)
   - `/admin/**`·`/api/admin/**` 보호(비회원 401, 일반 회원 404)
   - 회원별 세션 일괄 삭제
@@ -89,7 +89,7 @@
 | 원칙 | 판정 | 설계 산출물에서 확인한 내용 |
 |---|---|---|
 | I | **PASS** | data-model.md §6 "개인 확장/추가 제안: 없음". 51에 없는 객체를 만들지 않는다 |
-| II | **PASS (Complexity Tracking 1건)** | 다른 모듈의 Repository를 호출하지 않는다. `Viewer` 구성은 account 모듈의 공개 Service(`MemberAccessQuery`)를 거친다. 읽기 쿼리의 `member` JOIN만 예외로 기록했다 |
+| II | **PASS (Complexity Tracking 1건)** | 다른 모듈의 Repository를 호출하지 않는다. `Viewer` 구성은 account 모듈의 공개 Service(001 `MemberQueryService.findAccessInfo`, 001 T039)를 거친다. 읽기 쿼리의 `member` JOIN만 예외로 기록했다 |
 | III | **PASS** | openapi.yaml: 모든 거부 응답이 `LoginRequired`/`AccountStateDenied`/`NotFound` 3종으로 정리되어 있다. 요청 DTO에 작성자 번호가 없다. 404 헤더·본문이 같다 |
 | IV | **PASS** | 계약에 HTML을 입력받는 필드가 없다 |
 | V | **PASS** | events.md: 리스너 실패 격리, 구독하는 이벤트 없음, 세션 삭제는 이벤트가 아닌 직접 호출 |
@@ -145,17 +145,17 @@ backend/
     │   │   │       └── VisibilityFilter.java               # 공용 노출 조건 (06 R-2·R-2a·R-2b)
     │   │   ├── account/
     │   │   │   └── application/
-    │   │   │       ├── MemberAccessQuery.java              # Viewer 구성용 공개 조회 (id → role, status, emailVerified)
-    │   │   │       └── MemberSessionService.java           # 회원별 세션 일괄 삭제 (정지·탈퇴·비밀번호, 001/014/015가 호출)
+    │   │   │       ├── MemberQueryService.java             # (001 T039 소유) findAccessInfo: id → role, status, emailVerified
+    │   │   │       └── SessionTerminator.java              # (001 T038 소유) 회원별 세션 일괄 삭제 (정지·탈퇴·비밀번호, 001/014/015가 호출)
     │   │   └── shared/
     │   │       ├── security/
-    │   │       │   ├── SecurityConfig.java                 # /admin/**, /api/admin/** authenticated, CSRF, 세션
+    │   │       │   ├── SecurityConfig.java                 # (001 T026 소유) 004는 SecurityFilterChainCustomizer로 /admin/**, /api/admin/** 보호를 붙임
     │   │       │   ├── Viewer.java, CurrentViewerResolver.java
-    │   │       │   ├── AccountStateFilter.java             # ② 탈퇴 유예·정지 (R-23)
-    │   │       │   ├── RequiresVerifiedEmail.java          # ② 인증 전 차단 애너테이션 + 인터셉터
+    │   │       │   ├── AccountStatusGuard.java, ActionKind.java # (001 T037 소유) ② requireActive(memberId, ActionKind) — 인증 전·정지·탈퇴 유예 (R-23)
+    │   │       │   │                                       # 탈퇴 유예의 허용 목록 외 요청 403은 001 account/infra/security/WithdrawnAccountGateFilter (001 T042a)
     │   │       │   ├── LoginRequiredEntryPoint.java        # 401 LOGIN_REQUIRED
     │   │       │   ├── AdminPathAccessDeniedHandler.java   # 관리자 경로 일반 회원 → 404
-    │   │       │   └── ResilientSessionRepository.java     # Redis 장애 시 비로그인 (R-24)
+    │   │       │   └── session/ResilientSessionRepository.java # (001 T028 소유) Redis 장애 시 비로그인 (R-24)
     │   │       ├── error/
     │   │       │   ├── ReasonCode.java, ErrorResponse.java
     │   │       │   ├── NotFoundException.java, AccountStateException.java, BusinessRuleException.java
@@ -193,7 +193,7 @@ backend/
 frontend/
 └── src/
     ├── api/
-    │   ├── client.ts                                       # CSRF 헤더, 오류 본문 파싱 (code별 분기)
+    │   ├── client.ts                                       # (001 T042 소유: CSRF 헤더, 오류 본문 파싱) 004 T024는 404 onNotFound 분기만 추가
     │   └── posts.ts                                        # setVisibility(postId, visibility)
     ├── features/
     │   ├── visibility/
@@ -216,7 +216,7 @@ docker-compose.yml                                          # app + postgres + r
 - 다른 기능(005 상세·목록, 006 내 글 관리, 007 댓글, 008 태그, 009 좋아요, 010 피드, 012 검색·sitemap, 014 관리자)은 다음 공개 API만 호출한다.
   - `PostReadService.requireReadable(postId, viewer)`(③, 실패 시 404)
   - `VisibilityFilter.forViewer(...)`(목록)
-  - `@RequiresVerifiedEmail`·`Viewer`(①②)
+  - `Viewer`(①)와 001 `AccountStatusGuard.requireActive(memberId, ActionKind)`(②)
 - 이 기능은 다른 기능의 컨트롤러를 만들지 않는다.
 
 ## Complexity Tracking

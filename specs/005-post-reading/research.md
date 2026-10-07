@@ -160,7 +160,7 @@ spec 005 자체에는 `[NEEDS CLARIFICATION]`과 `## Clarifications` 절이 없�
 - **Alternatives considered**: 메타 없이 404 코드만 — 미리보기가 비어 공유 품질 저하, 기각.
 
 ### R-28 조회 기록 스크립트 위치 — 제안(팀 확인 필요)
-- **Decision**: 31 §4-1의 로직(1초 가시성 타이머, `visibilitychange`, `keepalive`, 실패 무시)을 React 번들 안 `useViewBeacon` 훅으로 구현한다. 번들 자체가 우리 서버가 주는 별도 파일이므로 FR-037(인라인 스크립트 없음)을 만족한다. 작성자 본인 상세(`viewer.isAuthor`)와 404 화면에서는 훅을 실행하지 않는다. CSRF 토큰은 001이 정하는 방식(M17)으로 가져와 `X-CSRF-TOKEN` 헤더에 넣는다. GIF 재생(`/js/gif-play.js`, 003 FR-039)도 같은 원칙으로 번들 모듈 또는 같은 출처 파일로 넣는다.
+- **Decision**: 31 §4-1의 로직(1초 가시성 타이머, `visibilitychange`, `keepalive`, 실패 무시)을 React 번들 안 `useViewBeacon` 훅으로 구현한다. 번들 자체가 우리 서버가 주는 별도 파일이므로 FR-037(인라인 스크립트 없음)을 만족한다. 작성자 본인 상세(`viewer.isAuthor`)와 404 화면에서는 훅을 실행하지 않는다. CSRF 토큰은 001이 정하는 방식(M17, 001 R-05: `XSRF-TOKEN` 쿠키)으로 가져와 `X-XSRF-TOKEN` 헤더에 넣는다(001 `api/client.ts`가 붙임). GIF 재생(`/js/gif-play.js`, 003 FR-039)도 같은 원칙으로 번들 모듈 또는 같은 출처 파일로 넣는다.
 - **Rationale**: 40 §4의 `/js/post-view.js` + `data-` 속성은 서버 렌더링 페이지를 전제로 했다. SPA에서는 화면 안 이동으로 여러 글을 볼 때 정적 스크립트가 다시 실행되지 않는다.
 - **Alternatives considered**: `/js/post-view.js`를 첫 응답 HTML에 넣기 — SPA 내부 이동 시 기록 누락, 기각.
 
@@ -199,5 +199,5 @@ spec 005 자체에는 `[NEEDS CLARIFICATION]`과 `## Clarifications` 절이 없�
 - **Alternatives considered**: 화면에서 관리자 제외 — 판정이 두 곳으로 갈라져 기각(40 R-8 "제외 판정은 기록 API 한곳").
 
 ### R-35 CSRF 토큰 전달 방식 — 미결(M17, constitution Follow-up) — 기본안
-- **Decision (기본안)**: 001 plan이 정하는 방식을 그대로 쓴다. 조회 기록 비콘은 그 토큰을 `X-CSRF-TOKEN` 헤더로 보낸다(31 §4-1). 이 기능의 GET API는 CSRF 토큰이 필요 없다.
+- **Decision (기본안)**: 001 plan이 정하는 방식을 그대로 쓴다. 001 기본안은 `XSRF-TOKEN` 쿠키 + `X-XSRF-TOKEN` 헤더(001 R-05)이며, 조회 기록 비콘은 그 토큰을 `X-XSRF-TOKEN` 헤더로 보낸다(31 §4-1의 헤더 이름 대신 001 기준, Tier A 교차 분석 2026-10-07). 이 기능의 GET API는 CSRF 토큰이 필요 없다.
 - **Rationale**: 02 §5 "토큰 저장 방식은 M17에서 확정".

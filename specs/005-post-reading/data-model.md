@@ -181,7 +181,7 @@ ORDER BY p.first_public_at DESC, p.id DESC LIMIT :pageSize + 1
 
 ### PostDetail — **추가 제안**(research R-22, 필드는 40 §2 기준)
 - 공통: `id, canonicalPath, status, visibility, title, contentHtml, hasCodeBlock, displayedAt, firstPublicAt, publishedAt, editedAt, tags[], likeCount, viewCount, commentCount, author{handle, nickname, profileImageUrl, bio}`
-- 보는 사람 기준: `viewer{isAuthor, loggedIn, likedByMe, followingAuthor}`
+- 보는 사람 기준: `viewer{isAuthor, loggedIn, likedByMe, followingAuthor, emailVerified, isAdmin}`(`emailVerified`·`isAdmin`은 004 R-29·004 T060 `viewerFlags`)
 - 작성자에게만: `authorView{hasDraft, draftSavedAt, hidden, hiddenReason}`
 - 작성자의 임시글: `status: DRAFT`, `editorPath`만(본문 없음)
 

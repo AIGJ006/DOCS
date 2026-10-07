@@ -180,7 +180,7 @@ spec.md에는 `[NEEDS CLARIFICATION]`이 남아 있지 않다(2026-10-07 Clarifi
 ### R-22. 계정 상태 검사 위치 — 확정 + 제안
 
 - **Decision (확정)**: 판정 순서 로그인(401) → 계정 상태(403) → 볼 수 있나(404) → 행동 권한(404) → 업무 규칙(400/409)(42 §3, README "정해진 것"). 인증 전 회원의 글쓰기(새 글·저장·발행·공개 범위 변경)·댓글·사진 업로드·좋아요·신고는 403 `EMAIL_NOT_VERIFIED`, 정지는 403 `ACCOUNT_SUSPENDED`(H7), 탈퇴 유예는 403 `ACCOUNT_WITHDRAWN`(42 P-12).
-- **Decision (제안, 팀 확인 필요)**: `AccountStatusGuard.requireActive(memberId, ActionKind)`를 account가 공개하고, 각 모듈 Service가 쓰기 처리 첫머리에서 호출한다. Guard는 세션 값이 아니라 **DB를 매번 읽는다**(`member.status` + `auth_identity.email_verified_at`, PK·UNIQUE 조회 1번). 다른 브라우저에서 인증을 마치거나 정지가 걸린 즉시 반영되게 하기 위해서다. `ActionKind`는 `CONTENT_WRITE`(인증 필요)와 `ACCOUNT_WRITE`(인증 불필요: 닉네임·소개, 비밀번호 변경, 기본 공개 범위, 탈퇴, 친구 요청)로 나눈다(FR-007, 42 §9).
+- **Decision (제안, 팀 확인 필요)**: `AccountStatusGuard.requireActive(memberId, ActionKind)`를 account가 공개하고, 각 모듈 Service가 쓰기 처리 첫머리에서 호출한다. Guard는 세션 값이 아니라 **DB를 매번 읽는다**(`member.status` + `auth_identity.email_verified_at`, PK·UNIQUE 조회 1번). 다른 브라우저에서 인증을 마치거나 정지가 걸린 즉시 반영되게 하기 위해서다. `ActionKind`는 `CONTENT_WRITE`(인증 필요)와 `ACCOUNT_WRITE`(인증 불필요: 닉네임·소개, 비밀번호 변경, 기본 공개 범위, 탈퇴, 친구 요청), `CONTENT_CLEANUP`(인증 불필요: 자기 글·댓글 삭제·복구·영구 삭제, 내 글 관리 목록 — 006·007)으로 나눈다(FR-007, 42 §9). 세 종류 모두 정지·탈퇴 유예는 거부한다. Guard는 쓰기에서만 불리므로, 탈퇴 유예 회원의 허용 목록(`POST /api/me/restore`, `POST /api/auth/logout`, `GET /api/me`, `GET /api/auth/csrf`) 외 모든 `/api/**` 요청 403(spec 004 FR-031)은 별도 필터 `WithdrawnAccountGateFilter`(tasks T042a, 004 research R-23)가 맡는다(Tier A 교차 분석 2026-10-07).
 - **Rationale**: 세션에만 상태를 두면 "남은 세션의 쓰기"(H7)를 막지 못한다.
 - **Alternatives considered**: 세션 캐시 + 이벤트로 갱신 — 이벤트 유실(20 EV-2) 시 정지가 새어 나간다.
 
