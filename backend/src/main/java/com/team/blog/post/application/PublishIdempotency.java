@@ -38,10 +38,15 @@ public class PublishIdempotency {
     private final RedisIdempotencyStore store;
     private final JsonMapper json;
     private final PostAuthoringProperties properties;
+    private final PostAuthoringMetrics metrics;
 
     public PublishIdempotency(
-            RedisIdempotencyStore store, JsonMapper json, PostAuthoringProperties properties) {
+            RedisIdempotencyStore store,
+            JsonMapper json,
+            PostAuthoringProperties properties,
+            PostAuthoringMetrics metrics) {
         this.store = store;
+        this.metrics = metrics;
         this.json = json;
         this.properties = properties;
     }
@@ -70,7 +75,10 @@ public class PublishIdempotency {
                         memberId, idempotencyKey, hash, properties.publish().idempotencyTtl());
         return switch (start) {
             case Start.Started s -> new Decision.Proceed(hash);
-            case Start.Skipped s -> new Decision.Proceed(hash);
+            case Start.Skipped s -> {
+                metrics.idempotencySkipped();
+                yield new Decision.Proceed(hash);
+            }
             case Start.Existing existing -> {
                 RedisIdempotencyStore.Entry entry = existing.entry();
                 if (!hash.equals(entry.hash())) {

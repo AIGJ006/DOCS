@@ -65,7 +65,7 @@ public class RedisIdempotencyStore {
     public Start tryStart(long memberId, String idempotencyKey, String hash, Duration ttl) {
         String key = key(memberId, idempotencyKey);
         String value = write(new Entry(hash, IN_PROGRESS, null));
-        return redisGuard.call(
+        return redisGuard.callWrite(
                 () -> {
                     // 있던 키가 그 사이 지워졌으면(실패 해제·만료) 한 번 더 잡는다
                     for (int attempt = 0; attempt < 2; attempt++) {
@@ -89,7 +89,7 @@ public class RedisIdempotencyStore {
     public void complete(long memberId, String idempotencyKey, String hash, String responseJson) {
         byte[] key = key(memberId, idempotencyKey).getBytes(StandardCharsets.UTF_8);
         byte[] value = write(new Entry(hash, DONE, responseJson)).getBytes(StandardCharsets.UTF_8);
-        redisGuard.run(
+        redisGuard.runWrite(
                 () ->
                         redis.execute(
                                 (RedisCallback<Boolean>)
@@ -106,7 +106,7 @@ public class RedisIdempotencyStore {
 
     /** 실패한 발행의 키를 지워 같은 키로 다시 시도할 수 있게 한다. */
     public void release(long memberId, String idempotencyKey) {
-        redisGuard.run(
+        redisGuard.runWrite(
                 () -> redis.delete(key(memberId, idempotencyKey)),
                 () -> log.warn("Redis 장애로 발행 멱등 키 해제를 건너뜁니다: memberId={}", memberId));
     }
