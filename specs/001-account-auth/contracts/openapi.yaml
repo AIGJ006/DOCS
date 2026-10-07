@@ -997,8 +997,9 @@ components:
           enum: [NICKNAME_INVALID_FORMAT, NICKNAME_LETTER_REQUIRED, NICKNAME_RESERVED, NICKNAME_BANNED_WORD, NICKNAME_DUPLICATE, null]
     MeSummary:
       type: object
-      required: [handle, nickname, role, status, provider, emailVerified, reagreementRequired, profileImageUrl]
+      required: [memberId, handle, nickname, role, status, provider, emailVerified, reagreementRequired, profileImageUrl]
       properties:
+        memberId: { type: integer, format: int64, description: '본인 회원 번호. 로그아웃 때 브라우저 임시 글 키 draft:{memberId}:* 삭제용(FR-041, 002 clearMemberDrafts)' }
         handle: { type: string }
         nickname: { type: string }
         role: { type: string, enum: [USER, ADMIN] }

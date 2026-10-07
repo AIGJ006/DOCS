@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  로그 설정: Spring Boot 기본 콘솔 형식과 같되 문구(%m)를 %maskedMsg로 바꿔 비밀번호·메일 링크 토큰 값을 가린다 (FR-015, R-11).
+  로그 수준은 application*.yml의 logging.level.* 를 그대로 쓴다.
+-->
+<configuration>
+    <conversionRule conversionWord="maskedMsg" class="com.team.blog.shared.web.MaskedMessageConverter"/>
+    <property name="CONSOLE_LOG_PATTERN" value="${CONSOLE_LOG_PATTERN:-%clr(%d{${LOG_DATEFORMAT_PATTERN:-yyyy-MM-dd'T'HH:mm:ss.SSSXXX}}){faint} %clr(${LOG_LEVEL_PATTERN:-%5p}){} %clr(${PID:-}){magenta} %clr(--- %esb(){APPLICATION_NAME}%esb{APPLICATION_GROUP}[%15.15t] ${LOG_CORRELATION_PATTERN:-}){faint}%clr(%-40.40logger{39}){cyan} %clr(:){faint} %maskedMsg%n${LOG_EXCEPTION_CONVERSION_WORD:-%wEx}}"/>
+    <include resource="org/springframework/boot/logging/logback/defaults.xml"/>
+    <include resource="org/springframework/boot/logging/logback/console-appender.xml"/>
+    <root level="INFO">
+        <appender-ref ref="CONSOLE"/>
+    </root>
+</configuration>
