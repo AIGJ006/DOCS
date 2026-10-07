@@ -25,3 +25,68 @@ spring:
 
 server:
   shutdown: graceful
+
+# ---------------------------------------------------------------------------
+# 서비스 설정값 (blog.*) — constitution VII
+# ---------------------------------------------------------------------------
+blog:
+  time-zone: Asia/Seoul
+  image:
+    # 공개 버킷 직접 주소. CSP(img-src·connect-src)와 이미지 주소·정화 허용 목록이 이 값 하나를 쓴다 (12 §8, H3)
+    public-base-url: ${BLOG_IMAGE_PUBLIC_BASE_URL:http://localhost:9000/blog}
+  scheduling:
+    pool-size: 2
+  async:
+    event:
+      core-size: 2
+      max-size: 4
+      queue-capacity: 500
+    mail:
+      core-size: 1
+      max-size: 2
+      queue-capacity: 500
+
+  # 계정 (data-model §6)
+  auth:
+    session-timeout: 14d
+    login:
+      max-failures: 5
+      lock-duration: 15m
+      ip-limit-per-minute: 20
+    verify:
+      token-ttl: 24h
+      resend-interval: 1m
+      resend-daily-limit: 10
+    reset:
+      token-ttl: 30m
+      email-interval: 1m
+      email-daily-limit: 10
+      ip-limit-per-hour: 20
+    password-change:
+      max-failures: 5
+      lock-duration: 15m
+    social:
+      pending-ttl: 10m
+      photo-hosts: lh3.googleusercontent.com,avatars.githubusercontent.com
+  availability:
+    ip-limit-per-minute: 30
+  member:
+    nickname-change-interval: 30d
+    bio:
+      max-length: 200
+      max-lines: 4
+    last-active:
+      touch-interval: 1h
+  agreement:
+    terms:
+      version: ${BLOG_AGREEMENT_TERMS_VERSION:2026-10-07}
+      effective-date: ${BLOG_AGREEMENT_TERMS_EFFECTIVE_DATE:2026-10-07}
+    privacy:
+      version: ${BLOG_AGREEMENT_PRIVACY_VERSION:2026-10-07}
+      effective-date: ${BLOG_AGREEMENT_PRIVACY_EFFECTIVE_DATE:2026-10-07}
+  policy:
+    reserved-handles: classpath:policy/reserved-handles.txt
+    reserved-nicknames: classpath:policy/reserved-nicknames.txt
+    banned-words: classpath:policy/banned-words.txt
+    banned-words-exceptions: classpath:policy/banned-words-exceptions.txt
+    common-passwords: classpath:policy/common-passwords.txt
