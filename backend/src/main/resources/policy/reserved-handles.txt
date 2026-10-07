@@ -1,0 +1,36 @@
+# 블로그 주소 예약어 (08 §5, FR-019). 접두어(go-·gi-)를 뺀 본문과 같으면 거부한다.
+# 한 줄에 한 단어, 영문 소문자. 서비스 이름이 정해지면 여기에 추가한다 (README "정해진 것" 2026-10-07).
+admin
+administrator
+root
+system
+official
+support
+help
+about
+terms
+privacy
+api
+login
+logout
+signup
+settings
+me
+write
+search
+tag
+tags
+notifications
+manage
+static
+assets
+images
+mail
+www
+blog
+user
+users
+null
+undefined
+devlog
+teamblog
