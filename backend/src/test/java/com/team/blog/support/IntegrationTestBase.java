@@ -1,5 +1,7 @@
 package com.team.blog.support;
 
+import io.github.resilience4j.circuitbreaker.CircuitBreaker;
+import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -20,7 +22,7 @@ import org.testcontainers.utility.DockerImageName;
  *
  * <p>컨테이너는 static 싱글턴으로 한 번만 띄우고 모든 테스트 클래스가 재사용한다(같은 설정이면 Spring 컨텍스트도 재사용). 이미지 태그는
  * docker-compose.yml과 같게 둔다. 각 테스트 전에 {@code flyway_schema_history}·{@code shedlock}을 뺀 모든 테이블을 비우고
- * Redis를 FLUSHALL 한다.
+ * Redis를 FLUSHALL 하고 회로 차단기를 닫는다.
  */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.MOCK)
 @AutoConfigureMockMvc
@@ -60,6 +62,10 @@ public abstract class IntegrationTestBase {
 
     @Autowired protected CapturingMailSender mailSender;
 
+    /** 002 Redis 회로 차단기. 앞선 테스트의 장애 재현이 회로를 열어 둔 채 다음 테스트로 넘어가지 않게 매번 닫는다. */
+    @Autowired(required = false)
+    private CircuitBreakerRegistry circuitBreakers;
+
     public static PostgreSQLContainer postgres() {
         return POSTGRES;
     }
@@ -91,6 +97,9 @@ public abstract class IntegrationTestBase {
                             return null;
                         });
         mailSender.clear();
+        if (circuitBreakers != null) {
+            circuitBreakers.getAllCircuitBreakers().forEach(CircuitBreaker::reset);
+        }
     }
 
     /** 이 테스트에서 쓸 회원 픽스처. */
