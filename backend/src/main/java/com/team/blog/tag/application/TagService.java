@@ -22,7 +22,8 @@ import org.springframework.stereotype.Service;
  *   <li>오류는 입력 칸 번호로 {@code tags[i]} 필드에 붙고(정리·중복 제거 전 입력 순서), 형식 오류 코드는 {@code INVALID_TAG}. 008이
  *       코드를 더해도(예: {@code TAG_TOO_LONG}) 필드 이름 규칙은 유지한다 — 화면이 그 칩 옆에 보인다 — {@code
  *       PublishValidatorTest#형식이_틀린_태그는_그_칸_번호로_INVALID_TAG}, {@code
- *       PublishValidatorTest#여러_항목이_틀리면_모두_모은다}, 프런트 {@code PublishDialog.test.tsx}("400 칸 오류를 모두 보인다")
+ *       PublishValidatorTest#여러_항목이_틀리면_모두_모은다}, 프런트 {@code PublishDialog.test.tsx}("400 칸 오류를 모두
+ *       보인다")
  *   <li>개수 제한({@code TOO_MANY_TAGS}, {@code blog.post.max-tags})과 대소문자 중복은 발행 검증이 본다 — {@code
  *       PublishValidatorTest#태그_11개는_TOO_MANY_TAGS_10개는_통과}·{@code #대소문자_중복은_하나로_센다}
  *   <li>{@code replacePostTags}(발행 트랜잭션 안): 입력 순서대로 {@code position} 0부터, 태그 수와 상관없이 쿼리 3번 — {@code
