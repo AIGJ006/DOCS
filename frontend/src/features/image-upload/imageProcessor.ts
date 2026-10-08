@@ -9,7 +9,7 @@
  * - GIF는 줄이지 않고 원본 바이트 그대로(10MB 이하), 썸네일은 첫 장면.
  * - 결과에는 원래 파일 이름이 없다(이름 없는 `Blob`).
  */
-import type { ImageContentType, ThumbContentType } from '../../api/types/images';
+import type { ImageContentType, StorageLimits, ThumbContentType } from '../../api/types/images';
 import { PROCESSING_FAILED, UPLOAD_MESSAGES } from './uploadMessages';
 
 /** 처리 한도. 서버 `GET /api/me/storage`의 `limits`와 같은 값(T063에서 서버 값으로 바꾼다). */
@@ -32,6 +32,19 @@ export const DEFAULT_LIMITS: ProcessorLimits = {
   thumbMaxHeight: 4096,
   gifMaxSide: 1920,
 };
+
+/** 서버 한도(`GET /api/me/storage`의 `limits`) → 처리 한도 (헌법 VII: 화면에 숫자를 따로 두지 않는다, T063). */
+export function limitsFrom(limits: StorageLimits | null | undefined): Partial<ProcessorLimits> {
+  if (!limits) return {};
+  return {
+    maxSourceBytes: limits.maxSourceBytes,
+    maxUploadBytes: limits.maxUploadBytes,
+    maxThumbBytes: limits.maxThumbBytes,
+    longSide: limits.longSide,
+    thumbMaxWidth: limits.thumbMaxWidth,
+    gifMaxSide: limits.gifMaxSide,
+  };
+}
 
 /** 해독한 사진 (가짜로 바꿀 수 있게 캔버스 소스를 감춘다). */
 export interface DecodedImage {

@@ -75,7 +75,7 @@ public class ImageUploadService {
     private final ImageStorage storage;
     private final StorageKeys keys;
     private final RateLimiter rateLimiter;
-    private final UploadLimits limits;
+    private final StorageQuotaService limits;
     private final ImageUrlResolver urls;
     private final ImageProperties properties;
     private final TransactionTemplate tx;
@@ -87,7 +87,7 @@ public class ImageUploadService {
             ImageStorage storage,
             StorageKeys keys,
             RateLimiter rateLimiter,
-            UploadLimits limits,
+            StorageQuotaService limits,
             ImageUrlResolver urls,
             ImageProperties properties,
             TransactionTemplate tx,

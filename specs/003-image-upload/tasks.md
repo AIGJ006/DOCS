@@ -186,19 +186,19 @@ description: "Task list for 003-image-upload (이미지 업로드)"
 
 ### Tests for User Story 4 ⚠️
 
-- [ ] T054 [P] [US4] `T/media/integration/ImagePresignIT.java`에 한도 경우를 더한다(T021 다음): `US4_1_용량초과_409` + `details`; `US4_2_동시10건_합계가_한도를_넘지_않음`(`ExecutorService` 10스레드, 성공 합계 ≤ 1GB, 500 없음, SC-004); `US4_3_하루_201번째_429_DAILY_UPLOAD_LIMIT` + `Retry-After`(다음 0시 KST까지), 날짜는 `Clock` 고정; 판정 순서 — 400 칸 오류가 409보다, 409가 429보다 먼저; 1분 제한(429 `TOO_MANY_REQUESTS`)에 걸리면 하루 장수가 늘지 않음; 실패한 complete 뒤에도 하루 장수 유지(FR-016); Redis 중지 중 하루 한도 통과
-- [ ] T055 [P] [US4] `T/media/integration/StorageUsageApiIT.java`: `GET /api/me/storage` → 내 TEMP·연결·연결 해제·PROFILE 합계, 남의 사진 제외(FR-014), 글을 휴지통·완전 삭제해도 정리 작업이 파일을 지우기 전까지 합계 그대로(FR-017), `todayCount`, `limits`, `Cache-Control: private, no-store`, 비회원 401, 인증 전 회원 200(보기만), Redis 중지 시 `todayCount: null`
-- [ ] T056 [P] [US4] `F/components/__tests__/StorageUsageBar.test.tsx`: "사진 저장 공간 312MB / 1GB" 글자·막대 비율·"지운 사진의 공간은 7일 뒤 돌아와요", 단위 표시(KB·MB·GB 한 자리), 불러오기 실패 시 막대 대신 "불러오지 못했어요"
-- [ ] T057 [P] [US4] `F/features/image-upload/__tests__/storageHint.test.ts`: 사용량 90% 초과면 "남은 공간 약 100MB", 이하면 안내 없음, 409·`DAILY_UPLOAD_LIMIT` 문구가 data-model §7과 같음
+- [X] T054 [P] [US4] `T/media/integration/ImagePresignIT.java`에 한도 경우를 더한다(T021 다음): `US4_1_용량초과_409` + `details`; `US4_2_동시10건_합계가_한도를_넘지_않음`(`ExecutorService` 10스레드, 성공 합계 ≤ 1GB, 500 없음, SC-004); `US4_3_하루_201번째_429_DAILY_UPLOAD_LIMIT` + `Retry-After`(다음 0시 KST까지), 날짜는 `Clock` 고정; 판정 순서 — 400 칸 오류가 409보다, 409가 429보다 먼저; 1분 제한(429 `TOO_MANY_REQUESTS`)에 걸리면 하루 장수가 늘지 않음; 실패한 complete 뒤에도 하루 장수 유지(FR-016); Redis 중지 중 하루 한도 통과 (구현 메모: 날짜를 고정 Clock으로 바꾸는 대신(시험 전용 컨텍스트 금지) 오늘 KST 날짜 키에 하루 장수를 미리 넣어 201번째를 만든다. Redis 중지 중 하루 한도 통과는 T021의 서비스 직접 호출 경우가 함께 덮는다)
+- [X] T055 [P] [US4] `T/media/integration/StorageUsageApiIT.java`: `GET /api/me/storage` → 내 TEMP·연결·연결 해제·PROFILE 합계, 남의 사진 제외(FR-014), 글을 휴지통·완전 삭제해도 정리 작업이 파일을 지우기 전까지 합계 그대로(FR-017), `todayCount`, `limits`, `Cache-Control: private, no-store`, 비회원 401, 인증 전 회원 200(보기만), Redis 중지 시 `todayCount: null`
+- [X] T056 [P] [US4] `F/components/__tests__/StorageUsageBar.test.tsx`: "사진 저장 공간 312MB / 1GB" 글자·막대 비율·"지운 사진의 공간은 7일 뒤 돌아와요", 단위 표시(KB·MB·GB 한 자리), 불러오기 실패 시 막대 대신 "불러오지 못했어요"
+- [X] T057 [P] [US4] `F/features/image-upload/__tests__/storageHint.test.ts`: 사용량 90% 초과면 "남은 공간 약 100MB", 이하면 안내 없음, 409·`DAILY_UPLOAD_LIMIT` 문구가 data-model §7과 같음
 
 ### Implementation for User Story 4
 
-- [ ] T058 [P] [US4] `B/media/application/StorageQuotaService.java`: `long usedBytes(me)`(`ImageRepository.sumUsageBytes`), `void checkQuota(me, addBytes)`(호출자 트랜잭션에서 `MemberLockService.lockForUpdate` 후 합계 비교 → `BusinessRuleException(STORAGE_QUOTA_EXCEEDED, details)`), `DailyReservation reserveDaily(me, today)`(Redis Lua INCR·첫 증가 EXPIRE 2일·한도 초과면 DECR 후 거부 → `TooManyRequestsException(DAILY_UPLOAD_LIMIT, 다음 0시까지 초)`, `RedisGuard`로 장애 시 통과), `void releaseDaily(reservation)`, `Integer todayCount(me)`(장애면 null)
-- [ ] T059 [US4] `ImageUploadService.presign`에 한도를 끼운다(T028 다음): 트랜잭션 A 안에서 `checkQuota` → INSERT, 커밋 뒤 `reserveDaily` → `RateLimiter` 거부면 `releaseDaily` → 거부면 보상 삭제(research R8 순서 그대로)(T054 통과)
-- [ ] T060 [US4] `B/media/web/StorageUsageController.java`: `GET /api/me/storage`(로그인만, 계정 상태 가드 `ActionKind`는 보기 전용이라 인증 전 허용 — 탈퇴 유예만 403), 응답 `StorageUsage`(research R25)(T055 통과)
-- [ ] T061 [P] [US4] `F/components/StorageUsageBar.tsx`(T056 통과)와 `F/features/image-upload/storageHint.ts`(T057 통과)를 구현하고, 에디터 툴바 [사진] 버튼 옆에 90% 안내를 붙인다(`F/pages/EditorPage.tsx`, 에디터를 열 때 `getStorageUsage` 한 번)
-- [ ] T062 [US4] 설정 화면 연결: 001 설정 화면(`/settings`, 001 US6)이 있으면 "사진 저장 공간" 항목으로 `StorageUsageBar`를 넣고, 없으면 001 US6 tasks에 넣을 위치를 알리는 확인 작업으로 남긴다(001 후속)
-- [ ] T063 [US4] 화면의 고르는 순간 검사가 `limits` 값(50MB·10MB)을 쓰도록 `imageProcessor.ts`의 상수를 `getStorageUsage().limits`로 바꾼다(헌법 VII)
+- [X] T058 [P] [US4] `B/media/application/StorageQuotaService.java`: `long usedBytes(me)`(`ImageRepository.sumUsageBytes`), `void checkQuota(me, addBytes)`(호출자 트랜잭션에서 `MemberLockService.lockForUpdate` 후 합계 비교 → `BusinessRuleException(STORAGE_QUOTA_EXCEEDED, details)`), `DailyReservation reserveDaily(me, today)`(Redis Lua INCR·첫 증가 EXPIRE 2일·한도 초과면 DECR 후 거부 → `TooManyRequestsException(DAILY_UPLOAD_LIMIT, 다음 0시까지 초)`, `RedisGuard`로 장애 시 통과), `void releaseDaily(reservation)`, `Integer todayCount(me)`(장애면 null) (구현 메모: reserveDaily(me, now)·releaseDaily(me, now)로 단순화(예약 객체 없음). todayCount는 Optional<Integer>)
+- [X] T059 [US4] `ImageUploadService.presign`에 한도를 끼운다(T028 다음): 트랜잭션 A 안에서 `checkQuota` → INSERT, 커밋 뒤 `reserveDaily` → `RateLimiter` 거부면 `releaseDaily` → 거부면 보상 삭제(research R8 순서 그대로)(T054 통과)
+- [X] T060 [US4] `B/media/web/StorageUsageController.java`: `GET /api/me/storage`(로그인만, 계정 상태 가드 `ActionKind`는 보기 전용이라 인증 전 허용 — 탈퇴 유예만 403), 응답 `StorageUsage`(research R25)(T055 통과) (구현 메모: 보기 전용이라 ACCOUNT_WRITE 가드에서 정지(ACCOUNT_SUSPENDED)만 통과시킨다 — 탈퇴 유예만 403. 조회는 StorageUsageQuery. Redis 장애 경우는 세션도 Redis라 서비스 직접 호출로 확인)
+- [X] T061 [P] [US4] `F/components/StorageUsageBar.tsx`(T056 통과)와 `F/features/image-upload/storageHint.ts`(T057 통과)를 구현하고, 에디터 툴바 [사진] 버튼 옆에 90% 안내를 붙인다(`F/pages/EditorPage.tsx`, 에디터를 열 때 `getStorageUsage` 한 번)
+- [X] T062 [US4] 설정 화면 연결: 001 설정 화면(`/settings`, 001 US6)이 있으면 "사진 저장 공간" 항목으로 `StorageUsageBar`를 넣고, 없으면 001 US6 tasks에 넣을 위치를 알리는 확인 작업으로 남긴다(001 후속) (구현 메모: 001 설정 화면(SettingsPage)이 main에 들어와 '사진 저장 공간' 항목으로 StorageUsageBar를 넣었다(001 파일 최소 수정))
+- [X] T063 [US4] 화면의 고르는 순간 검사가 `limits` 값(50MB·10MB)을 쓰도록 `imageProcessor.ts`의 상수를 `getStorageUsage().limits`로 바꾼다(헌법 VII)
 
 **Checkpoint**: 한도가 동시 요청에도 지켜지고 사용량이 보인다
 

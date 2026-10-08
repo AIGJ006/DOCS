@@ -1,0 +1,24 @@
+/* 003 사진 저장 공간 막대 (StorageUsageBar) */
+.storage-usage-text {
+  margin: 0 0 0.25rem;
+}
+
+.storage-usage-bar {
+  height: 0.5rem;
+  border-radius: 0.25rem;
+  background: var(--thumb-empty);
+  border: 1px solid var(--color-border);
+  overflow: hidden;
+}
+
+.storage-usage-fill {
+  height: 100%;
+  background: var(--color-brand-fill);
+}
+
+.storage-usage-note,
+.storage-usage-error {
+  margin: 0.25rem 0 0;
+  font-size: 0.875rem;
+  color: var(--color-text-muted);
+}

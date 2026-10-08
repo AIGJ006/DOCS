@@ -282,3 +282,22 @@
 .diff-fold button {
   width: 100%;
 }
+
+/* 003 사진 업로드: 올리는 중·대기 사진 수·남은 공간 안내·기기 사본 미리보기 */
+.image-uploading,
+.image-pending,
+.storage-hint {
+  font-size: 0.875rem;
+  color: var(--color-text-muted);
+  margin-left: 0.5rem;
+}
+
+.image-notice .link-button {
+  margin-left: 0.25rem;
+}
+
+.post-content img.local-image {
+  max-width: 100%;
+  height: auto;
+  outline: 1px dashed var(--color-border);
+}

@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import {
   detectFormat,
+  limitsFrom,
   processImage,
   type DecodedImage,
   type ProcessorDeps,
@@ -176,5 +177,25 @@ describe('processImage', () => {
       ok: false,
       code: 'PROCESSING_FAILED',
     });
+  });
+
+  it('서버 limits를 받으면 그 값으로 판정한다 (T063)', async () => {
+    const { deps, calls } = fakeDeps({ width: 4000, height: 3000 });
+    const limits = limitsFrom({
+      maxUploadBytes: 10_485_760,
+      maxThumbBytes: 1_048_576,
+      maxSourceBytes: 2_000,
+      longSide: 1280,
+      thumbMaxWidth: 320,
+      gifMaxSide: 1920,
+      gifMaxFrames: 300,
+    });
+    expect(await processImage(file(JPEG_HEAD, 2_001), { deps, limits })).toMatchObject({
+      ok: false,
+      code: 'IMAGE_TOO_LARGE',
+    });
+    await processImage(file(JPEG_HEAD, 1_000), { deps, limits });
+    expect(calls[0]).toMatchObject({ width: 1280, height: 960 });
+    expect(calls[1]).toMatchObject({ width: 320, height: 240 });
   });
 });

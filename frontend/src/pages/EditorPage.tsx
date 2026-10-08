@@ -22,6 +22,10 @@ import SaveStatus from '../components/editor/SaveStatus';
 import { useSession } from '../features/auth/useSession';
 import { AutosaveQueue, type AutosaveStatus } from '../features/editor/autosaveQueue';
 import { useImageInsert } from '../features/image-upload/useImageInsert';
+import { uploadImage } from '../features/image-upload/uploadImage';
+import { limitsFrom, processImage } from '../features/image-upload/imageProcessor';
+import { storageHint } from '../features/image-upload/storageHint';
+import { getStorageUsage, type StorageUsage } from '../api/images';
 import {
   createPendingRetrier,
   holdPending,
@@ -117,6 +121,9 @@ export default function EditorPage() {
   const [pendingCount, setPendingCount] = useState(0);
   const [localImages, setLocalImages] = useState<ReadonlyMap<string, string>>(new Map());
   const retrierRef = useRef<ReturnType<typeof createPendingRetrier> | null>(null);
+  /** 사진 저장 공간 (003 US4): 에디터를 열 때 한 번 읽어 남은 공간 안내와 처리 한도에 쓴다. */
+  const [storage, setStorage] = useState<StorageUsage | null>(null);
+  const storageRef = useRef<StorageUsage | null>(null);
   const onContentRef = useRef<(value: string) => void>(() => undefined);
 
   /** 대기 사진 수가 바뀌면 미리보기 주소를 다시 만든다(이전 주소는 놓는다). */
@@ -213,6 +220,14 @@ export default function EditorPage() {
         });
         retrierRef.current = retrier;
         retrier.start();
+        getStorageUsage()
+          .then((usage) => {
+            if (!cancelled) {
+              storageRef.current = usage;
+              setStorage(usage);
+            }
+          })
+          .catch(() => undefined);
         cleanups.push(
           () => retrier.stop(),
           () => window.removeEventListener('online', goOnline),
@@ -279,6 +294,10 @@ export default function EditorPage() {
     getContent: () => latest.current.contentMd,
     setContent: onContent,
     onRejected: setImageNotice,
+    upload: (file) =>
+      uploadImage(file, {
+        process: (f) => processImage(f, { limits: limitsFrom(storageRef.current?.limits) }),
+      }),
     onPending: async (file) => {
       if (memberId === null) return null;
       try {
@@ -486,6 +505,9 @@ export default function EditorPage() {
           <button type="button" onClick={images.openPicker}>
             사진
           </button>
+          {storageHint(storage) ? (
+            <span className="storage-hint">{storageHint(storage)}</span>
+          ) : null}
           <input {...images.fileInputProps} aria-label="사진 고르기" />
           <button type="button" onClick={onSave} disabled={saving}>
             저장

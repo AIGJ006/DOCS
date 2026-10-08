@@ -248,6 +248,157 @@ class ImagePresignIT extends StorageIntegrationTestBase {
         assertThat(imageRows()).isEqualTo(21);
     }
 
+    // ------------------------------------------------------------------ US4 한도 (T054)
+
+    private static final long GB = 1_073_741_824L;
+
+    /** 그 회원이 이미 {@code bytes}만큼 쓰고 있게 한다 (10MB 행 여러 개 + 나머지 한 행). */
+    private void use(long memberId, long bytes) {
+        long tenMb = 10_000_000L;
+        long rows = bytes / tenMb;
+        jdbc.update(
+                "INSERT INTO image (uploader_id, storage_key, content_type, size_bytes, width, height)"
+                        + " SELECT ?, 'images/2026/10/' || gen_random_uuid() || '.webp', 'image/webp',"
+                        + " ?, 100, 100 FROM generate_series(1, ?)",
+                memberId,
+                (int) tenMb,
+                (int) rows);
+        long rest = bytes - rows * tenMb;
+        if (rest > 0) {
+            jdbc.update(
+                    "INSERT INTO image (uploader_id, storage_key, content_type, size_bytes, width,"
+                            + " height) VALUES (?, 'images/2026/10/' || gen_random_uuid() || '.webp',"
+                            + " 'image/webp', ?, 100, 100)",
+                    memberId,
+                    (int) rest);
+        }
+    }
+
+    private String dailyKey(long memberId) {
+        return "img:daily:"
+                + memberId
+                + ":"
+                + java.time.LocalDate.now(java.time.ZoneId.of("Asia/Seoul"))
+                        .format(java.time.format.DateTimeFormatter.BASIC_ISO_DATE);
+    }
+
+    private Integer daily(long memberId) {
+        String v = redis.opsForValue().get(dailyKey(memberId));
+        return v == null ? null : Integer.valueOf(v);
+    }
+
+    @Test
+    void US4_1_용량을_넘으면_409_STORAGE_QUOTA_EXCEEDED와_details() throws Exception {
+        long me = members().member().create();
+        use(me, GB - 400_000);
+        long before = imageRows();
+
+        MvcResult result = api.presign(TestLogin.loginAs(mockMvc, me), WEBP_POST);
+
+        assertThat(result.getResponse().getStatus()).isEqualTo(409);
+        JsonNode body = ImageApi.json(result);
+        assertThat(body.path("code").asString()).isEqualTo("STORAGE_QUOTA_EXCEEDED");
+        assertThat(body.path("details").path("usedBytes").asLong()).isEqualTo(GB - 400_000);
+        assertThat(body.path("details").path("quotaBytes").asLong()).isEqualTo(GB);
+        assertThat(imageRows()).isEqualTo(before);
+        assertThat(daily(me)).as("409면 하루 장수를 세지 않는다").isNull();
+    }
+
+    @Test
+    void US4_2_동시_10건이어도_합계가_한도를_넘지_않는다() throws Exception {
+        long me = members().member().create();
+        use(me, GB - 35_000_000);
+        Cookie session = TestLogin.loginAs(mockMvc, me);
+        String tenMb = ImageApi.postBody("image/webp", 10_000_000, "image/webp", 1_000_000);
+
+        java.util.concurrent.ExecutorService pool =
+                java.util.concurrent.Executors.newFixedThreadPool(10);
+        java.util.List<Integer> statuses;
+        try {
+            java.util.List<java.util.concurrent.Callable<Integer>> calls =
+                    java.util.Collections.nCopies(
+                            10, () -> api.presign(session, tenMb).getResponse().getStatus());
+            statuses = new java.util.ArrayList<>();
+            for (var f : pool.invokeAll(calls)) {
+                statuses.add(f.get());
+            }
+        } finally {
+            pool.shutdownNow();
+        }
+
+        assertThat(statuses).doesNotContain(500).containsOnly(201, 409);
+        assertThat(statuses.stream().filter(s -> s == 201).count()).isEqualTo(3);
+        long used =
+                jdbc.queryForObject(
+                        "SELECT sum(size_bytes::bigint + coalesce(thumb_size_bytes, 0)) FROM image"
+                                + " WHERE uploader_id = ?",
+                        Long.class,
+                        me);
+        assertThat(used).isLessThanOrEqualTo(GB);
+    }
+
+    @Test
+    void US4_3_하루_201번째는_429_DAILY_UPLOAD_LIMIT와_다음_0시까지_Retry_After() throws Exception {
+        long me = members().member().create();
+        redis.opsForValue().set(dailyKey(me), "200");
+        java.time.ZonedDateTime now =
+                java.time.ZonedDateTime.now(java.time.ZoneId.of("Asia/Seoul"));
+        long untilMidnight =
+                java.time.Duration.between(
+                                now, now.toLocalDate().plusDays(1).atStartOfDay(now.getZone()))
+                        .toSeconds();
+
+        MvcResult result = api.presign(TestLogin.loginAs(mockMvc, me), WEBP_POST);
+
+        assertThat(result.getResponse().getStatus()).isEqualTo(429);
+        assertThat(code(result)).isEqualTo("DAILY_UPLOAD_LIMIT");
+        assertThat(Long.parseLong(result.getResponse().getHeader("Retry-After")))
+                .isBetween(untilMidnight - 5, untilMidnight + 1);
+        assertThat(daily(me)).isEqualTo(200);
+        assertThat(imageRows()).as("거부된 요청의 행은 보상 삭제").isZero();
+    }
+
+    @Test
+    void 판정_순서는_칸_오류_400_다음_용량_409_다음_하루_429() throws Exception {
+        long me = members().member().create();
+        use(me, GB);
+        redis.opsForValue().set(dailyKey(me), "200");
+        Cookie session = TestLogin.loginAs(mockMvc, me);
+
+        assertThat(
+                        code(
+                                api.presign(
+                                        session,
+                                        ImageApi.postBody(
+                                                "image/svg+xml", 1000, "image/webp", 100))))
+                .isEqualTo("VALIDATION_FAILED");
+        assertThat(code(api.presign(session, WEBP_POST))).isEqualTo("STORAGE_QUOTA_EXCEEDED");
+    }
+
+    @Test
+    void 일분_제한에_걸리면_하루_장수가_늘지_않는다() throws Exception {
+        long me = members().member().create();
+        redis.opsForValue().set("ratelimit:image:" + me, "20", java.time.Duration.ofSeconds(50));
+        redis.opsForValue().set(dailyKey(me), "5");
+
+        MvcResult result = api.presign(TestLogin.loginAs(mockMvc, me), WEBP_POST);
+
+        assertThat(code(result)).isEqualTo("TOO_MANY_REQUESTS");
+        assertThat(daily(me)).isEqualTo(5);
+    }
+
+    @Test
+    void 완료_확인이_실패해도_하루_장수는_돌려주지_않는다() throws Exception {
+        long me = members().member().create();
+        Cookie session = TestLogin.loginAs(mockMvc, me);
+        long imageId = ImageApi.json(api.presign(session, WEBP_POST)).path("imageId").asLong();
+        assertThat(daily(me)).isEqualTo(1);
+
+        assertThat(code(api.complete(session, imageId))).isEqualTo("IMAGE_NOT_UPLOADED");
+
+        assertThat(daily(me)).isEqualTo(1);
+    }
+
     private static void assertFieldError(MvcResult result, String field, String code)
             throws Exception {
         assertThat(result.getResponse().getStatus()).as(field).isEqualTo(400);

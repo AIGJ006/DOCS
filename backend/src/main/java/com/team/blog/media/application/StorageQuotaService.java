@@ -22,7 +22,7 @@ import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * 1인 저장 공간·하루 장수 (003 T056~T059, FR-014~FR-016, research R8·R9).
+ * 1인 저장 공간·하루 장수 (003 T058·T059, FR-014~FR-016, research R8·R9).
  *
  * <ul>
  *   <li>용량: presign 트랜잭션 A 안에서 회원 행을 {@code FOR UPDATE}로 잠그고(같은 회원의 동시 요청 직렬화) "지금 사용량 + 이번
@@ -33,7 +33,7 @@ import org.springframework.transaction.annotation.Transactional;
  * </ul>
  */
 @Component
-public class UploadLimits {
+public class StorageQuotaService {
 
     private static final DateTimeFormatter DAY = DateTimeFormatter.BASIC_ISO_DATE;
 
@@ -62,7 +62,7 @@ public class UploadLimits {
     private final ImageProperties properties;
     private final ZoneId zone;
 
-    public UploadLimits(
+    public StorageQuotaService(
             ImageRepository images,
             MemberLockService memberLock,
             StringRedisTemplate redis,
