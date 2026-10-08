@@ -165,13 +165,13 @@ description: "Task list for 011-notification (도메인 이벤트·인앱 알림
 
 ### Tests for User Story 4 ⚠️
 
-- [ ] T038 [P] [US4] `T/notification/integration/NotificationDisplayIT.java` — US4 #1~#4, SC-004: 비공개·휴지통·숨김·작성자 유예 각각 `post: {unavailable: true}`·`comment null`·`url null`, 다시 공개 → 지금 제목, 행동자 닉네임 변경 반영, 행동자 유예·익명 처리 `actor: {withdrawn: true}`, 댓글 수정 → 새 미리보기(공백 한 칸, 앞 50자 + "…", 이모지·한글 코드 포인트 경계), 마크다운 기호 그대로, 받는 사람이 작성자면 자기 비공개 글 제목이 보임
-- [ ] T039 [P] [US4] `CommentNotificationIT`에 US4 #5 더하기: 댓글 삭제(답글이 있어 자리로 남는 경우 포함) → 그 댓글 `COMMENT`·`REPLY` 0, 다른 댓글 알림은 그대로, 글 완전 삭제 → 그 글 알림 0(CASCADE, 006 머지 후 `PostPurgeService`로)
+- [X] T038 [P] [US4] `T/notification/integration/NotificationDisplayIT.java` — US4 #1~#4, SC-004: 비공개·휴지통·숨김·작성자 유예 각각 `post: {unavailable: true}`·`comment null`·`url null`, 다시 공개 → 지금 제목, 행동자 닉네임 변경 반영, 행동자 유예·익명 처리 `actor: {withdrawn: true}`, 댓글 수정 → 새 미리보기(공백 한 칸, 앞 50자 + "…", 이모지·한글 코드 포인트 경계), 마크다운 기호 그대로, 받는 사람이 작성자면 자기 비공개 글 제목이 보임 (구현 메모: 행동자 익명 처리는 member.deleted_at을 직접 넣어 확인. 이모지 경계·공백 한 칸·마크다운 기호 그대로 확인)
+- [X] T039 [P] [US4] `CommentNotificationIT`에 US4 #5 더하기: 댓글 삭제(답글이 있어 자리로 남는 경우 포함) → 그 댓글 `COMMENT`·`REPLY` 0, 다른 댓글 알림은 그대로, 글 완전 삭제 → 그 글 알림 0(CASCADE, 006 머지 후 `PostPurgeService`로) (구현 메모: 006이 main에 있어 글 완전 삭제는 PostPurgeService.purge를 트랜잭션 안에서 직접 불러 CASCADE 확인)
 - [ ] T040 [P] [US4] 화면 테스트 `notificationText.test.ts`에 "볼 수 없는 글이에요"(미리보기 없음)·"탈퇴한 사용자"(굵게 하지 않음)를 더한다
 
 ### Implementation for User Story 4
 
-- [ ] T041 [US4] `NotificationItemAssembler`에 표시 규칙(research R10 — 행동자 탈퇴, 미리보기 자르기 `preview-length`, 읽을 수 없으면 `post.unavailable`·`url null`)을 마무리한다 (T038 실패 확인)
+- [X] T041 [US4] `NotificationItemAssembler`에 표시 규칙(research R10 — 행동자 탈퇴, 미리보기 자르기 `preview-length`, 읽을 수 없으면 `post.unavailable`·`url null`)을 마무리한다 (T038 실패 확인) (구현 메모: T029에서 함께 구현해 T038이 처음부터 통과(실패 확인 단계 없음))
 - [ ] T042 [US4] `CommentNotificationListener`에 `CommentDeleted` → `NotificationWriter.removeCommentNotifications(commentId)`(§7-1)를 더하고, `notificationText.ts`·`NotificationItem.tsx`에 볼 수 없는 글·탈퇴한 사용자 표시 (T038~T040 통과)
 
 **Checkpoint**: 볼 수 없게 된 글의 제목·내용이 알림에 남지 않는다

@@ -20,6 +20,12 @@ import org.junit.jupiter.api.Test;
  */
 class CommentNotificationIT extends NotificationTestBase {
 
+    @org.springframework.beans.factory.annotation.Autowired
+    private com.team.blog.post.application.PostPurgeService postPurge;
+
+    @org.springframework.beans.factory.annotation.Autowired
+    private org.springframework.transaction.support.TransactionTemplate tx;
+
     private CommentApi comments;
     private long a;
     private long b;
@@ -109,6 +115,47 @@ class CommentNotificationIT extends NotificationTestBase {
         }
         awaiter.idle();
         assertThat(notifications.count(a)).isZero();
+    }
+
+    @Test
+    void 댓글을_지우면_그_댓글의_알림만_지운다() throws Exception {
+        long root = comment(b, "최상위", null);
+        long reply = comment(c, "답글", root);
+        long other = comment(d, "다른 댓글", null);
+        awaiter.untilCount(b, 1);
+        awaiter.untilCount(a, 3);
+
+        // 답글이 있어 자리로 남는 최상위 삭제
+        assertThat(status(comments.delete(TestLogin.loginAs(mockMvc, b), root))).isEqualTo(204);
+        awaiter.idle();
+        assertThat(commentNotifications(root)).isZero();
+        assertThat(commentNotifications(reply)).isEqualTo(2);
+
+        assertThat(status(comments.delete(TestLogin.loginAs(mockMvc, c), reply))).isEqualTo(204);
+        awaiter.idle();
+        assertThat(commentNotifications(reply)).isZero();
+        assertThat(commentNotifications(other)).isEqualTo(1);
+    }
+
+    @Test
+    void 글을_완전히_지우면_그_글의_알림도_사라진다() throws Exception {
+        comment(b, "최상위", null);
+        awaiter.untilCount(a, 1);
+        notifications.single(c, "NEW_POST").post(postId).actor(a).create();
+
+        tx.executeWithoutResult(status -> postPurge.purge(postId, a, true));
+
+        assertThat(
+                        jdbc.queryForObject(
+                                "SELECT count(*) FROM notification WHERE post_id = ?",
+                                Long.class,
+                                postId))
+                .isZero();
+    }
+
+    private long commentNotifications(long commentId) {
+        return jdbc.queryForObject(
+                "SELECT count(*) FROM notification WHERE comment_id = ?", Long.class, commentId);
     }
 
     private long comment(long author, String content, Long replyTo) throws Exception {
