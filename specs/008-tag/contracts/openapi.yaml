@@ -1,0 +1,327 @@
+openapi: 3.1.0
+info:
+  title: 태그 API (008-tag)
+  version: 0.1.0
+  description: |
+    C-TAG-1 태그 REST 계약. 원문: docs/22-tag.md §5~§8, docs/10-post-list.md §4-2, docs/02-architecture.md §5-1(O8).
+
+    공통 규칙
+    - 태그 이름은 경로 조각으로 퍼센트 인코딩한다(`#` → `%23`, 한글 인코딩, `+`·`.`·`_`·`-`는 그대로). 쿼리 값(`?tag=`)은 `+`도 `%2B`로 인코딩한다.
+    - API는 **정규화된 이름만** 받는다. 정규화 결과와 다르거나 형식이 틀리면 404 NOT_FOUND다(리다이렉트 없음, 005 R-23). 301은 페이지 셸(`/tags/{name}`, `/@{handle}?tag=`)만 한다 — contracts/normalization.md §4.
+    - 형식에 맞지만 공개 글이 없는 태그(아무도 안 쓴 태그, 비공개 글에만 쓰인 태그)는 200 + 빈 결과이고, 두 경우의 응답은 같다(SC-005).
+    - 공개 글 수·목록은 004 `VisibilityFilter` 공용 조건(발행·전체 공개·휴지통 아님·숨김 아님·작성자 탈퇴 신청 아님)이다. 태그별 목록·전체 목록·자동완성 글 수는 친구 공개 적용자라도 전체 공개 글만, 블로그 태그는 블로그 목록과 같은 조건이다.
+    - 목록 크기(`size`·`limit`)는 받아도 무시한다(설정값 고정, 원칙 VII).
+    - 오류 본문은 공통 형식 {code, message, errors, details}. errors는 항상 배열, 메시지 끝에 마침표 없음.
+    - 응답 `Cache-Control: private, no-cache`(005 R-31).
+    - 태그 붙이기는 별도 API가 없다. 002 발행 API(`POST /api/posts/{postId}/publish`)의 `tags` 배열로 보낸다 — 오류 형식은 data-model §2-3.
+servers:
+  - url: http://localhost:8080
+    description: 로컬 Docker Compose
+tags:
+  - name: tags
+    description: 태그별 목록·전체 목록·자동완성
+  - name: blog-tags
+    description: 블로그 안 태그
+paths:
+  /api/tags:
+    get:
+      tags: [tags]
+      operationId: listTopTags
+      summary: 전체 태그 목록 (상위 100)
+      description: |
+        공개 글 수 많은 순(같으면 이름 순) 상위 `blog.tag.top-limit`(100)개. 공개 글 수 0인 태그는 없다.
+        저장해 두지 않고 요청마다 계산한다 — 글이 공개에서 빠지면 다음 요청부터 빠진다(FR-029, Clarifications Q1).
+      security: []
+      parameters:
+        - name: limit
+          in: query
+          required: false
+          description: 받아도 무시한다
+          schema: { type: integer }
+      responses:
+        '200':
+          description: 목록 (없으면 items = [] → 화면 "아직 태그가 없어요")
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/TagIndex' }
+              example:
+                items:
+                  - { name: spring-boot, postCount: 12 }
+                  - { name: jpa, postCount: 5 }
+
+  /api/tags/{name}/summary:
+    get:
+      tags: [tags]
+      operationId: getTagSummary
+      summary: 태그 페이지 머리말
+      description: |
+        "#spring-boot · 공개 글 12". 형식에 맞으면 태그가 없어도 `{name, postCount: 0}`(비공개 전용 태그와 같은 응답).
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/TagName'
+      responses:
+        '200':
+          description: 머리말
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/TagSummary' }
+              examples:
+                used: { value: { name: spring-boot, postCount: 12 } }
+                empty: { value: { name: 이직준비, postCount: 0 } }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /api/tags/{name}/posts:
+    get:
+      tags: [tags]
+      operationId: listTagPosts
+      summary: 태그별 글 목록
+      description: |
+        홈과 같은 카드·9개·정렬(최초 공개 시각 최신순, 같으면 번호 큰 순)·커서(005). 커서 목록 구분은 `tag:{name}` —
+        다른 목록의 커서는 400 INVALID_CURSOR. SQL은 태그 번호 1번 + 카드 1번.
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/TagName'
+        - $ref: '#/components/parameters/Cursor'
+        - name: size
+          in: query
+          required: false
+          description: 받아도 무시한다
+          schema: { type: integer }
+      responses:
+        '200':
+          description: 카드 목록 (공개 글이 없으면 items = [], nextCursor = null)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PostCardPage' }
+        '400': { $ref: '#/components/responses/InvalidCursor' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /api/tags/suggest:
+    get:
+      tags: [tags]
+      operationId: suggestTags
+      summary: 태그 자동완성
+      description: |
+        로그인한 회원만(비회원 401, 이메일 인증 전 허용 — 2026-10-07 결정). 검색어는 정규화(금칙어 검사 제외) 후 앞부분 일치.
+        후보는 ① 내가 쓴 태그(내 글 전부, 공개 범위 무관) ② 공개 글 수 1 이상인 태그. 남의 비공개 글에만 쓰인 태그는 나오지 않는다.
+        순서: 내 태그 먼저 → 공개 글 수 많은 순 → 이름 순, 최대 `blog.tag.suggest.limit`(10)개.
+        정리 결과가 비면 200 `[]`. 회원당 1분 60번(넘으면 429, 판정 순서 맨 끝). Redis 장애 때는 제한 없이 응답한다.
+      security:
+        - sessionCookie: []
+      parameters:
+        - name: q
+          in: query
+          required: false
+          description: 입력 중인 글자 (빈 값·정리 실패면 `[]`)
+          schema: { type: string, maxLength: 100 }
+      responses:
+        '200':
+          description: 후보
+          content:
+            application/json:
+              schema:
+                type: array
+                maxItems: 10
+                items: { $ref: '#/components/schemas/TagSuggestion' }
+              example:
+                - { name: spring-boot, postCount: 3, mine: true }
+                - { name: spring, postCount: 30, mine: false }
+        '401': { $ref: '#/components/responses/LoginRequired' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+
+  /api/members/{handle}/tags:
+    get:
+      tags: [blog-tags]
+      operationId: getBlogTags
+      summary: 블로그 태그 줄
+      description: |
+        그 블로그의 목록 대상 글(블로그 목록과 같은 조건)에 쓰인 태그와 글 수, 글 수 많은 순(같으면 이름 순) 최대 `blog.tag.blog-strip.limit`(100)개.
+        화면은 처음 `initialVisible`(10)개를 보이고 [태그 더 보기]로 나머지를 펼친다. 블로그 주인이 봐도 자기 비공개 글의 태그는 없다(06 V-8).
+        없는 블로그·탈퇴 유예·익명 처리·대문자 주소는 같은 404(005 R-23).
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/Handle'
+      responses:
+        '200':
+          description: 태그 줄
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/BlogTags' }
+              example:
+                items:
+                  - { name: jpa, postCount: 5 }
+                  - { name: spring, postCount: 3 }
+                initialVisible: 10
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /api/members/{handle}/posts:
+    get:
+      tags: [blog-tags]
+      operationId: listBlogPostsByTag
+      summary: 블로그 글 목록 (+ 태그 필터)
+      description: |
+        005 `listBlogPosts`에 `tag` 쿼리를 더한다. `tag`가 없으면 005와 같다.
+        `tag`가 있으면 그 태그의 글만, 같은 카드·9개·커서. 커서 목록 구분은 `blog:{handle}:tag:{name}`.
+        `tag`가 정규화 결과와 다르거나 형식이 틀리면 404(301은 페이지 셸 `/@{handle}?tag=`만).
+        필터 머리말 "#jpa 글 5개"의 수는 `getBlogTags` 응답의 그 태그 `postCount`를 쓴다(따로 부르지 않음 — 태그 줄 밖의 태그면 첫 페이지 결과로 "글 N개" 대신 이름만 표시).
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/Handle'
+        - name: tag
+          in: query
+          required: false
+          schema: { type: string, maxLength: 30 }
+        - $ref: '#/components/parameters/Cursor'
+      responses:
+        '200':
+          description: 카드 목록
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PostCardPage' }
+        '400': { $ref: '#/components/responses/InvalidCursor' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+components:
+  parameters:
+    TagName:
+      name: name
+      in: path
+      required: true
+      description: 정규화된 태그 이름 (경로 조각 퍼센트 인코딩)
+      schema: { type: string, minLength: 1, maxLength: 30 }
+      examples:
+        plain: { value: spring-boot }
+        sharp: { summary: "c# (주소에서는 c%23)", value: 'c#' }
+        korean: { value: 스프링-부트 }
+    Handle:
+      name: handle
+      in: path
+      required: true
+      description: 블로그 주소 (소문자, `@` 없이)
+      schema: { type: string }
+    Cursor:
+      name: cursor
+      in: query
+      required: false
+      description: 이전 응답의 nextCursor 그대로
+      schema: { type: string }
+  securitySchemes:
+    sessionCookie:
+      type: apiKey
+      in: cookie
+      name: SESSION
+      description: Spring Session(Redis) 세션 쿠키. HttpOnly, Secure, SameSite=Lax (02 §5).
+
+  headers:
+    RetryAfter:
+      description: 다시 시도할 수 있을 때까지 남은 초
+      schema: { type: integer, minimum: 1 }
+
+  responses:
+    LoginRequired:
+      description: 비회원
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+          example: { code: LOGIN_REQUIRED, message: 로그인이 필요해요, errors: [], details: null }
+    Forbidden:
+      description: |
+        계정 상태 거부(001 `AccountStatusGuard`) 또는 CSRF 거부. 판정 순서상 404보다 먼저다(42 §3).
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+          examples:
+            emailNotVerified:
+              value: { code: EMAIL_NOT_VERIFIED, message: 이메일 인증 후 이용할 수 있어요, errors: [], details: null }
+            withdrawn:
+              value: { code: ACCOUNT_WITHDRAWN, message: 탈퇴 신청한 계정이에요, errors: [], details: null }
+            suspended:
+              value: { code: ACCOUNT_SUSPENDED, message: 정지된 계정이에요, errors: [], details: null }
+            csrfRejected:
+              value: { code: CSRF_REJECTED, message: 요청을 확인하지 못했어요. 페이지를 새로 고친 뒤 다시 시도해 주세요, errors: [], details: null }
+    NotFound:
+      description: 없음·볼 수 없음·남의 것. 본문은 모든 경우 같다(README 2026-10-07).
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+          example: { code: NOT_FOUND, message: 볼 수 없는 페이지예요, errors: [], details: null }
+    TooManyRequests:
+      description: 요청 과다. 판정 순서의 맨 끝(007 Q2). 코드는 `TOO_MANY_REQUESTS` 하나(007 Q3).
+      headers:
+        Retry-After: { $ref: '#/components/headers/RetryAfter' }
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+          example: { code: TOO_MANY_REQUESTS, message: 잠시 후 다시 시도해 주세요, errors: [], details: null }
+    InvalidCursor:
+      description: 풀 수 없거나 다른 목록의 커서
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+          example: { code: INVALID_CURSOR, message: 목록을 처음부터 다시 불러와 주세요, errors: [], details: null }
+
+  schemas:
+    ErrorResponse:
+      type: object
+      description: 공통 오류 본문 (02 §5-1 O8). `errors`는 항상 배열(없으면 []), 메시지 끝에 마침표 없음.
+      required: [code, message, errors, details]
+      properties:
+        code: { type: string, description: 대문자 이유 코드 }
+        message: { type: string }
+        errors:
+          type: array
+          items:
+            type: object
+            required: [field, code, message]
+            properties:
+              field: { type: string }
+              code: { type: string }
+              message: { type: string }
+        details:
+          type: [object, 'null']
+    TagSummary:
+      type: object
+      required: [name, postCount]
+      properties:
+        name: { type: string, maxLength: 30 }
+        postCount: { type: integer, minimum: 0, description: 전체 공개 조건의 글 수 }
+    TagCount:
+      type: object
+      required: [name, postCount]
+      properties:
+        name: { type: string, maxLength: 30 }
+        postCount: { type: integer, minimum: 1 }
+    TagIndex:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          maxItems: 100
+          items: { $ref: '#/components/schemas/TagCount' }
+    TagSuggestion:
+      type: object
+      required: [name, postCount, mine]
+      properties:
+        name: { type: string, maxLength: 30 }
+        postCount: { type: integer, minimum: 0, description: "공개 글 수 (내 태그면 0일 수 있음)" }
+        mine: { type: boolean, description: 내 글에 쓴 태그인가 }
+    BlogTags:
+      type: object
+      required: [items, initialVisible]
+      properties:
+        items:
+          type: array
+          maxItems: 100
+          items: { $ref: '#/components/schemas/TagCount' }
+        initialVisible: { type: integer, minimum: 1, description: "처음 보이는 개수 (blog.tag.blog-strip.initial)" }
+    PostCardPage:
+      description: 005 contracts/openapi.yaml `PostCardPage` 그대로 (items 최대 9, nextCursor)
+      type: object
+      required: [items, nextCursor]
+      properties:
+        items:
+          type: array
+          maxItems: 9
+          items: { type: object, description: 005 PostCard }
+        nextCursor: { type: [string, 'null'] }

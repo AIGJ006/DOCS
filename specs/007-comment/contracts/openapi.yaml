@@ -1,0 +1,372 @@
+openapi: 3.1.0
+info:
+  title: 댓글 API (007-comment)
+  version: 0.1.0
+  description: |
+    C-CMT-1 댓글·답글 REST 계약. 원문: docs/21-comment.md §5~§8, docs/42-permission-matrix.md §3·§6, docs/02-architecture.md §5-1(O8).
+
+    공통 규칙
+    - 현재 사용자는 세션에서만 꺼낸다. 요청에 회원을 가리키는 값은 없다.
+    - 판정 순서(42 §3, README 2026-10-07, Clarifications Q2): 401 LOGIN_REQUIRED → 403 계정 상태 → 404(글·댓글) → 400 내용·대상(수정은 409 COMMENT_HIDDEN) → 429 TOO_MANY_REQUESTS(맨 끝, 앞에서 걸린 요청은 세지 않음).
+    - 볼 수 없는 글(없음·임시·비공개·휴지통·숨김 글에 쓰기·작성자 탈퇴 유예)과 남의 댓글·없는 댓글은 모두 같은 404 본문이다.
+    - 오류 본문은 공통 형식 {code, message, errors, details}. errors는 항상 배열, 메시지 끝에 마침표 없음. 내용 오류는 VALIDATION_FAILED + errors[{field: content|replyToCommentId, code}].
+    - 상태를 바꾸는 요청은 세션 쿠키 + `X-XSRF-TOKEN` 헤더(001). 없거나 틀리면 403 CSRF_REJECTED.
+    - 댓글 내용은 글자 그대로다. 서버는 HTML로 바꾸지 않고 화면은 글자로만 그린다(white-space: pre-line).
+    - 응답 Cache-Control: 공개 글의 댓글은 `private, no-cache`, 공개가 아닌 글의 댓글은 `private, no-store`(06 R-5).
+servers:
+  - url: http://localhost:8080
+    description: 로컬 Docker Compose
+tags:
+  - name: comments
+    description: 댓글·답글
+paths:
+  /api/posts/{postId}/comments:
+    get:
+      tags: [comments]
+      operationId: listComments
+      summary: 댓글 목록 (최상위 20 + 각 답글 3)
+      description: |
+        글을 읽을 수 있는 사람만(아니면 404). 최상위 댓글을 오래된 순(작성 시각, 같으면 번호)으로 `blog.comment.page-size`(20)개,
+        각 최상위의 처음 답글 `reply-preview`(3)개와 답글 수. 커서 목록 구분은 `comments:{postId}`(다른 목록 커서면 400).
+        `around`가 있으면 그 댓글의 최상위부터 20개, 앞에 더 있으면 `prevCursor`, 대상이 4번째 이후 답글이면 그 최상위의 답글을 대상까지 담는다.
+        `around` 대상이 그 글의 보이는 댓글이 아니면 오류 없이 첫 페이지(`focusCommentId = null`).
+        `prevCursor`를 `cursor`로 보내면 그 앞 20개를 오래된 순으로 준다(방향은 커서 안에 있음).
+        SQL은 페이지당 4번 고정(최상위·답글·회원 표시·프로필 사진).
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/PostId'
+        - $ref: '#/components/parameters/Cursor'
+        - name: around
+          in: query
+          required: false
+          description: 바로 갈 댓글 번호 (알림 링크의 `?comment=` 값). 숫자가 아니면 무시
+          schema: { type: string }
+      responses:
+        '200':
+          description: 댓글 페이지
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CommentPage' }
+        '400': { $ref: '#/components/responses/InvalidCursor' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    post:
+      tags: [comments]
+      operationId: createComment
+      summary: 댓글·답글 쓰기
+      description: |
+        이메일 인증한 회원만. 글은 읽을 수 있는 발행 글이고 관리자가 숨기지 않았어야 한다(아니면 404).
+        `replyToCommentId`가 있으면 답글 — 대상이 답글이면 그 최상위 아래에 달리고, 대상 작성자가 내가 아니면 `replyTo`가 기록된다.
+        같은 회원·같은 글·같은 내용·같은 대상으로 10초 안에 다시 보내면(동시 포함) 새로 만들지 않고 처음 댓글을 200으로 돌려준다.
+        회원당 1분 10개(넘으면 429, 판정 맨 끝).
+      security:
+        - sessionCookie: []
+      parameters:
+        - $ref: '#/components/parameters/PostId'
+        - $ref: '#/components/parameters/CsrfToken'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateCommentRequest' }
+            examples:
+              root: { value: { content: "좋은 글 잘 읽었어요" } }
+              reply: { value: { content: "저도 같은 생각이에요", replyToCommentId: 4812 } }
+      responses:
+        '201':
+          description: 새 댓글 (화면이 목록 끝에 바로 붙임)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Comment' }
+        '200':
+          description: 10초 안 같은 요청 — 처음 댓글 (새로 만들지 않음)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Comment' }
+        '400':
+          description: 내용·대상 오류
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+              examples:
+                required:
+                  value: { code: VALIDATION_FAILED, message: 입력한 내용을 확인해 주세요, errors: [{ field: content, code: COMMENT_REQUIRED, message: 댓글 내용을 입력해 주세요 }], details: null }
+                tooLong:
+                  value: { code: VALIDATION_FAILED, message: 입력한 내용을 확인해 주세요, errors: [{ field: content, code: COMMENT_TOO_LONG, message: 댓글은 1000자까지 쓸 수 있어요 }], details: null }
+                target:
+                  value: { code: VALIDATION_FAILED, message: 입력한 내용을 확인해 주세요, errors: [{ field: replyToCommentId, code: REPLY_TARGET_UNAVAILABLE, message: 답글을 달 수 없는 댓글이에요 }], details: null }
+        '401': { $ref: '#/components/responses/LoginRequired' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+
+  /api/comments/{rootId}/replies:
+    get:
+      tags: [comments]
+      operationId: listReplies
+      summary: 답글 펼치기 (20개씩)
+      description: |
+        최상위 댓글의 답글을 오래된 순으로 `reply-page-size`(20)개. 첫 요청은 목록 응답의 `repliesNextCursor`를 보낸다(미리보기 다음부터).
+        커서 목록 구분은 `replies:{rootId}`. 그 글을 읽을 수 없거나 rootId가 최상위가 아니거나 없으면 404.
+      security: []
+      parameters:
+        - name: rootId
+          in: path
+          required: true
+          schema: { type: integer, format: int64, minimum: 1 }
+        - $ref: '#/components/parameters/Cursor'
+      responses:
+        '200':
+          description: 답글 페이지
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ReplyPage' }
+        '400': { $ref: '#/components/responses/InvalidCursor' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /api/comments/{commentId}:
+    patch:
+      tags: [comments]
+      operationId: editComment
+      summary: 내 댓글 고치기
+      description: |
+        작성자 본인만(남의 댓글은 글 작성자·관리자도 404). 삭제된 자리는 404, 숨긴 댓글은 409 COMMENT_HIDDEN.
+        그 글을 지금 읽을 수 있어야 하고 숨긴 글이면 404. 정리한 내용이 같으면 아무것도 바꾸지 않고 지금 댓글을 돌려준다(edited 그대로).
+        회원당 1분 20번. 알림·이력 없음.
+      security:
+        - sessionCookie: []
+      parameters:
+        - $ref: '#/components/parameters/CommentId'
+        - $ref: '#/components/parameters/CsrfToken'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/EditCommentRequest' }
+      responses:
+        '200':
+          description: 고친(또는 그대로인) 댓글
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Comment' }
+        '400':
+          description: 내용 오류 (COMMENT_REQUIRED·COMMENT_TOO_LONG)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+        '401': { $ref: '#/components/responses/LoginRequired' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409':
+          description: 숨긴 댓글
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+              example: { code: COMMENT_HIDDEN, message: 숨겨진 댓글은 수정할 수 없어요, errors: [], details: null }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+    delete:
+      tags: [comments]
+      operationId: deleteComment
+      summary: 내 댓글 지우기
+      description: |
+        작성자 본인만(남의 댓글은 글 작성자·관리자도 404). 이메일 인증 전 회원도 자기 댓글은 지울 수 있다. 숨긴 내 댓글도 지울 수 있다.
+        답글이 있는 최상위는 내용을 비우고 "삭제된 댓글이에요" 자리로 남기고, 그 밖은 완전히 지운다.
+        답글을 지워 자리인 최상위 아래 답글이 0개가 되면 자리도 지운다. 되살릴 수 없다.
+        글이 비공개·휴지통·숨김이어도 내 댓글은 지울 수 있다(제안, research R9). 이미 지운 자리는 404.
+      security:
+        - sessionCookie: []
+      parameters:
+        - $ref: '#/components/parameters/CommentId'
+        - $ref: '#/components/parameters/CsrfToken'
+      responses:
+        '204': { description: 지움 }
+        '401': { $ref: '#/components/responses/LoginRequired' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+components:
+  parameters:
+    PostId:
+      name: postId
+      in: path
+      required: true
+      description: 숫자가 아니면 404
+      schema: { type: string, pattern: '^[0-9]+$' }
+    CommentId:
+      name: commentId
+      in: path
+      required: true
+      schema: { type: integer, format: int64, minimum: 1 }
+    Cursor:
+      name: cursor
+      in: query
+      required: false
+      description: 이전 응답의 nextCursor·prevCursor·repliesNextCursor 그대로
+      schema: { type: string }
+    CsrfToken:
+      name: X-XSRF-TOKEN
+      in: header
+      required: true
+      description: CSRF 토큰 (`XSRF-TOKEN` 쿠키 값, 001)
+      schema: { type: string }
+  securitySchemes:
+    sessionCookie:
+      type: apiKey
+      in: cookie
+      name: SESSION
+      description: Spring Session(Redis) 세션 쿠키. HttpOnly, Secure, SameSite=Lax (02 §5).
+
+  headers:
+    RetryAfter:
+      description: 다시 시도할 수 있을 때까지 남은 초
+      schema: { type: integer, minimum: 1 }
+
+  responses:
+    LoginRequired:
+      description: 비회원
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+          example: { code: LOGIN_REQUIRED, message: 로그인이 필요해요, errors: [], details: null }
+    Forbidden:
+      description: |
+        계정 상태 거부(001 `AccountStatusGuard`) 또는 CSRF 거부. 판정 순서상 404보다 먼저다(42 §3).
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+          examples:
+            emailNotVerified:
+              value: { code: EMAIL_NOT_VERIFIED, message: 이메일 인증 후 이용할 수 있어요, errors: [], details: null }
+            withdrawn:
+              value: { code: ACCOUNT_WITHDRAWN, message: 탈퇴 신청한 계정이에요, errors: [], details: null }
+            suspended:
+              value: { code: ACCOUNT_SUSPENDED, message: 정지된 계정이에요, errors: [], details: null }
+            csrfRejected:
+              value: { code: CSRF_REJECTED, message: 요청을 확인하지 못했어요. 페이지를 새로 고친 뒤 다시 시도해 주세요, errors: [], details: null }
+    NotFound:
+      description: 없음·볼 수 없음·남의 것. 본문은 모든 경우 같다(README 2026-10-07).
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+          example: { code: NOT_FOUND, message: 볼 수 없는 페이지예요, errors: [], details: null }
+    TooManyRequests:
+      description: 요청 과다. 판정 순서의 맨 끝(007 Q2). 코드는 `TOO_MANY_REQUESTS` 하나(007 Q3).
+      headers:
+        Retry-After: { $ref: '#/components/headers/RetryAfter' }
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+          example: { code: TOO_MANY_REQUESTS, message: 잠시 후 다시 시도해 주세요, errors: [], details: null }
+    InvalidCursor:
+      description: 풀 수 없거나 다른 목록의 커서
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+          example: { code: INVALID_CURSOR, message: 목록을 처음부터 다시 불러와 주세요, errors: [], details: null }
+
+  schemas:
+    ErrorResponse:
+      type: object
+      description: 공통 오류 본문 (02 §5-1 O8). `errors`는 항상 배열(없으면 []), 메시지 끝에 마침표 없음.
+      required: [code, message, errors, details]
+      properties:
+        code: { type: string, description: 대문자 이유 코드 }
+        message: { type: string }
+        errors:
+          type: array
+          items:
+            type: object
+            required: [field, code, message]
+            properties:
+              field: { type: string }
+              code: { type: string }
+              message: { type: string }
+        details:
+          type: [object, 'null']
+    CreateCommentRequest:
+      type: object
+      required: [content]
+      properties:
+        content: { type: string, description: "정리 후 1~1000자(코드 포인트). 서버가 다시 센다" }
+        replyToCommentId: { type: [integer, 'null'], format: int64 }
+    EditCommentRequest:
+      type: object
+      required: [content]
+      properties:
+        content: { type: string }
+    CommentState:
+      type: string
+      enum: [NORMAL, DELETED, HIDDEN, WITHDRAWN_AUTHOR]
+      description: 우선순위 WITHDRAWN_AUTHOR > DELETED > HIDDEN > NORMAL (data-model §3)
+    CommentAuthor:
+      type: object
+      required: [handle, nickname, profileImageUrl, isPostAuthor]
+      properties:
+        handle: { type: string }
+        nickname: { type: string }
+        profileImageUrl: { type: [string, 'null'], description: 없으면 기본 아이콘 }
+        isPostAuthor: { type: boolean, description: "[작성자] 배지" }
+    ReplyTo:
+      description: 답글의 답글일 때만. 대상이 탈퇴(유예·익명 처리)면 withdrawn true만 담는다
+      oneOf:
+        - type: object
+          required: [handle, nickname]
+          properties:
+            handle: { type: string }
+            nickname: { type: string }
+        - type: object
+          required: [withdrawn]
+          properties:
+            withdrawn: { const: true }
+    Comment:
+      type: object
+      required: [id, state, content, createdAt, edited, author, replyTo, mine, parentId]
+      properties:
+        id: { type: integer, format: int64 }
+        state: { $ref: '#/components/schemas/CommentState' }
+        content:
+          type: [string, 'null']
+          maxLength: 1000
+          description: DELETED·WITHDRAWN_AUTHOR는 null, HIDDEN은 작성자 본인에게만 값
+        createdAt: { type: string, format: date-time }
+        edited: { type: boolean, description: "· 수정됨" }
+        author:
+          oneOf:
+            - $ref: '#/components/schemas/CommentAuthor'
+            - type: 'null'
+        replyTo:
+          oneOf:
+            - $ref: '#/components/schemas/ReplyTo'
+            - type: 'null'
+        mine: { type: boolean }
+        parentId: { type: [integer, 'null'], format: int64 }
+    RootComment:
+      allOf:
+        - $ref: '#/components/schemas/Comment'
+        - type: object
+          required: [replyCount, replies, repliesNextCursor]
+          properties:
+            replyCount: { type: integer, minimum: 0, description: "숨긴 답글 포함 (화면 [답글 N개 더 보기]의 N = replyCount - replies.length)" }
+            replies:
+              type: array
+              items: { $ref: '#/components/schemas/Comment' }
+            repliesNextCursor: { type: [string, 'null'] }
+    CommentPage:
+      type: object
+      required: [items, nextCursor, prevCursor, focusCommentId]
+      properties:
+        items:
+          type: array
+          maxItems: 20
+          items: { $ref: '#/components/schemas/RootComment' }
+        nextCursor: { type: [string, 'null'] }
+        prevCursor: { type: [string, 'null'], description: around·이전 방향일 때 앞에 더 있으면 }
+        focusCommentId: { type: [integer, 'null'], format: int64, description: around 대상을 펼쳤으면 그 번호 }
+    ReplyPage:
+      type: object
+      required: [items, nextCursor]
+      properties:
+        items:
+          type: array
+          maxItems: 20
+          items: { $ref: '#/components/schemas/Comment' }
+        nextCursor: { type: [string, 'null'] }

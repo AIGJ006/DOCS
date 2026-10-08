@@ -8,6 +8,17 @@
 
 **Input**: 원문 설계 문서 — [docs/04-draft-and-image.md](../../docs/04-draft-and-image.md) (§1 D-4, §4 사진 업로드, §6 결정 2·3, §6-1), [docs/23-image.md](../../docs/23-image.md) (전체). 참고: [docs/01-common-requirements.md](../../docs/01-common-requirements.md) C-IMG-1·결정 기록, [docs/10-post-list.md](../../docs/10-post-list.md) §6, [docs/12-content-sanitize.md](../../docs/12-content-sanitize.md) S-6·§6·§8, [docs/42-permission-matrix.md](../../docs/42-permission-matrix.md) §10, [docs/51-erd-unified.md](../../docs/51-erd-unified.md) `image`·`post_image`
 
+## Clarifications
+
+### Session 2026-10-08
+
+- Q: 친구 공개(`FRIENDS`) 글에 넣은 사진도 "주소를 알면 누구나 볼 수 있음"으로 둘까? → A: 그대로 둔다. 비공개 글 사진과 같은 기준이며 서명된 주소는 쓰지 않는다 (FR-025) (민서 확정 2026-10-08)
+- Q: 운영(NHN) 사진 저장소가 브라우저 직접 업로드를 지원하는지 언제 확인할까? → A: 구현 전에 운영 저장소 점검 11가지를 돌려 업로드 방식을 확정한다. 점검 전까지 plan은 직접 업로드를 기본안으로, 서버 경유 업로드를 대체안으로 적는다 (FR-026~FR-028, SC-009) (민서 확정 2026-10-08)
+- Q: "10MB 이하"는 원래 파일 기준인가, 실제로 올라가는 파일 기준인가? → A: 올라가는 파일 기준. 큰 사진도 브라우저가 줄여서 올리고 서버는 10MB 넘는 파일을 거부한다. GIF는 줄이지 않으므로 원래 파일 10MB가 한도다. 원래 파일 상한(기본 50MB)은 설정값으로 둔다. 001 프로필 사진 고르기에도 같은 규칙을 적용한다 (FR-001·FR-002, US1 #4) (민서 확정 2026-10-08)
+- Q: 브라우저가 WebP를 만들지 못하면? → A: JPEG(품질 0.8)로 대신 만든다. 썸네일·GIF 정지 장면은 `…_thumb.webp`를 가정하지 않고 실제 저장 이름(`thumb_key`)을 읽는다 (FR-002·FR-003·FR-007·FR-039) (민서 확정 2026-10-08)
+- Q: 어떤 업로드 실패를 "이 기기에 보관했다가 다시 올리기"로 처리할까? → A: 연결 끊김·시간 초과·서버 장애(5xx)만 보관해 연결이 돌아올 때·에디터를 다시 열 때 다시 올린다. 저장 공간 초과(409)·하루 200장 초과·요청 과다(429)·형식 거부(400)는 보관하지 않고 바로 안내한다 (FR-016·FR-019·FR-021, US3) (민서 확정 2026-10-08)
+- Q: 요청 과다 오류 코드는? → A: 공통 `TOO_MANY_REQUESTS`(007 Q3과 같음). 하루 200장 `DAILY_UPLOAD_LIMIT`·용량 `STORAGE_QUOTA_EXCEEDED`는 뜻이 달라 별도 코드로 둔다 (FR-016·FR-018) (민서 확정 2026-10-08)
+
 ## User Scenarios & Testing *(mandatory)*
 
 ### User Story 1 - 글에 사진 넣기 (Priority: P1)
@@ -23,7 +34,7 @@
 1. **Given** 인증된 회원이 에디터를 열었을 때, **When** 5MB JPEG 사진을 붙여넣으면, **Then** 긴 변 1920px 이하·WebP로 줄어든 원본과 가로 640px 이하 썸네일이 올라가고, 본문에는 사진 주소만 들어가며 사진이 화면에 보인다 (C-IMG-1).
 2. **Given** 사진에 촬영 위치(EXIF GPS)가 들어 있을 때, **When** 업로드가 끝나면, **Then** 저장된 원본·썸네일 어디에도 촬영 위치가 남아 있지 않다.
 3. **Given** 확장자만 `.jpg`로 바꾼 다른 형식의 파일(확장자 위장)일 때, **When** 업로드 완료 확인을 하면, **Then** 서버가 실제 파일 내용으로 형식을 판별해 거부하고 올라간 파일을 지운다 (C-IMG-1).
-4. **Given** 10MB를 넘는 파일이거나 jpg·png·gif·webp가 아닌 형식일 때, **When** 업로드를 요청하면, **Then** 업로드가 거부된다 (C-IMG-1).
+4. **Given** 브라우저가 줄인 뒤에도 10MB를 넘는 파일(GIF는 원래 파일 10MB 초과, 그 밖은 원래 파일 50MB 초과 포함)이거나 jpg·png·gif·webp가 아닌 형식일 때, **When** 업로드를 요청하면, **Then** 업로드가 거부된다 (C-IMG-1).
 5. **Given** 업로드가 끝난 사진일 때, **When** 저장 이름을 확인하면, **Then** 서버가 만든 추측할 수 없는 이름이고 원래 파일 이름은 어디에도 저장·표시되지 않는다 (C-IMG-1, 2026-10-07 회의).
 6. **Given** 비회원이거나 이메일 인증 전 회원일 때, **When** 사진 업로드를 요청하면, **Then** 비회원은 로그인 필요, 인증 전 회원은 이메일 인증 필요로 거부된다 (42 §10, 07 L-2).
 7. **Given** 한 회원이 1분 안에 사진 20장을 올렸을 때, **When** 21번째 업로드를 요청하면, **Then** 요청 횟수 초과로 거부된다 (04 §4-2).
@@ -169,9 +180,9 @@ GIF는 변환 없이 그대로 올라가 움직임이 살아 있다. 본문에�
 
 **형식·크기·브라우저 준비**
 
-- **FR-001**: System MUST jpg·png·gif·webp 형식의 10MB 이하 사진만 받는다 (C-IMG-1).
-- **FR-002**: 브라우저는 GIF가 아닌 사진을 올리기 전에 긴 변 최대 1920px로 줄이고, WebP(품질 0.8)로 바꾸고, 촬영 위치를 포함한 EXIF 메타데이터를 제거해야 한다 (04 §4-1 ②, C-IMG-1).
-- **FR-003**: 브라우저는 모든 사진에 대해 가로 최대 640px의 WebP(품질 0.8) 썸네일을 함께 만들어 올려야 한다. GIF의 썸네일은 첫 장면 정지 이미지다 (10 L-8, 2026-10-07 O5 "640px 썸네일 생성은 공통 데이터 규칙").
+- **FR-001**: System MUST jpg·png·gif·webp 형식의 10MB 이하 사진만 받는다. 10MB는 브라우저가 줄인 뒤 **실제로 올라가는 파일** 기준이다. 줄이지 않는 GIF는 원래 파일이 10MB 이하여야 하고, 그 밖의 사진은 원래 파일이 설정값(기본 50MB) 이하면 브라우저가 줄여서 올린다. 001 프로필 사진 고르기에도 같은 기준을 적용한다 (C-IMG-1, Clarifications 2026-10-08).
+- **FR-002**: 브라우저는 GIF가 아닌 사진을 올리기 전에 긴 변 최대 1920px로 줄이고, WebP(품질 0.8)로 바꾸고(브라우저가 WebP를 만들지 못하면 JPEG 품질 0.8), 촬영 위치를 포함한 EXIF 메타데이터를 제거해야 한다 (04 §4-1 ②, C-IMG-1, Clarifications 2026-10-08).
+- **FR-003**: 브라우저는 모든 사진에 대해 가로 최대 640px의 WebP(품질 0.8, 만들지 못하면 JPEG 0.8) 썸네일을 함께 만들어 올려야 한다. GIF의 썸네일은 첫 장면 정지 이미지다. 썸네일 주소는 확장자를 가정하지 않고 저장된 썸네일 이름을 읽어 만든다 (10 L-8, 2026-10-07 O5 "640px 썸네일 생성은 공통 데이터 규칙").
 - **FR-004**: 사진 데이터는 본문(자동 저장 경로)에 넣지 않고 올리는 즉시 사진 저장소로 업로드하며, 본문에는 사진 주소만 남긴다 (04 D-4). 사진 데이터는 앱 서버를 거치지 않고 브라우저에서 저장소로 직접 올라간다.
 
 **업로드 절차·서버 검사**
@@ -196,7 +207,7 @@ GIF는 변환 없이 그대로 올라가 움직임이 살아 있다. 본문에�
 
 **오프라인·실패 (04 §4-3)**
 
-- **FR-019**: 업로드가 실패하거나 오프라인이면 브라우저는 원본을 이 기기의 임시 저장소에 보관하고, 본문에 임시 표시를 넣고, 화면에는 기기 안 사본으로 사진을 정상 표시해야 한다. 연결되면 자동으로 다시 올리고 성공하면 임시 표시를 진짜 주소로 바꾼다.
+- **FR-019**: 오프라인이거나 업로드가 연결 끊김·시간 초과·서버 장애(5xx)로 실패하면 브라우저는 원본을 이 기기의 임시 저장소에 보관하고, 본문에 임시 표시를 넣고, 화면에는 기기 안 사본으로 사진을 정상 표시해야 한다. 연결되거나 에디터를 다시 열면 자동으로 다시 올리고 성공하면 임시 표시를 진짜 주소로 바꾼다. 저장 공간 초과(409)·하루 200장 초과·요청 과다(429)·형식 거부(400)는 다시 해도 성공할 수 없으므로 보관하지 않고 바로 안내한다 (Clarifications 2026-10-08).
 - **FR-020**: 자동 저장은 임시 표시가 있어도 그대로 진행해야 한다 (글이 사라지면 안 된다).
 - **FR-021**: System MUST 임시 표시 사진이 남아 있는 글의 발행을 거부한다 (다른 사람이 볼 수 없는 주소가 공개 글에 들어가는 것을 막는다). 발행 절차는 → [specs/002-post-authoring](../002-post-authoring/spec.md).
 
@@ -208,7 +219,7 @@ GIF는 변환 없이 그대로 올라가 움직임이 살아 있다. 본문에�
 
 **사진 공개·저장소 보호**
 
-- **FR-025**: 사진은 주소를 알면 누구나 볼 수 있다. 비공개 글의 사진도 같다 (04 결정 2, 01 Q10). 공개 범위가 `FRIENDS`(선택 구현)인 글의 사진 접근 방식은 [NEEDS CLARIFICATION: 04 결정 2와 01 결정 기록(Q10)은 "친구 공개 도입 시 서명된 주소 방식으로 재검토"라고만 남겼다. `FRIENDS` 적용자의 사진도 "주소를 알면 보임"을 유지할지, 사진마다 권한을 확인하는 방식으로 바꿀지 정해지지 않았다]
+- **FR-025**: 사진은 주소를 알면 누구나 볼 수 있다. 비공개 글의 사진도 같고, 공개 범위가 `FRIENDS`(선택 구현)인 글의 사진도 같다. 사진마다 권한을 확인하거나 서명된 주소를 쓰지 않으며, 저장 이름은 추측할 수 없는 무작위 이름이다 (04 결정 2, 01 Q10, Clarifications 2026-10-08).
 - **FR-026**: 사진 저장소는 다음을 만족해야 한다 (23 §2-2·§2-3): 서명된 업로드만 허용(서명 위조·서명 후 경로 변경·서명과 다른 형식·만료된 업로드 거부), 서명 없는 익명 쓰기 거부, 익명 목록 조회 거부, 사진 경로 아래 파일 하나 익명 읽기만 허용, 사진 경로 밖 익명 읽기 거부, 우리 사이트 출처에서만 업로드 허용(다른 출처 거부). 관리 콘솔은 외부에 열지 않는다.
 - **FR-027**: 저장소 보호 검증 11가지(FR-026 항목)는 로컬 개발용 고정 버전과 운영 저장소 **두 곳 모두**에서 통과해야 하며, 운영은 배포 전에 반드시 실행한다. 저장소 버전을 올리거나, 운영 저장소 변경 공지가 있거나, 버킷 정책·교차 출처·키 권한을 바꿀 때 다시 실행한다 (23 §2-3).
 - **FR-028**: 운영 저장소에서 브라우저 직접 업로드용 교차 출처 허용을 설정할 수 없으면 앱 서버를 거쳐 업로드하는 방식으로 바꾸되 FR-001~FR-024 규칙은 같아야 한다 (23 §2-2).
@@ -272,7 +283,7 @@ GIF는 변환 없이 그대로 올라가 움직임이 살아 있다. 본문에�
 - 사진 업로드는 임시저장과 분리된 즉시 업로드다 (01 결정 기록 2026-10-02 "사진 처리"). 자동 저장·수동 저장·발행 흐름 자체와 발행 때 카드 썸네일 지정(본문 첫 업로드 사진의 썸네일), 본문 렌더링·정화(우리 사진·남의 사진·외부 이미지 표시)는 → [specs/002-post-authoring](../002-post-authoring/spec.md)이 맡는다. 이 스펙은 업로드·검사·소유·저장소·정리·GIF·대체글을 맡는다.
 - 프로필 사진(256×256 WebP, 소셜 가입 시 사진 복사, 프로필 사진 교체 순서, 남의 사진을 프로필로 지정하면 거부)은 같은 업로드 흐름을 쓰되 규칙은 → [specs/001-account-auth](../001-account-auth/spec.md)가 맡는다. 프로필 사진도 사용량에 포함된다.
 - 글 카드의 썸네일 표시는 → [specs/005-post-reading](../005-post-reading/spec.md), 글 완전 삭제 때 사진 연결 해제는 → [specs/006-manage-delete](../006-manage-delete/spec.md), 탈퇴 회원 사진 정리는 → [specs/015-withdraw](../015-withdraw/spec.md), 공개 범위 정책은 → [specs/004-visibility-permission](../004-visibility-permission/spec.md)이 맡는다.
-- 저장소 제품은 팀 결정(2026-10-06)대로 운영 NHN 제공 저장소, 로컬은 버전을 고정한 커뮤니티 포크다. 운영 저장소의 접속 방식·앱 전용 키·버킷 정책·교차 출처 설정 가능 여부와 백업 정책은 **배포 전 확인 대상**이며 아직 확인되지 않았다 (04 §6-1, 23 §2-1).
+- 저장소 제품은 팀 결정(2026-10-06)대로 운영 NHN 제공 저장소, 로컬은 버전을 고정한 커뮤니티 포크다. 운영 저장소의 접속 방식·앱 전용 키·버킷 정책·교차 출처 설정 가능 여부와 백업 정책은 아직 확인되지 않았다. **구현 전에** 운영 저장소 점검 11가지를 돌려 업로드 방식(직접 / 서버 경유)을 확정한다 (04 §6-1, 23 §2-1, Clarifications 2026-10-08).
 - CDN(CloudFront)과 지운 사진의 CDN 무효화 요청은 강성찬 개인 확장이다. 공통 기간에는 저장소 공개 주소를 그대로 쓴다 (23 §2-4, §6-3).
 - 지운 사진이 이미 본 독자의 브라우저 캐시에 최대 1년 남는 것은 허용 한계로 둔다. "탈퇴 후 사진이 남지 않는다"는 우리 저장소(와 CDN) 기준이다 (23 §6-3).
 - `FRIENDS` 공개 범위는 선택 구현이고 기본 비활성이다. 비활성인 동안 사진 접근은 "주소를 알면 보임"으로 충분하다.
@@ -288,10 +299,10 @@ GIF는 변환 없이 그대로 올라가 움직임이 살아 있다. 본문에�
 - **저장소 제품** ([04 §6-1](../../docs/04-draft-and-image.md), [23 §2](../../docs/23-image.md)): MinIO. 운영 NHN 제공 MinIO, 로컬 `pgsty/silo:RELEASE.2026-09-16T00-00-00Z`(버전 고정, `latest` 금지, 클라이언트 `pgsty/mc`). 버킷 `blog` 하나, 사진은 `images/*`만. 앱 전용 키는 `s3:PutObject`·`GetObject`·`DeleteObject`만, 환경 변수로만. 익명 `GetObject`는 `images/*`만, 익명 `ListBucket` 금지. CORS는 우리 출처의 `PUT`·헤더 `Content-Type`만(MinIO 서버 설정 `MINIO_API_CORS_ALLOW_ORIGIN`). 관리 콘솔 비공개, 로컬도 9000 포트만.
 - **저장소 검증 11가지** ([23 §2-3](../../docs/23-image.md)): `scripts/check-storage.sh`(로컬, 2026-10-06 PASS 11/FAIL 0), 운영은 `scripts/lib/presign_check.py`를 `S3_ENDPOINT`·`APP_KEY`·`APP_SECRET`·`BUCKET`·`SITE_ORIGIN`만 바꿔 실행(미실행, 배포 전 필수). 앱 통합 테스트는 Testcontainers로 같은 고정 이미지.
 - **저장 키·주소** ([04 §4-2](../../docs/04-draft-and-image.md), [23 §2-4](../../docs/23-image.md)): 키 `images/{yyyy}/{MM}/{uuid}.{ext}`, 썸네일 `{uuid}_thumb.{ext}`. 주소 = `blog.image.public-base-url` + `/` + 키. 옛 주소 `blog.image.legacy-base-urls`. 판별·키 추출은 `ImageUrls.keyOf(url)` 하나(키 모양 `images/{yyyy}/{MM}/{uuid}(_thumb)?.{ext}`). 렌더링은 12 §2 ② AST 변환에서 `src`를 현재 공개 주소로. 작성자 사진 확인은 `SELECT storage_key FROM image WHERE storage_key = ANY(:keys) AND uploader_id = :author`(`uq_image_storage_key`). 캐시 `Cache-Control: public, max-age=31536000, immutable`. 공개 주소 변경 4단계 SQL: `UPDATE post SET thumbnail_url = :new || substr(thumbnail_url, length(:old) + 1) WHERE thumbnail_url LIKE :old || '/%'`, 3단계는 `RENDER_VERSION` 증가(12 §7-7).
-- **요청 제한·용량** ([04 §4-2](../../docs/04-draft-and-image.md), [23 §3](../../docs/23-image.md)): 1분 20장은 Redis 카운터. 하루 장수 Redis `img:daily:{memberId}:{yyyyMMdd}` `INCR`, TTL 2일, presign에서 셈. 용량 설정 `blog.image.quota-bytes`(1GB), `blog.image.daily-limit`(200). presign 트랜잭션에서 `SELECT … FROM member WHERE id = :me FOR UPDATE` 후 `SELECT coalesce(sum(size_bytes + coalesce(thumb_size_bytes, 0)), 0) FROM image WHERE uploader_id = :me`(`ix_image_uploader`) → TEMP 행을 신고 크기로 INSERT. 오류 `409 STORAGE_QUOTA_EXCEEDED`, `429 DAILY_UPLOAD_LIMIT`. `GET /api/me/storage` → `{ usedBytes, quotaBytes, todayCount, dailyLimit }`. 회원 행에 사용량 컬럼을 두지 않는다.
+- **요청 제한·용량** ([04 §4-2](../../docs/04-draft-and-image.md), [23 §3](../../docs/23-image.md)): 1분 20장은 Redis 카운터(`RateLimiter`, 넘으면 `429 TOO_MANY_REQUESTS`). 하루 장수 Redis `img:daily:{memberId}:{yyyyMMdd}` `INCR`, TTL 2일, presign에서 셈. 용량 설정 `blog.image.quota-bytes`(1GB), `blog.image.daily-limit`(200). presign 트랜잭션에서 `SELECT … FROM member WHERE id = :me FOR UPDATE` 후 `SELECT coalesce(sum(size_bytes + coalesce(thumb_size_bytes, 0)), 0) FROM image WHERE uploader_id = :me`(`ix_image_uploader`) → TEMP 행을 신고 크기로 INSERT. 오류 `409 STORAGE_QUOTA_EXCEEDED`, `429 DAILY_UPLOAD_LIMIT`. `GET /api/me/storage` → `{ usedBytes, quotaBytes, todayCount, dailyLimit }`. 회원 행에 사용량 컬럼을 두지 않는다.
 - **오프라인 대기열** ([04 §4-3](../../docs/04-draft-and-image.md)): IndexedDB `pendingImages`에 Blob, 본문 `![업로드 대기](local:…)`, 화면은 `URL.createObjectURL`(CSP `img-src blob:`). 발행 시 `local:`이 있으면 `400`.
 - **연결·정리** ([04 §4-4](../../docs/04-draft-and-image.md), [05 §7 ⑥](../../docs/05-publish.md)): `post_image` 동기화(`uploader_id = 글 작성자`만, `status = ATTACHED`, 빠진 사진 `detached_at`). 정리 배치는 매일 새벽 `@Scheduled` + ShedLock, `ix_image_cleanup_temp`(TEMP 24시간)·`ix_image_cleanup_detached`(7일). `purpose = PROFILE`, `status = ATTACHED`, `detached_at IS NULL`인 행은 제외(`uq_image_profile_current`). 저장소 삭제는 트랜잭션 밖, 성공 후 행 삭제. 탈퇴 정리는 13 §3-3 4번(order 40): `detached_at = now() - interval '7 days'`로 기록해 다음 배치가 지움.
-- **GIF** ([23 §5](../../docs/23-image.md)): 서버 검사는 `ImageReader.getNumImages`로 머리말·프레임 수만. 본문 출력 `<a href="{원본.gif}" title="움직이는 이미지 재생" target="_blank" rel="noopener noreferrer nofollow ugc"><img src="{uuid}_thumb.webp" alt="…" loading="lazy" decoding="async"></a>`. 재생 스크립트 `/js/gif-play.js`(CSP `script-src 'self'`, `a[href$=".gif"] > img`), ▶ 표시는 CSS `a[href$=".gif"]::after`(class 없이, 정화 허용 목록 변경 없음).
+- **GIF** ([23 §5](../../docs/23-image.md)): 서버 검사는 `ImageReader.getNumImages`로 머리말·프레임 수만. 본문 출력 `<a href="{원본.gif}" title="움직이는 이미지 재생" target="_blank" rel="noopener noreferrer nofollow ugc"><img src="{thumb_key 주소}" alt="…" loading="lazy" decoding="async"></a>`. 재생 스크립트 `/js/gif-play.js`(CSP `script-src 'self'`, `a[href$=".gif"] > img`), ▶ 표시는 CSS `a[href$=".gif"]::after`(class 없이, 정화 허용 목록 변경 없음).
 - **CSP** ([02 §5](../../docs/02-architecture.md), [12 §8](../../docs/12-content-sanitize.md), 2026-10-07 H3): `connect-src 'self' {저장소 공개 주소}`, `img-src 'self' {저장소 공개 주소} data: blob:`. 저장소 주소는 `blog.image.public-base-url` 하나를 CSP·정화 허용 목록이 함께 씀.
 - **스키마** ([51 `image`·`post_image`](../../docs/51-erd-unified.md)): `image(id, uploader_id FK RESTRICT, storage_key UQ, thumb_storage_key UQ, content_type CHECK 4종, size_bytes CHECK 1~10485760, thumb_size_bytes CHECK ≤1048576, width, height, status TEMP/ATTACHED, purpose POST/PROFILE, detached_at, created_at)`, `post_image(post_id, image_id)` 복합 PK, 양쪽 CASCADE. `image.original_name`은 삭제됨(2026-10-07). 회원 테이블은 사진을 가리키지 않는다.
 - **장애** ([02 §2-1](../../docs/02-architecture.md)): Redis 장애 시 요청 제한 카운터는 통과(경고 로그).

@@ -171,7 +171,7 @@
 
 ### R-29 화면 버튼 표시 기준 데이터 — 제안(팀 확인 필요)
 
-- **Decision**: 글 상세 응답(005 담당)에 `viewer: { isAuthor, loggedIn, emailVerified, isAdmin }` 같은 표시 플래그를 넣고, React `PostActions`가 FR-045 규칙으로 버튼을 고른다. 버튼을 누른 결과는 공통 `useAuthGate`가 처리한다. 401이면 `/login?returnTo=` 안내, `EMAIL_NOT_VERIFIED`면 "인증 메일 다시 보내기" 안내, `ACCOUNT_WITHDRAWN`이면 `/restore`로 안내하고, 로그인 뒤 자동 실행은 하지 않는다.
+- **Decision**: 글 상세 응답(005 담당)에 `viewer: { isAuthor, loggedIn, emailVerified, isAdmin }` 같은 표시 플래그를 넣고, React `PostActions`가 FR-045 규칙으로 버튼을 고른다. 버튼을 누른 결과는 공통 `useAuthGate`가 처리한다. 401이면 `/login?returnTo=` 안내, `EMAIL_NOT_VERIFIED`면 "인증 메일 다시 보내기" 안내, `ACCOUNT_WITHDRAWN`이면 `/account/restore`로 안내하고(015 화면 경로, ANALYSIS-tier-a R13), 로그인 뒤 자동 실행은 하지 않는다.
 - **Rationale**: 42 §11, H6, FR-045. 서버 판정은 별도로 매번 한다(P-1).
 - **Alternatives considered**: 화면이 세션 정보와 작성자 id를 직접 비교(작성자 id를 화면에 노출할 필요가 생김).
 

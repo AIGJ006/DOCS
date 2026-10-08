@@ -39,18 +39,18 @@
 | R1 | 불일치 | HIGH (**해결됨 2026-10-07**: A안 — `errors: []`, 마침표 없음. 001 T017·T018, 001·002·005·006 contracts 반영) | 001 tasks T017 ↔ 004 research R-26·contracts, 002·005·006 contracts | 404 본문이 문서마다 다르다. 001 T017은 `errors:null`, 나머지는 `errors: []`이고, 002·005는 메시지 끝에 마침표가 있다. "본문 완전 동일" 테스트끼리 서로 깨진다. | 001 T017·T018 기준 하나로 정한다. 다수안은 `errors: []`·마침표 없음(→ 팀 결정 4). |
 | R2 | 불일치(spec) | HIGH | 001 spec FR-031 ↔ FR-049 | 소셜 사진은 가입 때 한 번만 복사하는데, 인증 전 회원은 사진을 업로드할 수 없다. 확인된 이메일이 없는 GitHub 가입자는 소셜 사진을 받지 못한다. | spec 수정 필요(→ 팀 결정 1). |
 | R3 | 불일치 | MEDIUM | 001 T017(`MALFORMED_REQUEST`) ↔ 004 R-21·T027·T036(`INVALID_REQUEST`) | 읽을 수 없는 JSON의 이유 코드가 둘이다. | 하나로 정한다(→ 팀 결정 2). |
-| R4 | 불일치 | MEDIUM | 001 T018·contracts(`TOO_MANY_REQUESTS`) ↔ 002 contracts·T007(`RATE_LIMITED`) | 429 이유 코드가 둘이다. | 001 공통 코드로 맞추거나 구분 근거를 적는다(→ 팀 결정 3). |
+| R4 | 불일치 | MEDIUM (**해결됨 2026-10-08**: `TOO_MANY_REQUESTS` 하나, 007 Q3 민서 확정. 002 코드는 007 T058) | 001 T018·contracts(`TOO_MANY_REQUESTS`) ↔ 002 contracts·T007(`RATE_LIMITED`) | 429 이유 코드가 둘이다. | 001 공통 코드로 맞추거나 구분 근거를 적는다(→ 팀 결정 3). |
 | R5 | Constitution 정렬 | MEDIUM | 005 T034 → 004 소유 `PostQueryRepository`, 004 plan Complexity Tracking | 005가 004 파일에 `image` LEFT JOIN을 추가하는데, 이 원칙 II 예외가 004 plan에는 기록되지 않았다. | 004 plan Complexity Tracking에 추가하거나, T034가 001 `ProfileImageQuery`를 쓰게 한다. |
 | R6 | 커버리지 공백 | MEDIUM | 004 spec FR-012·036·037·038·041·043 | Tier B/C 기능에 위임한 6개 FR은 Tier A 작업이 없다(의도). | 해당 기능 tasks 작성 때 004 권한 매트릭스 하네스(T021~T023)에 연결. |
-| R7 | 커버리지 공백 | MEDIUM | 005 spec SC-005(썸네일 전송량) | 확인 작업이 없다(003 썸네일 생성에 의존). | 003 tasks 또는 005 Polish에 측정 항목 추가. |
+| R7 | 커버리지 공백 | MEDIUM (**해결됨 2026-10-08**: 003 T098이 측정) | 005 spec SC-005(썸네일 전송량) | 확인 작업이 없다(003 썸네일 생성에 의존). | 003 tasks 또는 005 Polish에 측정 항목 추가. |
 | R8 | 미명세 | MEDIUM | 001 T084·T116(임시)·T121, 003(Tier B) | 003이 없어 001 프로필 사진 기능은 임시 구현으로 일부만 동작한다. | 001 체크포인트에 "사진은 003 완료 전 임시" 명시(→ 팀 결정 5). |
-| R9 | 미명세 | MEDIUM | 002·004·006 spec·events | sitemap 소유 기능이 없다. | 012 또는 005에 배정(→ 팀 결정 6). |
+| R9 | 미명세 | MEDIUM (**해결됨 2026-10-08**: 012가 맡음, 민서 확정) | 002·004·006 spec·events | sitemap 소유 기능이 없다. | 012 또는 005에 배정(→ 팀 결정 6). |
 | R10 | 불일치 | MEDIUM | 001 T015(`blog.<기능>`) ↔ 002·005·006 설정 키 | 설정 키 접두어 규칙이 지켜지지 않는다. | 규칙을 정한 뒤 각 `*Properties` 작업 수정(→ 팀 결정 7). |
 | R12 | 불일치 | LOW | 51 공통 스키마 `ck_post_published` | DB CHECK는 공백(U+0020)만 지운다. Java 검사가 더 엄격해 실제 문제는 없다. | 51은 유지, 002 data-model에 주석. |
-| R13 | 불일치 | LOW | 004(복구 화면 `/restore`) ↔ 015 spec(`/account/restore`) | 복구 화면 경로가 다르다. | 015 plan 때 `/account/restore`로 맞춘다. |
+| R13 | 불일치 | LOW (**해결됨 2026-10-08**: `/account/restore`, 004 T051·research 수정 — ANALYSIS-tier-bc I6) | 004(복구 화면 `/restore`) ↔ 015 spec(`/account/restore`) | 복구 화면 경로가 다르다. | 015 plan 때 `/account/restore`로 맞춘다. |
 | R14 | 미명세 | LOW | 001 T042a ↔ T109(`ReagreementGateFilter`) | 두 필터의 실행 순서가 정해지지 않았다. | 탈퇴 유예 판정을 먼저 둔다고 명시. |
 | R15 | 커버리지 | LOW | 002 SC-001, 005 SC-011 | 측정 테스트 없이 간접 확인만 된다. | Polish의 quickstart 검증 항목에 명시. |
-| R16 | 불일치(범위 밖) | LOW | 009 spec Implementation Notes | Tier B 문서에 옛 CSRF 헤더 이름이 남아 있다. | 009 plan 단계에서 `X-XSRF-TOKEN`으로. |
+| R16 | 불일치(범위 밖) | LOW (**해결됨 2026-10-08**: 009 spec·contracts가 `X-XSRF-TOKEN`) | 009 spec Implementation Notes | Tier B 문서에 옛 CSRF 헤더 이름이 남아 있다. | 009 plan 단계에서 `X-XSRF-TOKEN`으로. |
 
 ## 2. 요구사항 ↔ 작업 커버리지
 
@@ -83,10 +83,10 @@ FR이나 SC에 직접 연결되지 않은 작업은 모두 기반·확인 작업
 
 1. **소셜 사진 충돌(R2)**: 가입 때 서버 복사만 FR-049 예외로 둘지, 인증 후 한 번 더 복사를 허용할지.
 2. **400 형식 오류 코드(R3)**: `MALFORMED_REQUEST` vs `INVALID_REQUEST`.
-3. **429 코드(R4)**: `TOO_MANY_REQUESTS` vs `RATE_LIMITED`.
+3. ~~**429 코드(R4)**~~ → 2026-10-08 결정: `TOO_MANY_REQUESTS`(007 Q3).
 4. ~~**404 본문(R1)**~~ → 2026-10-07 결정: `errors: []`, 마침표 없음.
 5. **003 미완성 동안 001 사진 기능(R8)**: "003 전까지 임시"로 받아들일지.
-6. **sitemap 소유(R9)**: 012 또는 005.
+6. ~~**sitemap 소유(R9)**~~ → 2026-10-08 결정: 012.
 7. **설정 키 규칙(R10)**: `blog.<기능>` vs `blog.<도메인>`.
 8. **제안 승인**: `CSRF_REJECTED`, `ActionKind.CONTENT_CLEANUP`, 001 T042a 허용 목록 4개 경로.
 

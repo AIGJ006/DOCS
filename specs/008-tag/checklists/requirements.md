@@ -13,7 +13,7 @@
 
 ## Requirement Completeness
 
-- [ ] No [NEEDS CLARIFICATION] markers remain
+- [x] No [NEEDS CLARIFICATION] markers remain
 - [x] Requirements are testable and unambiguous
 - [x] Success criteria are measurable
 - [x] Success criteria are technology-agnostic (no implementation details)
@@ -31,6 +31,7 @@
 
 ## Notes
 
+- **2026-10-08 clarify 반영**: NEEDS CLARIFICATION 표시를 모두 spec Clarifications(Session 2026-10-08, 민서 확정)의 답으로 고쳤다. 아래 "남음" 기록은 clarify 전 상태다.
 - Items marked incomplete require spec updates before `/speckit-clarify` or `/speckit-plan`
 - **NEEDS CLARIFICATION 1개 남음** (FR-029): 전체 태그 목록 10분 재계산(22 §6)이 C-TAG-1 #5·06 §8 #2(비공개 글은 목록·글 수에 나오지 않음)를 최대 10분 동안 어기는 것을 허용하는지. `/speckit-clarify`에서 해소한다.
 - 구현 세부: 본문에는 프레임워크·테이블·API 경로가 없다. 정규화 클래스, 정규식 CHECK, 인덱스, 저장 SQL, API, Redis 캐시 키, 경로 인코딩·방화벽 주의점은 `## Implementation Notes (for /speckit-plan)` 절에만 두었다. 사용자가 보는 주소(`/tags/{이름}`, `?tag=`)와 301/404, 이유 코드(`INVALID_TAG` 등)는 C-TAG-1 #6·#7의 관찰 가능한 결과라 본문에 남겼다. 정규화 단계(NFKC 등)는 태그 동일성의 요구사항 자체라 본문에 두었다.

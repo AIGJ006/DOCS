@@ -13,7 +13,7 @@
 
 ## Requirement Completeness
 
-- [ ] No [NEEDS CLARIFICATION] markers remain
+- [x] No [NEEDS CLARIFICATION] markers remain
 - [x] Requirements are testable and unambiguous
 - [x] Success criteria are measurable
 - [x] Success criteria are technology-agnostic (no implementation details)
@@ -31,6 +31,7 @@
 
 ## Notes
 
+- **2026-10-08 clarify 반영**: NEEDS CLARIFICATION 표시를 모두 spec Clarifications(Session 2026-10-08, 민서 확정)의 답으로 고쳤다. 아래 "남음" 기록은 clarify 전 상태다.
 - Items marked incomplete require spec updates before `/speckit-clarify` or `/speckit-plan`
 - **NEEDS CLARIFICATION 1개 남음** (FR-020): 신고 없이 관리자가 직접 숨길 수 있는지(42 §5-2·§6·§11은 관리자 [숨김] 행동·버튼을 두지만 43은 신고 처리 화면에서만 정의).
 - 관련 미결이 다른 spec에 있음: 정지 중 탈퇴 경로·영구 정지 계정 개인정보 보유 기간(13 §3-2 "미정", → specs/015-withdraw), 트렌딩에서 숨긴 댓글 제외(→ specs/012-trending-search).
