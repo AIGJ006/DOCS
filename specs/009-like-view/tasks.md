@@ -120,14 +120,14 @@ description: "Task list for 009-like-view (좋아요와 조회수)"
 
 ### Tests for User Story 2 ⚠️
 
-- [ ] T019 [P] [US2] 권한 매트릭스 `TR/permission/like-view.csv`(research R12의 `post.like`·`post.unlike`·`post.view` 행 전부, owner `009`)와 `T/interaction/integration/LikeViewPermissionMatrixIT.java`, 실행기 `T/interaction/integration/permission/LikeAction.java`·`UnlikeAction.java`(거부 때 `PostSnapshot`에 `like_count`·`post_like` 행 수 포함). `post.view` 실행기는 US3에서 더한다
-- [ ] T020 [P] [US2] `LikeApiIT`에 추가: `볼_수_없는_자기_글은_400이_아니라_404`(판정 순서), `좋아요_취소_합쳐_61번째는_429와_Retry_After`(US2 #5), `앞_단계에서_걸린_요청은_세지_않는다`, `관리자도_일반_회원과_같다`, `정지_회원_남은_세션은_403`, `좋아요한_글이_비공개가_되어도_보존되고_다시_공개하면_그대로`(FR-019)
-- [ ] T021 [P] [US2] `LikeButton.test.tsx`에 추가: 비회원이 누르면 "로그인하고 좋아요를 눌러 보세요 [로그인]"(링크 `/login?returnTo={지금 주소}`), 인증 전이면 "이메일 인증 후 누를 수 있어요", 작성자는 버튼 없이 ♥ + 수, 401·403 응답도 같은 안내로(US2 #1~#3)
+- [X] T019 [P] [US2] 권한 매트릭스 `TR/permission/like-view.csv`(research R12의 `post.like`·`post.unlike`·`post.view` 행 전부, owner `009`)와 `T/interaction/integration/LikeViewPermissionMatrixIT.java`, 실행기 `T/interaction/integration/permission/LikeAction.java`·`UnlikeAction.java`(거부 때 `PostSnapshot`에 `like_count`·`post_like` 행 수 포함). `post.view` 실행기는 US3에서 더한다 (구현 메모: 좋아요 수·행 수 비교는 004 PostSnapshot을 고치지 않고 실행기(LikePermissionSupport)가 다른 회원의 좋아요 1건을 미리 넣고 거부 때 전후를 비교한다. 129행(post.view 43행은 T029까지 대기))
+- [X] T020 [P] [US2] `LikeApiIT`에 추가: `볼_수_없는_자기_글은_400이_아니라_404`(판정 순서), `좋아요_취소_합쳐_61번째는_429와_Retry_After`(US2 #5), `앞_단계에서_걸린_요청은_세지_않는다`, `관리자도_일반_회원과_같다`, `정지_회원_남은_세션은_403`, `좋아요한_글이_비공개가_되어도_보존되고_다시_공개하면_그대로`(FR-019) (구현 메모: 인증_전_회원은_403_EMAIL_NOT_VERIFIED도 더했다)
+- [X] T021 [P] [US2] `LikeButton.test.tsx`에 추가: 비회원이 누르면 "로그인하고 좋아요를 눌러 보세요 [로그인]"(링크 `/login?returnTo={지금 주소}`), 인증 전이면 "이메일 인증 후 누를 수 있어요", 작성자는 버튼 없이 ♥ + 수, 401·403 응답도 같은 안내로(US2 #1~#3)
 
 ### Implementation for User Story 2
 
-- [ ] T022 [US2] T019·T020에서 드러난 판정 차이를 `LikeService`에서 고친다(예: `PUBLISHED` 확인 위치, 관리자 숨김 글). 모든 `like-view.csv` 좋아요 행 통과(SC-004)
-- [ ] T023 [US2] `LikeButton`의 비회원·인증 전·작성자 표시와 로그인 이동(돌아와서 자동으로 누르지 않음, FR-014)을 구현한다(T021 통과)
+- [X] T022 [US2] T019·T020에서 드러난 판정 차이를 `LikeService`에서 고친다(예: `PUBLISHED` 확인 위치, 관리자 숨김 글). 모든 `like-view.csv` 좋아요 행 통과(SC-004) (구현 메모: T019·T020에서 판정 차이는 나오지 않았다(작성자 본인의 숨김·비공개 발행 글은 볼 수 있어 400, 임시·휴지통은 404). 006 TrashedPostPermissionMatrixIT의 좋아요는_404 자리를 실제 단언(로그인 404, 비회원 401)으로 채웠다)
+- [X] T023 [US2] `LikeButton`의 비회원·인증 전·작성자 표시와 로그인 이동(돌아와서 자동으로 누르지 않음, FR-014)을 구현한다(T021 통과) (구현 메모: 로그인 링크는 004 loginPathFor(지금 경로+쿼리)를 그대로 쓴다)
 
 **Checkpoint**: C-LIKE-1 기준이 모두 통과한다
 
