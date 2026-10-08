@@ -3,7 +3,7 @@ import { hasAccount, login } from './support';
 
 /**
  * 001 T147 (quickstart §4-12): 375px에서 가입·로그인·소셜 가입 마무리·설정 화면에 가로 스크롤이 없고, 비밀번호 규칙이 글자와 ✓로
- * 보이며, 주소 칸이 소문자로 바꾸고 `-`·한글을 막고, 로그아웃하면 이 기기의 `draft:{memberId}:*` 임시 글이 지워지되
+ * 보이며, 주소 칸이 소문자로 바꾸고 `-`를 막고 한글 자판 입력을 영문으로 넣으며, 로그아웃하면 이 기기의 `draft:{memberId}:*` 임시 글이 지워지되
  * localStorage(테마 같은 화면 설정)는 그대로다.
  */
 async function expectNoHorizontalScroll(page: Page, where: string) {
@@ -67,7 +67,9 @@ test.describe('계정 화면 375px·입력 칸·로그아웃 정리', () => {
     }
   });
 
-  test('비밀번호 규칙은 글자 + ✓, 주소 칸은 소문자·- 차단·한글 차단', async ({ page }) => {
+  test('비밀번호 규칙은 글자 + ✓, 주소 칸은 소문자·- 차단·한글 자판은 영문으로', async ({
+    page,
+  }) => {
     await page.goto('/signup');
     await page.getByLabel('비밀번호', { exact: true }).fill('Blog#2026a');
     const rules = page.getByRole('list', { name: '비밀번호 규칙' }).locator('li');
@@ -80,7 +82,7 @@ test.describe('계정 화면 375px·입력 칸·로그아웃 정리', () => {
       expect((await rules.nth(i).innerText()).replace(/[✓✗\s]/g, '').length).toBeGreaterThan(0);
     }
     await page.getByLabel('비밀번호', { exact: true }).fill('abc');
-    await expect(rules.locator('[data-met="false"]').first()).toContainText('✗');
+    await expect(page.locator('ul.password-rules li[data-met="false"]').first()).toContainText('✗');
 
     const handle = page.getByLabel('블로그 주소');
     await expect(handle).toHaveAttribute('inputmode', 'url');
@@ -88,9 +90,9 @@ test.describe('계정 화면 375px·입력 칸·로그아웃 정리', () => {
     await handle.fill('');
     await handle.pressSequentially('My-Blog');
     await expect(handle).toHaveValue('myblog');
-    // 한글 자판 입력(조합 결과가 들어오는 경우)도 막는다.
+    // 한글 자판 상태로 친 글자는 같은 자리의 영문으로 들어간다(한글 → gksrmf, quickstart §4-12).
     await handle.pressSequentially('한글2');
-    await expect(handle).toHaveValue('myblog2');
+    await expect(handle).toHaveValue('mybloggksrmf2');
   });
 
   test('설정 화면 가로 스크롤 없음, 로그아웃하면 draft:{memberId}:* 삭제·localStorage 유지', async ({
