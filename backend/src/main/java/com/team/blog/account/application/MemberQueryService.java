@@ -18,7 +18,8 @@ import org.springframework.transaction.annotation.Transactional;
  *   <li>{@link #findAccessInfo(long)} — 004 {@code Viewer}·T042a 탈퇴 유예 필터
  *   <li>{@link #findReadableBlogOwner(String)}·{@link #normalizeHandle(String)} — 005 블로그 주소
  *   <li>{@link #defaultVisibility(long)} — 002 새 글 기본 공개 범위
- *   <li>{@link #findDisplays(Collection)} — 007 댓글 작성자·대상 표시
+ *   <li>{@link #findDisplays(Collection)} — 007 댓글 작성자·대상 표시, 014 신고 목록 작성자·처리 관리자
+ *   <li>{@link #findAdminView(String)} — 014 관리자 회원 화면
  * </ul>
  */
 @Service
@@ -117,6 +118,63 @@ public class MemberQueryService {
                                             withdrawn));
                         });
         return result;
+    }
+
+    /**
+     * 관리자 회원 화면용 회원 정보 (014 T014). 주소는 대소문자를 가리지 않는다(소문자로 바꿔 찾음). 탈퇴 유예 회원도 돌려주고, 익명 처리된 회원·없는 주소는
+     * 빈 값.
+     */
+    public Optional<AdminMemberInfo> findAdminView(String handle) {
+        if (handle == null || handle.isBlank() || handle.length() > 39) {
+            return Optional.empty();
+        }
+        return jdbc.sql(
+                        """
+                        SELECT id, handle, nickname, role, status, created_at, withdrawn_at
+                          FROM member
+                         WHERE handle = ? AND deleted_at IS NULL
+                        """)
+                .param(normalizeHandle(handle))
+                .query(
+                        (rs, n) ->
+                                new AdminMemberInfo(
+                                        rs.getLong("id"),
+                                        rs.getString("handle"),
+                                        rs.getString("nickname"),
+                                        Role.valueOf(rs.getString("role")),
+                                        MemberStatus.valueOf(rs.getString("status")),
+                                        rs.getTimestamp("created_at").toInstant(),
+                                        rs.getTimestamp("withdrawn_at") == null
+                                                ? null
+                                                : rs.getTimestamp("withdrawn_at").toInstant()))
+                .optional();
+    }
+
+    /** 회원 번호로 관리자용 회원 정보 (014 처리 화면 작성자 카드). 익명 처리된 회원도 돌려주되 주소·닉네임은 {@code null}이다. 없는 번호는 빈 값. */
+    public Optional<AdminMemberInfo> findAdminViewById(long memberId) {
+        return jdbc.sql(
+                        """
+                        SELECT id, handle, nickname, role, status, created_at, withdrawn_at,
+                               deleted_at IS NOT NULL AS anonymized
+                          FROM member
+                         WHERE id = ?
+                        """)
+                .param(memberId)
+                .query(
+                        (rs, n) -> {
+                            boolean anonymized = rs.getBoolean("anonymized");
+                            return new AdminMemberInfo(
+                                    rs.getLong("id"),
+                                    anonymized ? null : rs.getString("handle"),
+                                    anonymized ? null : rs.getString("nickname"),
+                                    Role.valueOf(rs.getString("role")),
+                                    MemberStatus.valueOf(rs.getString("status")),
+                                    rs.getTimestamp("created_at").toInstant(),
+                                    rs.getTimestamp("withdrawn_at") == null
+                                            ? null
+                                            : rs.getTimestamp("withdrawn_at").toInstant());
+                        })
+                .optional();
     }
 
     /** 주소 비교·301 판단용 소문자화 (FR-021). 주소는 영문 소문자·숫자·{@code _}·{@code -}만 쓰므로 {@link Locale#ROOT}. */

@@ -4,11 +4,12 @@ import { ApiError } from '../../api/client';
 import { discardWorkingCopy } from '../../api/posts';
 import type { PostAuthorView, PostDetail } from '../../api/types/reading';
 import ConfirmDialog from '../../components/editor/ConfirmDialog';
+import HiddenReasonText from '../moderation/HiddenReasonText';
 import { formatDateTime } from '../time/dateFormat';
 
 /** 비공개 글 안내 (FR-039, 40 §2-1). */
 export const PRIVATE_NOTICE = '나만 볼 수 있는 글이에요';
-/** 관리자 숨김 안내 (FR-039). 사유 표시 규칙은 014가 정한다. */
+/** 관리자 숨김 안내 — 사유가 없을 때의 문장 (FR-039). 사유가 있으면 014 `HiddenReasonText`가 "(사유: …)"를 넣는다. */
 export const HIDDEN_NOTICE = '운영 정책에 따라 숨겨진 글이에요. 다른 사람에게는 보이지 않아요';
 /** [변경 취소] 확인 문구 — 002 에디터(`EditorPage.DISCARD_CONFIRM`)와 같은 문구. 006 `confirmDialogs.ts`가 생기면 그쪽으로 옮긴다. */
 export const DISCARD_CONFIRM = '고치던 내용을 버리고 발행한 내용으로 돌아갈까요?';
@@ -20,8 +21,6 @@ export interface AuthorStatusBannerProps {
   authorView: PostAuthorView;
   /** 작업본을 버린 뒤 — 상세를 다시 불러온다 */
   onDiscarded: () => void;
-  /** 숨김 사유 표시 자리 (014가 채운다) */
-  hiddenReasonSlot?: React.ReactNode;
 }
 
 /**
@@ -30,7 +29,7 @@ export interface AuthorStatusBannerProps {
  * - 수정 중: "수정 중인 내용이 있어요({M월 D일 HH:mm} 저장)" + [이어서 수정](→ `/write/{id}`) + [변경 취소](확인 창 →
  *   002 `DELETE /api/posts/{postId}/working-copy` → 상세 다시 불러오기). 시각은 한국 시간.
  * - 비공개: 🔒 비공개 + "나만 볼 수 있는 글이에요".
- * - 관리자 숨김: 숨김 안내(사유 표시는 014 자리).
+ * - 관리자 숨김: 숨김 안내 + 사유(014 `HiddenReasonText` — `authorView.hiddenReason`).
  *
  * (구현 메모) 004 `VisibilityBadge`(T039)가 아직 없어 🔒 표시는 이 부품 안의 글자 배지로 둔다 — 004가 만들면 바꾼다.
  */
@@ -39,7 +38,6 @@ export default function AuthorStatusBanner({
   visibility,
   authorView,
   onDiscarded,
-  hiddenReasonSlot = null,
 }: AuthorStatusBannerProps) {
   const [confirming, setConfirming] = useState(false);
   const [discarding, setDiscarding] = useState(false);
@@ -98,8 +96,7 @@ export default function AuthorStatusBanner({
       ) : null}
       {authorView.hidden ? (
         <p data-testid="hidden-notice" style={{ margin: 0 }}>
-          {HIDDEN_NOTICE}
-          {hiddenReasonSlot}
+          <HiddenReasonText reason={authorView.hiddenReason} />
         </p>
       ) : null}
       {authorView.hasDraft ? (

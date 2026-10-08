@@ -2,9 +2,11 @@ import { useState, type FormEvent, type KeyboardEvent, type ReactNode } from 're
 import { Link } from 'react-router-dom';
 import { editComment } from '../../api/comments';
 import type { CommentView } from '../../api/types/comments';
+import type { ViewerFlags } from '../../api/types/viewerFlags';
 import DefaultAvatar from '../../components/DefaultAvatar';
 import RelativeTime from '../../components/RelativeTime';
 import { useConfirm } from '../../components/useConfirm';
+import ReportButton from '../moderation/ReportButton';
 import {
   COMMENT_MAX,
   COMMENT_TEXT,
@@ -24,6 +26,8 @@ export interface CommentItemProps {
   onDelete: (id: number) => Promise<void>;
   /** 이 댓글 아래 놓을 것(답글 입력칸·답글 목록) */
   children?: ReactNode;
+  /** 보는 사람 플래그 (014 [신고]의 비회원·인증 전 안내). 없으면 서버 거부로 안내한다 */
+  viewer?: ViewerFlags;
 }
 
 /**
@@ -32,8 +36,8 @@ export interface CommentItemProps {
  * - 상태별 표시: 정상은 프로필·"닉네임 @주소"(블로그 링크)·시각·"· 수정됨"·[작성자] 배지·내용, 삭제된 자리·남이 보는 숨김·탈퇴한
  *   작성자는 정해진 문구만(작성자·내용 없음), 숨긴 내 댓글은 원문 + "숨겨졌어요 (나만 보여요)".
  * - 내용은 글자 그대로(React 텍스트) — `white-space: pre-line`로 줄바꿈만 살리고 링크로 바꾸지 않는다(C-CMT-1 #6).
- * - 버튼: [답글]은 정상 댓글, [수정]·[삭제]는 내 정상 댓글, 숨긴 내 댓글은 [삭제]만. [신고]는 014 전까지 그리지 않는다
- *   (Clarifications Q4 — 014가 켤 때 `comment-actions` 자리에 넣는다).
+ * - 버튼: [답글]은 정상 댓글, [수정]·[삭제]는 내 정상 댓글, 숨긴 내 댓글은 [삭제]만. [신고]는 남의 정상 댓글에만(014 T026 —
+ *   `comment-actions` 자리, 자리·숨김·탈퇴 작성자 댓글에는 없음).
  */
 export default function CommentItem({
   comment,
@@ -42,6 +46,7 @@ export default function CommentItem({
   onEdited,
   onDelete,
   children,
+  viewer,
 }: CommentItemProps) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState('');
@@ -55,6 +60,7 @@ export default function CommentItem({
   const showAuthor = (normal || hiddenMine) && comment.author !== null;
   const canEdit = normal && comment.mine;
   const canDelete = comment.mine && (normal || comment.state === 'HIDDEN');
+  const canReport = normal && !comment.mine;
 
   function startEdit() {
     setDraft(comment.content ?? '');
@@ -219,6 +225,14 @@ export default function CommentItem({
                 >
                   {removing ? COMMENT_TEXT.removing : COMMENT_TEXT.remove}
                 </button>
+              ) : null}
+              {canReport ? (
+                <ReportButton
+                  targetType="COMMENT"
+                  targetId={comment.id}
+                  viewer={viewer ? { ...viewer, isAuthor: false } : undefined}
+                  className="comment-action"
+                />
               ) : null}
             </div>
           ) : null}

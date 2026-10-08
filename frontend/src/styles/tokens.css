@@ -4,7 +4,7 @@
  *
  * - 공통 토큰 11개(`--color-bg` … `--color-focus`): 이름은 세 서비스 공통 규격, 값은 이 저장소 기본값.
  * - 보조 토큰(`--color-overlay`, `--color-notice-bg`, `--color-warning-*`, `--diff-*`, `--color-toast-*`, `--color-on-fill`,
- *   `--color-success`, `--color-danger-bg`, `--color-shadow`, `--avatar-*`, `--hljs-*`): 이 저장소 이름, 공통 규격 아님.
+ *   `--color-danger-fill`, `--color-success`, `--color-danger-bg`, `--color-shadow`, `--avatar-*`, `--hljs-*`): 이 저장소 이름, 공통 규격 아님.
  * - 라이트는 `:root, [data-theme='light']`, 다크는 `[data-theme='dark']`(016 선택 묶음 — 다크 모드를 끈 빌드에서는 쓰이지 않음).
  * - 색이 서서히 바뀌는 `transition`은 두지 않는다(FR-010).
  */
@@ -39,6 +39,8 @@
   --color-toast-text: #ffffff;
   --color-toast-link: #9cd3ff;
   --color-on-fill: #ffffff;
+  /* 014 위험 동작을 채운 버튼 바탕 (--color-on-fill 글자 4.5:1 이상) */
+  --color-danger-fill: #c92a2a;
   /* 012 검색어 강조 <mark> 바탕 (본문색 글자 대비 4.5:1 이상, 굵기로도 구분) */
   --color-mark-bg: #fff3bf;
 
@@ -99,6 +101,7 @@
   --color-toast-text: #121212;
   --color-toast-link: #1864ab;
   --color-on-fill: #ffffff;
+  --color-danger-fill: #c92a2a;
   --color-mark-bg: #5c4b00;
 
   --avatar-1: #1565c0;

@@ -336,6 +336,19 @@ blog:
     banned-words: classpath:policy/banned-words.txt
     banned-words-exceptions: classpath:policy/banned-words-exceptions.txt
     common-passwords: classpath:policy/common-passwords.txt
+  # 신고·숨김·정지 (014 research R14, data-model §7). 시간대는 공통 blog.time-zone
+  moderation:
+    snapshot-content-chars: 2000   # 글 스냅샷 원문 앞부분 (코드 포인트, V1 varchar(2000))
+    detail-max-chars: 200          # 기타 설명 (V1 varchar(200))
+    rate-limit:
+      per-minute: 5                # FR-009 — ratelimit:report:{memberId}:1m
+      per-day: 50                  # ratelimit:report:{memberId}:1d
+    retention: 30d                 # 처리된 사건의 스냅샷·설명 보관 (FR-033)
+    cleanup-cron: "0 45 4 * * *"   # ShedLock reportSnapshotCleanup
+    cleanup-batch-size: 1000
+    admin-page-size: 20
+    suspension-durations: [P1D, P7D, P30D, PERMANENT]
+    suspension-reason-max-chars: 200
 
   # AI 태그 추천 (013 research R15, data-model §6). 키는 환경 변수 GEMINI_API_KEY로만 — 비어 있으면 공개 글도 자체 AI(Ollama)로 간다.
   # 배포 확인 (T005, 배포 담당 답 전 가정값): Ollama용 메모리 2~4GB 추가 가능, num-thread는 배포 서버 성능 코어 수 이하(기본 4),

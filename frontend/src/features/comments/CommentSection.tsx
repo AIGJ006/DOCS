@@ -99,6 +99,7 @@ export default function CommentSection({
         onReply={setReplyTarget}
         onEdited={thread.applyEdited}
         onDelete={thread.remove}
+        viewer={viewer}
       >
         {replyForm(comment)}
         {children}

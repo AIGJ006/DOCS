@@ -1,5 +1,5 @@
 import { lazy, Suspense, useEffect, useState } from 'react';
-import { Route, Routes, useLocation } from 'react-router-dom';
+import { Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import { onNotFound } from './api/client';
 import { ReagreementGate } from './features/auth/ReagreementGate';
 import AppLayout from './components/AppLayout';
@@ -17,6 +17,9 @@ import NotificationsPage from './pages/NotificationsPage';
 import PostDetailPage from './pages/PostDetailPage';
 import VisibilitySelect from './features/visibility/VisibilitySelect';
 import AdminRouteGate from './features/auth-gate/AdminRouteGate';
+import AdminMemberPage from './pages/admin/AdminMemberPage';
+import AdminReportDetailPage from './pages/admin/AdminReportDetailPage';
+import AdminReportsPage from './pages/admin/AdminReportsPage';
 import type { AuthorActionContext } from './features/post-detail/AuthorActions';
 import PrivacyPage from './pages/PrivacyPage';
 import ReagreementPage from './pages/ReagreementPage';
@@ -51,11 +54,6 @@ function EditorLoading() {
       불러오는 중…
     </main>
   );
-}
-
-/** 화면 자리. 아직 화면이 없는 기능이 쓴다 (014 관리자 화면). */
-function Placeholder({ name }: { name: string }) {
-  return <main data-route={name}>{name}</main>;
 }
 
 /**
@@ -127,15 +125,14 @@ export default function App() {
               <Route path="/feed" element={<FeedPage />} />
               {/* 011 알림 — 로그인 회원만. 비로그인은 화면이 로그인으로 보낸다 */}
               <Route path="/notifications" element={<NotificationsPage />} />
-              {/* 004 관리자 화면 가드 — 비로그인은 로그인으로, 일반 회원은 공통 404. 하위 화면은 014가 채운다 */}
-              <Route
-                path="/admin/*"
-                element={
-                  <AdminRouteGate>
-                    <Placeholder name="admin" />
-                  </AdminRouteGate>
-                }
-              />
+              {/* 004 관리자 화면 가드 — 비로그인은 로그인으로, 일반 회원은 공통 404. 하위 화면은 014 */}
+              <Route path="/admin" element={<AdminRouteGate />}>
+                <Route index element={<Navigate to="/admin/reports" replace />} />
+                <Route path="reports" element={<AdminReportsPage />} />
+                <Route path="reports/:caseId" element={<AdminReportDetailPage />} />
+                <Route path="members/:handle" element={<AdminMemberPage />} />
+                <Route path="*" element={<NotFoundPage />} />
+              </Route>
               {/* 012 검색 — `?q&tab&sort` */}
               <Route path="/search" element={<SearchPage />} />
               {/* 008 태그 — `/:handle`보다 앞에 둔다. `:name`은 react-router가 디코드해 준다(`c%23` → `c#`) */}

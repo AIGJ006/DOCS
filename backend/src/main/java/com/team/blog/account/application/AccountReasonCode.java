@@ -80,7 +80,15 @@ public enum AccountReasonCode implements ReasonCode {
     /** 복구 기한(신청 + 30일)이 지난 복구 요청 (FR-021a). */
     RESTORE_PERIOD_EXPIRED(HttpStatus.CONFLICT, "복구 기한이 지났어요"),
     /** 가입 email 칸 오류: 같은 이메일의 이메일 가입 계정이 탈퇴 유예 중 (FR-022). 응답은 400 VALIDATION_FAILED. */
-    EMAIL_WITHDRAWAL_PENDING(HttpStatus.BAD_REQUEST, "탈퇴 신청한 계정이 있어요. 로그인하면 복구할 수 있어요");
+    EMAIL_WITHDRAWAL_PENDING(HttpStatus.BAD_REQUEST, "탈퇴 신청한 계정이 있어요. 로그인하면 복구할 수 있어요"),
+
+    // ---- 회원 정지 (014 data-model §5 — 제안 코드, 팀 확인 014 T004)
+    /** 관리자(자기 자신 포함)를 정지하려 함 (H-12). */
+    CANNOT_SUSPEND_ADMIN(HttpStatus.BAD_REQUEST, "관리자는 정지할 수 없어요"),
+    /** 탈퇴 유예 회원 정지 (FR-041, 13 §3-2). */
+    CANNOT_SUSPEND_WITHDRAWN(HttpStatus.BAD_REQUEST, "탈퇴 신청한 회원은 정지할 수 없어요"),
+    /** 열린 정지가 있음 (E5 — 회원당 하나). */
+    ALREADY_SUSPENDED(HttpStatus.CONFLICT, "이미 정지된 회원이에요");
 
     private final HttpStatus status;
     private final String defaultMessage;

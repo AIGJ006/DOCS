@@ -10,6 +10,7 @@ import FollowButton from '../features/follow/FollowButton';
 import AuthorChip from '../components/AuthorChip';
 import LikeButton from '../components/LikeButton';
 import ReactionBar from '../components/ReactionBar';
+import ReportButton from '../features/moderation/ReportButton';
 import RelativeTime from '../components/RelativeTime';
 import TagList from '../components/TagList';
 import AuthorActions, { type AuthorActionSlot } from '../features/post-detail/AuthorActions';
@@ -241,6 +242,12 @@ export default function PostDetailPage({
               initialLiked={detail.viewer.likedByMe}
               initialCount={detail.likeCount}
             />
+          }
+          reportButton={
+            // 014: [신고] — 작성자에게는 없다(004 PostActions 표시 규칙)
+            isAuthor ? null : (
+              <ReportButton targetType="POST" targetId={detail.id} viewer={detail.viewer} />
+            )
           }
         />
       </article>

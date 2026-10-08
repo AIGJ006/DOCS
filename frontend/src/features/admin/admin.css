@@ -1,0 +1,203 @@
+/* 관리자 화면 (014). 색은 tokens.css 토큰만 쓴다(noRawColors). 채운 버튼 글자는 --color-on-fill. */
+.admin-page {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: var(--content-max-width, 45rem);
+  margin: 0 auto;
+  padding: 1.5rem 1rem;
+  overflow-wrap: anywhere;
+}
+
+.admin-page h1 {
+  margin: 0 0 1rem;
+  font-size: 1.5rem;
+}
+
+.admin-tabs {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.admin-tabs a {
+  padding: 0.5rem 0.75rem;
+  color: var(--color-text-muted);
+  text-decoration: none;
+}
+
+.admin-tabs a[aria-current='page'] {
+  border-bottom: 2px solid var(--color-brand);
+  color: var(--color-text);
+  font-weight: 600;
+}
+
+.admin-muted {
+  color: var(--color-text-muted);
+  font-size: 0.875rem;
+}
+
+.admin-badge {
+  display: inline-block;
+  padding: 0 0.375rem;
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  color: var(--color-text-muted);
+  font-size: 0.75rem;
+}
+
+.case-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.case-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding: 0.75rem 0;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.case-item-head {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+.case-item-title {
+  min-width: 0;
+  color: var(--color-text);
+  overflow-wrap: anywhere;
+}
+
+.case-item-meta,
+.case-reasons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  color: var(--color-text-muted);
+  font-size: 0.8125rem;
+}
+
+.case-snapshot {
+  margin: 1rem 0;
+  padding: 0.75rem;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  background: var(--color-code-bg);
+}
+
+.case-snapshot-title {
+  margin: 0 0 0.5rem;
+  font-size: 1.125rem;
+}
+
+.case-snapshot-content,
+.admin-pre {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.admin-fieldset {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1rem;
+  margin: 0.5rem 0;
+  padding: 0;
+  border: 0;
+}
+
+.admin-fieldset legend {
+  margin-bottom: 0.25rem;
+  font-weight: 600;
+}
+
+.admin-radio {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.admin-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+}
+
+.admin-button {
+  padding: 0.375rem 0.75rem;
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  background: var(--color-surface);
+  color: var(--color-text);
+  cursor: pointer;
+}
+
+.admin-button-danger {
+  border-color: var(--color-danger-fill);
+  background: var(--color-danger-fill);
+  color: var(--color-on-fill);
+}
+
+.admin-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.admin-textarea,
+.admin-input {
+  box-sizing: border-box;
+  width: 100%;
+  padding: 0.5rem;
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  background: var(--color-bg);
+  color: var(--color-text);
+  font: inherit;
+}
+
+.admin-counter {
+  display: block;
+  text-align: right;
+}
+
+.admin-card {
+  margin: 1rem 0;
+  padding: 0.75rem;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  background: var(--color-surface);
+}
+
+.admin-error {
+  color: var(--color-danger);
+}
+
+.admin-table-wrap {
+  overflow-x: auto;
+}
+
+.admin-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+}
+
+.admin-table th,
+.admin-table td {
+  padding: 0.375rem;
+  border-bottom: 1px solid var(--color-border);
+  text-align: left;
+  vertical-align: top;
+}
+
+.admin-direct {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-top: 2rem;
+}

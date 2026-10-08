@@ -193,7 +193,7 @@ describe('PostDetailPage — 작성자', () => {
     expect(screen.getByText('2026.09.30')).toBeInTheDocument();
   });
 
-  it('숨겨진 글은 숨김 안내', async () => {
+  it('숨겨진 글은 숨김 안내 (014 T041 — 사유 포함)', async () => {
     stubFetch({
       'GET /api/posts/7': () =>
         json(
@@ -207,7 +207,9 @@ describe('PostDetailPage — 작성자', () => {
     renderDetail();
 
     expect(
-      await screen.findByText('운영 정책에 따라 숨겨진 글이에요. 다른 사람에게는 보이지 않아요'),
+      await screen.findByText(
+        '운영 정책에 따라 숨겨진 글이에요 (사유: 스팸·광고). 다른 사람에게는 보이지 않아요',
+      ),
     ).toBeInTheDocument();
   });
 

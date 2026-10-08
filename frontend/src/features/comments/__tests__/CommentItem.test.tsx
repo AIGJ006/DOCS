@@ -21,7 +21,7 @@ describe('CommentItem', () => {
   });
   afterEach(() => vi.unstubAllGlobals());
 
-  it('본인 정상 댓글에만 [수정]·[삭제], 숨긴 본인 댓글은 [삭제]만, 남의 댓글엔 [신고] 없음', async () => {
+  it('본인 정상 댓글에만 [수정]·[삭제], 숨긴 본인 댓글은 [삭제]만, [신고]는 남의 정상 댓글에만 (014 T026)', async () => {
     stubFetch({
       'GET /api/posts/7/comments': () =>
         json(
@@ -51,7 +51,9 @@ describe('CommentItem', () => {
     const others = within(item(3));
     expect(others.queryByRole('button', { name: '수정' })).toBeNull();
     expect(others.queryByRole('button', { name: '삭제' })).toBeNull();
-    expect(others.queryByRole('button', { name: /신고/ })).toBeNull();
+    expect(others.getByRole('button', { name: '신고' })).toBeInTheDocument();
+    expect(mine.queryByRole('button', { name: '신고' })).toBeNull();
+    expect(hidden.queryByRole('button', { name: '신고' })).toBeNull();
     expect(others.getByRole('button', { name: '회원3님 댓글에 답글' })).toBeInTheDocument();
 
     const placeholder = item(4).querySelector('[data-testid="comment-main"]') as HTMLElement;

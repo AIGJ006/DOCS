@@ -93,10 +93,18 @@ describe('AuthorStatusBanner', () => {
     expect(PRIVATE_NOTICE).toBe('나만 볼 수 있는 글이에요');
   });
 
-  it('숨겨진 글은 숨김 안내를 보인다', () => {
+  it('숨겨진 글은 숨김 안내를 사유와 함께 보인다 (014 T041)', () => {
     renderBanner({ authorView: authorView({ hidden: true, hiddenReason: 'SPAM' }) });
 
-    expect(screen.getByText(HIDDEN_NOTICE)).toBeInTheDocument();
+    expect(screen.getByTestId('hidden-notice')).toHaveTextContent(
+      '운영 정책에 따라 숨겨진 글이에요 (사유: 스팸·광고). 다른 사람에게는 보이지 않아요',
+    );
     expect(HIDDEN_NOTICE).toBe('운영 정책에 따라 숨겨진 글이에요. 다른 사람에게는 보이지 않아요');
+  });
+
+  it('사유가 없는 숨김은 괄호 없이', () => {
+    renderBanner({ authorView: authorView({ hidden: true, hiddenReason: null }) });
+
+    expect(screen.getByTestId('hidden-notice')).toHaveTextContent(HIDDEN_NOTICE);
   });
 });

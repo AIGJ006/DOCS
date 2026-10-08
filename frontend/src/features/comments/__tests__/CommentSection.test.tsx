@@ -203,13 +203,14 @@ describe('CommentSection 읽기', () => {
     expect(body).toHaveStyle({ whiteSpace: 'pre-line', overflowWrap: 'anywhere' });
   });
 
-  it('[신고] 버튼은 그리지 않는다 (014 전, Q4)', async () => {
+  it('남의 정상 댓글에 [신고]가 있고 누르면 댓글 신고 창이 열린다 (014 T026)', async () => {
     stubFetch({ 'GET /api/posts/7/comments': () => json(200, page([root({ id: 1 })])) });
 
     renderSection({ commentCount: 1, viewer: MEMBER });
 
     await waitFor(() => expect(items()).toHaveLength(1));
-    expect(screen.queryByRole('button', { name: /신고/ })).toBeNull();
+    await userEvent.click(screen.getByRole('button', { name: '신고' }));
+    expect(screen.getByRole('dialog', { name: '댓글 신고하기' })).toBeInTheDocument();
   });
 
   it('상위에서 미리 시작한 첫 요청이 있으면 다시 부르지 않는다', async () => {
