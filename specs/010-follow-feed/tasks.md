@@ -54,9 +54,9 @@ description: "Task list for 010-follow-feed (팔로우·팔로잉 피드)"
 
 **Purpose**: 선행 확인, 설정값, 팀 확인 질문
 
-- [ ] T001 선행 확인: V1 `follow`(PK·`ck_follow_self`·`ix_follow_followee`·`ix_follow_follower`)·`ix_member_withdraw_purge`, `B/post/application/port/AuthorFollowStatusQuery.java`·`B/post/config/PostReadingPorts.java`(`@ConditionalOnMissingBean`), `B/discovery/infra/PostCardQueryRepository.java`(`CardFilter`가 있는지 — 008), `B/discovery/application/BlogHeaderView.java`, `B/discovery/web/PageShellController.java`, `F/components/AuthorCard.tsx`(`followButton`), `F/pages/BlogPage.tsx`, `F/features/post-list/useCursorList.ts`가 있는지 기록한다
-- [ ] T002 [P] 설정값: `B/interaction/application/FollowProperties.java`(`@ConfigurationProperties("blog.follow")` + `@Validated`: `rateLimit.limit`(1 이상)·`rateLimit.window`, `listPageSize`(1~100)), `R/application.yml`에 research R12 기본값, 테스트 `T/interaction/unit/FollowPropertiesBindingTest.java`
-- [ ] T003 팀 확인 질문을 ANALYSIS-tier-bc "팀 결정" 항목으로 올린다: ① 팔로우를 interaction 모듈에(R2) ② 팔로우에 `ActionKind.ACCOUNT_WRITE`(R3, 001 `ActionKind` 주석에 "팔로우" 추가) ③ `CANNOT_FOLLOW_SELF` 문구 "자기 자신은 팔로우할 수 없어요". 답이 오기 전에는 기본안으로 진행한다
+- [X] T001 선행 확인: V1 `follow`(PK·`ck_follow_self`·`ix_follow_followee`·`ix_follow_follower`)·`ix_member_withdraw_purge`, `B/post/application/port/AuthorFollowStatusQuery.java`·`B/post/config/PostReadingPorts.java`(`@ConditionalOnMissingBean`), `B/discovery/infra/PostCardQueryRepository.java`(`CardFilter`가 있는지 — 008), `B/discovery/application/BlogHeaderView.java`, `B/discovery/web/PageShellController.java`, `F/components/AuthorCard.tsx`(`followButton`), `F/pages/BlogPage.tsx`, `F/features/post-list/useCursorList.ts`가 있는지 기록한다 (구현 메모: 확인 결과: V1 follow(PK·ck_follow_self·ix_follow_followee·ix_follow_follower)·ix_member_withdraw_purge 있음. AuthorFollowStatusQuery·PostReadingPorts(@ConditionalOnMissingBean, 항상 false) 있음. CardFilter는 008이 discovery.application.CardFilter(authorId, tagId)로 이미 만듦. BlogHeaderView·PageShellController·AuthorCard(followButton)·BlogPage·useCursorList 있음. 001 SessionBar는 공통 머리말 SiteHeader(site-header-actions)로 바뀌어 [피드]는 SiteHeader에 넣는다)
+- [X] T002 [P] 설정값: `B/interaction/application/FollowProperties.java`(`@ConfigurationProperties("blog.follow")` + `@Validated`: `rateLimit.limit`(1 이상)·`rateLimit.window`, `listPageSize`(1~100)), `R/application.yml`에 research R12 기본값, 테스트 `T/interaction/unit/FollowPropertiesBindingTest.java`
+- [X] T003 팀 확인 질문을 ANALYSIS-tier-bc "팀 결정" 항목으로 올린다: ① 팔로우를 interaction 모듈에(R2) ② 팔로우에 `ActionKind.ACCOUNT_WRITE`(R3, 001 `ActionKind` 주석에 "팔로우" 추가) ③ `CANNOT_FOLLOW_SELF` 문구 "자기 자신은 팔로우할 수 없어요". 답이 오기 전에는 기본안으로 진행한다 (구현 메모: ANALYSIS-tier-bc §6 팀 결정 4(R7)에 010 T003 세 항목이 이미 올라가 있어 문서는 고치지 않았다. 기본안(interaction 모듈·ACCOUNT_WRITE·문구)으로 진행)
 
 ---
 
@@ -68,18 +68,18 @@ description: "Task list for 010-follow-feed (팔로우·팔로잉 피드)"
 
 ### Tests for Foundational ⚠️
 
-- [ ] T004 [P] 통합 테스트 `T/interaction/integration/FollowRepositoryIT.java`(contracts/follow-sql.md §1~§3): `insertIfAbsent`가 처음만 true·두 번째 false, `deleteIfPresent`가 있을 때만 true, 자기 팔로우 행은 `ck_follow_self` 위반, `countFollowers`·`countFollowing`이 탈퇴 유예 회원을 빼고 정지 회원은 셈, `pageFollowers`·`pageFollowing`이 `created_at DESC, 회원 번호 DESC`·커서 이후만·`status = WITHDRAWN` 제외·현재 프로필 사진 키, `followedAmong(viewer, ids)`
-- [ ] T005 [P] 통합 테스트 `T/discovery/integration/PostCardFollowFilterIT.java`: `CardFilter(followerId = A)`가 A가 팔로우한 작성자의 공개 발행 글만 돌려주고, 비공개·임시·휴지통·숨김·유예 작성자 글·A 자신의 글은 없음. `followerId` 없는 기존 호출(홈·블로그·008 태그)의 결과가 바뀌지 않음 — 005 `HomePostListIT`·`BlogPostListIT`(이름은 005 tasks 기준)를 함께 돌린다
+- [X] T004 [P] 통합 테스트 `T/interaction/integration/FollowRepositoryIT.java`(contracts/follow-sql.md §1~§3): `insertIfAbsent`가 처음만 true·두 번째 false, `deleteIfPresent`가 있을 때만 true, 자기 팔로우 행은 `ck_follow_self` 위반, `countFollowers`·`countFollowing`이 탈퇴 유예 회원을 빼고 정지 회원은 셈, `pageFollowers`·`pageFollowing`이 `created_at DESC, 회원 번호 DESC`·커서 이후만·`status = WITHDRAWN` 제외·현재 프로필 사진 키, `followedAmong(viewer, ids)`
+- [X] T005 [P] 통합 테스트 `T/discovery/integration/PostCardFollowFilterIT.java`: `CardFilter(followerId = A)`가 A가 팔로우한 작성자의 공개 발행 글만 돌려주고, 비공개·임시·휴지통·숨김·유예 작성자 글·A 자신의 글은 없음. `followerId` 없는 기존 호출(홈·블로그·008 태그)의 결과가 바뀌지 않음 — 005 `HomePostListIT`·`BlogPostListIT`(이름은 005 tasks 기준)를 함께 돌린다
 
 ### Implementation for Foundational
 
-- [ ] T006 [P] `B/interaction/domain/FollowReasonCode.java`(`CANNOT_FOLLOW_SELF` 400 "자기 자신은 팔로우할 수 없어요", 끝 마침표 없음)
-- [ ] T007 [P] 이벤트 `B/shared/event/MemberFollowed.java`(`followerId, followeeId, followedAt`)·`B/shared/event/MemberUnfollowed.java`(`followerId, followeeId, unfollowedAt`) — 001 `DomainEvent` 규칙
-- [ ] T008 [P] `B/interaction/application/FollowListCursor.java`: 001 `CursorCodec`으로 `followers:{handle}`·`following:{handle}` 범위, 키 `[created_at 마이크로초, 회원 번호]` 인코딩·디코딩(다른 범위 → `InvalidCursorException`)과 단위 테스트 `T/interaction/unit/FollowListCursorTest.java`
-- [ ] T009 `B/interaction/infra/FollowRepository.java`(`JdbcClient`, contracts/follow-sql.md §1~§3)를 구현한다. 클래스 주석에 원칙 II 읽기 예외(`member`·`image`, plan Complexity Tracking)를 적는다 (T004 통과)
-- [ ] T010 [P] `ListScope`에 `feed()`·`followers(handle)`·`following(handle)` 정적 메서드를 더한다(`B/shared/web/cursor/ListScope.java`, 값 규칙 주석에 세 값 추가 — 001 소유 파일, 담당에게 알림)
-- [ ] T011 카드 조회 팔로우 조건: `B/discovery/infra/PostCardQueryRepository.java`의 `CardFilter`에 `followerId`를 더하고(008 T014가 만든 레코드 — 없으면 이 작업이 `CardFilter(authorId, followerId)`로 만들고 `findCards`·`cardQuery`·`PostListService.page`의 기존 호출을 고친다) 있으면 `AND EXISTS (SELECT 1 FROM follow f WHERE f.follower_id = :followerId AND f.followee_id = p.author_id)`를 붙인다. 클래스 주석의 원칙 II 예외 문단에 `follow`를 더한다 (T005 통과)
-- [ ] T012 [P] 화면 API `F/api/follows.ts`(`follow(handle)`, `unfollow(handle)`, `listFollowers(handle, cursor)`, `listFollowing(handle, cursor)`, `getFeed(cursor)` — 001 `client.ts`)와 타입 `F/api/types/follow.ts`(`FollowState`, `FollowListItem`, `FeedPage`), 005 `F/api/types/reading.ts`의 `BlogHeader`에 `followerCount`·`followingCount`·`followedByMe`
+- [X] T006 [P] `B/interaction/domain/FollowReasonCode.java`(`CANNOT_FOLLOW_SELF` 400 "자기 자신은 팔로우할 수 없어요", 끝 마침표 없음)
+- [X] T007 [P] 이벤트 `B/shared/event/MemberFollowed.java`(`followerId, followeeId, followedAt`)·`B/shared/event/MemberUnfollowed.java`(`followerId, followeeId, unfollowedAt`) — 001 `DomainEvent` 규칙
+- [X] T008 [P] `B/interaction/application/FollowListCursor.java`: 001 `CursorCodec`으로 `followers:{handle}`·`following:{handle}` 범위, 키 `[created_at 마이크로초, 회원 번호]` 인코딩·디코딩(다른 범위 → `InvalidCursorException`)과 단위 테스트 `T/interaction/unit/FollowListCursorTest.java`
+- [X] T009 `B/interaction/infra/FollowRepository.java`(`JdbcClient`, contracts/follow-sql.md §1~§3)를 구현한다. 클래스 주석에 원칙 II 읽기 예외(`member`·`image`, plan Complexity Tracking)를 적는다 (T004 통과)
+- [X] T010 [P] `ListScope`에 `feed()`·`followers(handle)`·`following(handle)` 정적 메서드를 더한다(`B/shared/web/cursor/ListScope.java`, 값 규칙 주석에 세 값 추가 — 001 소유 파일, 담당에게 알림) (구현 메모: 001 소유 ListScope에 feed()·followers(handle)·following(handle)과 값 규칙 주석 추가)
+- [X] T011 카드 조회 팔로우 조건: `B/discovery/infra/PostCardQueryRepository.java`의 `CardFilter`에 `followerId`를 더하고(008 T014가 만든 레코드 — 없으면 이 작업이 `CardFilter(authorId, followerId)`로 만들고 `findCards`·`cardQuery`·`PostListService.page`의 기존 호출을 고친다) 있으면 `AND EXISTS (SELECT 1 FROM follow f WHERE f.follower_id = :followerId AND f.followee_id = p.author_id)`를 붙인다. 클래스 주석의 원칙 II 예외 문단에 `follow`를 더한다 (T005 통과) (구현 메모: 008 CardFilter(authorId, tagId)에 followerId를 더한 3필드 record로 바꾸고 기존 2인자 생성자를 보조 생성자로 남겨 005·008 호출은 그대로 둠. 정적 메서드 CardFilter.followedBy(id) 추가)
+- [X] T012 [P] 화면 API `F/api/follows.ts`(`follow(handle)`, `unfollow(handle)`, `listFollowers(handle, cursor)`, `listFollowing(handle, cursor)`, `getFeed(cursor)` — 001 `client.ts`)와 타입 `F/api/types/follow.ts`(`FollowState`, `FollowListItem`, `FeedPage`), 005 `F/api/types/reading.ts`의 `BlogHeader`에 `followerCount`·`followingCount`·`followedByMe`
 
 **Checkpoint**: 저장소·카드 조건·이벤트 준비 완료 — user story 시작 가능
 
