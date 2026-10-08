@@ -21,6 +21,18 @@ import { finishPublish } from '../features/editor/publish';
 import SaveStatus from '../components/editor/SaveStatus';
 import { useSession } from '../features/auth/useSession';
 import { AutosaveQueue, type AutosaveStatus } from '../features/editor/autosaveQueue';
+import { useImageInsert } from '../features/image-upload/useImageInsert';
+import { uploadImage } from '../features/image-upload/uploadImage';
+import { limitsFrom, processImage } from '../features/image-upload/imageProcessor';
+import { storageHint } from '../features/image-upload/storageHint';
+import { ANIMATION_NOTICE } from '../features/image-upload/uploadMessages';
+import { getStorageUsage, type StorageUsage } from '../api/images';
+import {
+  createPendingRetrier,
+  holdPending,
+  localImageUrls,
+} from '../features/image-upload/pendingUploads';
+import { loadPendingImages } from '../features/editor/localDraftStore';
 import { ConflictController, serverCopyOf, type ConflictState } from '../features/editor/conflict';
 import { EDITOR_CONFIG } from '../features/editor/editorConfig';
 import { registerLifecycle } from '../features/editor/lifecycle';
@@ -106,6 +118,34 @@ export default function EditorPage() {
   const queueRef = useRef<AutosaveQueue | null>(null);
   const conflictRef = useRef<ConflictController | null>(null);
   const latest = useRef({ title: '', contentMd: '' });
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const [imageNotice, setImageNotice] = useState<string | null>(null);
+  /** 업로드 대기 사진 (003 US3): 수와 미리보기용 blob: 주소. */
+  const [pendingCount, setPendingCount] = useState(0);
+  const [localImages, setLocalImages] = useState<ReadonlyMap<string, string>>(new Map());
+  const retrierRef = useRef<ReturnType<typeof createPendingRetrier> | null>(null);
+  /** 사진 저장 공간 (003 US4): 에디터를 열 때 한 번 읽어 남은 공간 안내와 처리 한도에 쓴다. */
+  const [storage, setStorage] = useState<StorageUsage | null>(null);
+  const storageRef = useRef<StorageUsage | null>(null);
+  const onContentRef = useRef<(value: string) => void>(() => undefined);
+
+  /** 대기 사진 수가 바뀌면 미리보기 주소를 다시 만든다(이전 주소는 놓는다). */
+  const refreshLocalImages = useCallback(
+    (count: number) => {
+      setPendingCount(count);
+      if (memberId === null) return;
+      void loadPendingImages(memberId, postId)
+        .then((images) => {
+          const urls = localImageUrls(images);
+          setLocalImages((previous) => {
+            previous.forEach((url) => URL.revokeObjectURL(url));
+            return urls;
+          });
+        })
+        .catch(() => undefined);
+    },
+    [memberId, postId],
+  );
 
   useEffect(() => {
     if (loading || !validId) {
@@ -175,7 +215,24 @@ export default function EditorPage() {
         const goOffline = () => queue.setOnline(false);
         window.addEventListener('online', goOnline);
         window.addEventListener('offline', goOffline);
+        const retrier = createPendingRetrier(memberId, postId, {
+          getContent: () => latest.current.contentMd,
+          setContent: (value) => onContentRef.current(value),
+          onFailed: setImageNotice,
+          onCount: refreshLocalImages,
+        });
+        retrierRef.current = retrier;
+        retrier.start();
+        getStorageUsage()
+          .then((usage) => {
+            if (!cancelled) {
+              storageRef.current = usage;
+              setStorage(usage);
+            }
+          })
+          .catch(() => undefined);
         cleanups.push(
+          () => retrier.stop(),
           () => window.removeEventListener('online', goOnline),
           () => window.removeEventListener('offline', goOffline),
           registerLifecycle({
@@ -203,8 +260,19 @@ export default function EditorPage() {
       cleanups.forEach((cleanup) => cleanup());
       queueRef.current = null;
       conflictRef.current = null;
+      retrierRef.current = null;
     };
-  }, [loading, memberId, postId, validId, navigate, reloadKey]);
+  }, [loading, memberId, postId, validId, navigate, reloadKey, refreshLocalImages]);
+
+  useEffect(
+    () => () => {
+      setLocalImages((previous) => {
+        previous.forEach((url) => URL.revokeObjectURL(url));
+        return new Map();
+      });
+    },
+    [],
+  );
 
   const onTitle = (value: string) => {
     setTitle(value);
@@ -219,6 +287,39 @@ export default function EditorPage() {
     setFieldErrors((errors) => errors.filter((e) => e.field !== 'contentMd'));
     queueRef.current?.update(latest.current.title, value);
   };
+  useEffect(() => {
+    onContentRef.current = onContent;
+  });
+
+  /** 사진 넣기 (003 US1): 붙여넣기·끌어놓기·[사진] 버튼 → 대기 표시 → 업로드 → `![](주소)`. 자동 저장은 막지 않는다. */
+  const images = useImageInsert({
+    textareaRef,
+    getContent: () => latest.current.contentMd,
+    setContent: onContent,
+    onRejected: setImageNotice,
+    upload: (file) =>
+      uploadImage(file, {
+        process: async (f) => {
+          const result = await processImage(f, {
+            limits: limitsFrom(storageRef.current?.limits),
+          });
+          if (result.ok && result.image.notice) setImageNotice(result.image.notice);
+          return result;
+        },
+      }),
+    onPending: async (file) => {
+      if (memberId === null) return null;
+      try {
+        const held = await holdPending(memberId, postId, file);
+        const count = (await loadPendingImages(memberId, postId)).length;
+        refreshLocalImages(count);
+        retrierRef.current?.held(count);
+        return held.markdown;
+      } catch {
+        return null;
+      }
+    },
+  });
 
   /** [저장] — 즉시 DB에 반영한다 (FR-009, D-3). */
   const onSave = async () => {
@@ -393,6 +494,16 @@ export default function EditorPage() {
             <span className="editing-badge">수정 중</span>
           ) : null}
           <SaveStatus status={status} onCompare={conflict ? onCompare : undefined} />
+          {images.uploading > 0 ? (
+            <span className="image-uploading" aria-live="polite">
+              사진 올리는 중…
+            </span>
+          ) : null}
+          {pendingCount > 0 ? (
+            <span className="image-pending" aria-live="polite">
+              업로드 대기 사진 {pendingCount}장
+            </span>
+          ) : null}
         </div>
         <div className="editor-actions">
           {opened.server.status === 'PUBLISHED' && editing ? (
@@ -400,6 +511,13 @@ export default function EditorPage() {
               변경 취소
             </button>
           ) : null}
+          <button type="button" onClick={images.openPicker} title={ANIMATION_NOTICE}>
+            사진
+          </button>
+          {storageHint(storage) ? (
+            <span className="storage-hint">{storageHint(storage)}</span>
+          ) : null}
+          <input {...images.fileInputProps} aria-label="사진 고르기" />
           <button type="button" onClick={onSave} disabled={saving}>
             저장
           </button>
@@ -413,6 +531,14 @@ export default function EditorPage() {
       {message ? (
         <p role="alert" className="form-error">
           {message}
+        </p>
+      ) : null}
+      {imageNotice ? (
+        <p role="alert" className="form-error image-notice">
+          {imageNotice}{' '}
+          <button type="button" className="link-button" onClick={() => setImageNotice(null)}>
+            닫기
+          </button>
         </p>
       ) : null}
 
@@ -435,12 +561,16 @@ export default function EditorPage() {
       <div className="editor-body">
         <div className="editor-input">
           <textarea
+            ref={textareaRef}
             aria-label="본문"
             placeholder="Markdown으로 쓰세요"
             value={contentMd}
             aria-invalid={contentError ? 'true' : undefined}
             aria-describedby={contentError ? 'content-error' : undefined}
             onChange={(e) => onContent(e.target.value)}
+            onPaste={images.onPaste}
+            onDrop={images.onDrop}
+            onDragOver={images.onDragOver}
           />
           {contentError ? (
             <p id="content-error" className="field-error">
@@ -448,7 +578,7 @@ export default function EditorPage() {
             </p>
           ) : null}
         </div>
-        <PreviewPane contentMd={contentMd} />
+        <PreviewPane contentMd={contentMd} localImages={localImages} />
       </div>
 
       {comparing && conflict ? (
@@ -487,6 +617,8 @@ export default function EditorPage() {
           onConflict={onPublishConflict}
           onSettled={() => queueRef.current?.resume()}
           onClose={() => setPublishing(false)}
+          contentMd={contentMd}
+          onContentChange={onContent}
         />
       ) : null}
     </main>

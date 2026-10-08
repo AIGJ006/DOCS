@@ -7,6 +7,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import com.team.blog.post.support.EditorApi;
 import com.team.blog.shared.config.CoreProperties;
 import com.team.blog.support.IntegrationTestBase;
+import com.team.blog.support.MinioContainerSupport;
 import com.team.blog.support.TestLogin;
 import jakarta.servlet.http.Cookie;
 import java.net.URI;
@@ -29,8 +30,11 @@ class SecurityHeadersIT extends IntegrationTestBase {
                         + uri.getHost()
                         + (uri.getPort() > 0 ? ":" + uri.getPort() : "");
         assertThat(properties.image().publicOrigin()).isEqualTo(origin);
+        // 003 StorageCspContributor: 업로드 주소(테스트는 임의 포트 MinIO)의 출처가 공개 주소와 다르면 connect-src에 더한다
         return "default-src 'self'; script-src 'self'; connect-src 'self' "
                 + origin
+                + " "
+                + MinioContainerSupport.endpoint()
                 + "; img-src 'self' "
                 + origin
                 + " data: blob:; style-src 'self' 'unsafe-inline'; object-src 'none';"

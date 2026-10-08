@@ -49,8 +49,8 @@ class PublishQueryCountIT extends IntegrationTestBase {
             tags.add("tag" + i);
             String key = "images/2026/10/" + UUID.randomUUID() + ".webp";
             jdbc.update(
-                    "INSERT INTO image (uploader_id, storage_key, content_type, size_bytes)"
-                            + " VALUES (?, ?, 'image/webp', 1000)",
+                    "INSERT INTO image (uploader_id, storage_key, content_type, size_bytes, width, height)"
+                            + " VALUES (?, ?, 'image/webp', 1000, 640, 480)",
                     me,
                     key);
             md.append("![사진 ").append(i).append("](").append(BASE).append('/').append(key);

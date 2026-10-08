@@ -151,7 +151,7 @@ class PageShellIntegrationTest extends IntegrationTestBase {
         assertThat(html)
                 .contains(
                         "<meta property=\"og:image\""
-                                + " content=\"http://localhost:9000/blog/images/2026/09/3f2a9c1e.png\">");
+                                + " content=\"http://localhost:9000/blog/images/2026/09/3f2a9c1e-5b7d-4e2a-9c1f-0a1b2c3d4e5f.png\">");
         assertThat(html).doesNotContain("_thumb.webp\">").doesNotContain("article:modified_time");
     }
 

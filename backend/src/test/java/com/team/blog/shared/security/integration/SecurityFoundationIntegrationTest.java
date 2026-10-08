@@ -11,6 +11,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.team.blog.support.IntegrationTestBase;
+import com.team.blog.support.MinioContainerSupport;
 import com.team.blog.support.TestLogin;
 import jakarta.servlet.http.Cookie;
 import java.util.List;
@@ -31,6 +32,18 @@ class SecurityFoundationIntegrationTest extends IntegrationTestBase {
             "default-src 'self'; script-src 'self'; connect-src 'self' http://localhost:9000;"
                     + " img-src 'self' http://localhost:9000 data: blob:; style-src 'self' 'unsafe-inline';"
                     + " object-src 'none'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'";
+
+    /**
+     * 테스트 사진 저장소(MinIO, 임의 포트)의 업로드 주소가 공개 주소와 출처가 달라 003 {@code StorageCspContributor}가 {@code
+     * connect-src}에 업로드 출처를 더한다.
+     */
+    private static String expectedCsp() {
+        return CSP.replace(
+                "connect-src 'self' http://localhost:9000;",
+                "connect-src 'self' http://localhost:9000 "
+                        + MinioContainerSupport.endpoint()
+                        + ";");
+    }
 
     // ① CSRF 토큰 쿠키 발급
     @Test
@@ -165,7 +178,7 @@ class SecurityFoundationIntegrationTest extends IntegrationTestBase {
                         mockMvc.perform(get("/settings")).andReturn().getResponse(),
                         mockMvc.perform(get("/api/없는경로")).andReturn().getResponse());
         for (MockHttpServletResponse response : responses) {
-            assertThat(response.getHeader("Content-Security-Policy")).isEqualTo(CSP);
+            assertThat(response.getHeader("Content-Security-Policy")).isEqualTo(expectedCsp());
             assertThat(response.getHeader("X-Content-Type-Options")).isEqualTo("nosniff");
             assertThat(response.getHeader("Referrer-Policy"))
                     .isEqualTo("strict-origin-when-cross-origin");

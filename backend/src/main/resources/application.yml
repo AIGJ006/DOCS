@@ -55,6 +55,39 @@ blog:
   image:
     # 공개 버킷 직접 주소. CSP(img-src·connect-src)와 이미지 주소·정화 허용 목록이 이 값 하나를 쓴다 (12 §8, H3)
     public-base-url: ${BLOG_IMAGE_PUBLIC_BASE_URL:http://localhost:9000/blog}
+    # ---- 003 사진 업로드 (data-model §5, media ImageProperties) ----
+    upload-mode: DIRECT            # DIRECT | PROXY (research R2, 운영 점검 결과로 정함)
+    quota-bytes: 1073741824        # 1인 1GB (FR-013)
+    daily-limit: 200               # 하루 장수, 한국 시간 0시 기준 (FR-013)
+    per-minute-limit: 20           # 1분 장수 (FR-011)
+    presign-ttl: PT5M              # 업로드 주소 유효 시간 (FR-005)
+    max-upload-bytes: 10485760     # 올라가는 원본 (V1 ck_image_size와 같아야 함)
+    max-thumb-bytes: 1048576       # 썸네일 (V1 ck_image_thumb_size와 같아야 함)
+    max-source-bytes: 52428800     # 브라우저가 처리할 원래 파일 상한 50MB (Q3, 화면만 사용)
+    long-side: 1920                # 브라우저 줄이기 (FR-002)
+    thumb-max-width: 640           # (FR-003)
+    max-side: 4096                 # 서버 검사: GIF 아닌 원본 가로·세로 상한 (research R6)
+    max-pixels: 16777216           # 서버 검사: 전체 픽셀 상한
+    thumb-max-height: 4096         # 서버 검사: 썸네일 세로 상한
+    gif-max-side: 1920             # (FR-036)
+    gif-max-frames: 300            # (FR-036)
+    profile-side: 256              # 프로필 사진 정확한 크기 (001)
+    profile-max-bytes: 1048576
+    inspect-head-bytes: 65536      # complete 앞부분 읽기 (research R6)
+    cleanup:
+      cron: "0 30 3 * * *"
+      temp-ttl: PT24H
+      detached-ttl: P7D
+      batch-size: 1000
+      max-duration: PT30M
+    storage:
+      endpoint: ${BLOG_IMAGE_STORAGE_ENDPOINT:http://localhost:9000}                    # 서버 → 저장소
+      presign-endpoint: ${BLOG_IMAGE_STORAGE_PRESIGN_ENDPOINT:http://localhost:9000}    # 브라우저 → 저장소 (R20)
+      region: ${BLOG_IMAGE_STORAGE_REGION:us-east-1}
+      bucket: ${BLOG_IMAGE_STORAGE_BUCKET:blog}
+      # 앱 전용 키 (PutObject·GetObject·DeleteObject만). 환경 변수로만 넣는다 — 비면 기동하지 않는다
+      access-key: ${BLOG_IMAGE_STORAGE_ACCESS_KEY:}
+      secret-key: ${BLOG_IMAGE_STORAGE_SECRET_KEY:}
   scheduling:
     pool-size: 2
   async:

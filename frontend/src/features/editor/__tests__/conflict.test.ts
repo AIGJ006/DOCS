@@ -23,7 +23,7 @@ function conflictError(server: ServerCopy = SERVER) {
 function setup() {
   const sent: SaveRequest[] = [];
   const responses: (() => Promise<SaveResponse>)[] = [];
-  const local: LocalDraft[] = [];
+  const local: Omit<LocalDraft, 'pendingImages'>[] = [];
   const statuses: AutosaveStatus[] = [];
   const controllerRef: { current: ConflictController | null } = { current: null };
   const queue = new AutosaveQueue({

@@ -34,7 +34,7 @@ SELECT id, 'profiles/2026/09/a1b2c3d4.png', 'profiles/2026/09/a1b2c3d4_thumb.web
   FROM member WHERE handle = 'kim755030';
 INSERT INTO image (uploader_id, storage_key, thumb_storage_key, content_type, size_bytes, thumb_size_bytes,
                    width, height, status, purpose)
-SELECT id, 'images/2026/09/3f2a9c1e.png', 'images/2026/09/3f2a9c1e_thumb.webp', 'image/png', 512000, 40960,
+SELECT id, 'images/2026/09/3f2a9c1e-5b7d-4e2a-9c1f-0a1b2c3d4e5f.png', 'images/2026/09/3f2a9c1e-5b7d-4e2a-9c1f-0a1b2c3d4e5f_thumb.webp', 'image/png', 512000, 40960,
        1600, 900, 'ATTACHED', 'POST'
   FROM member WHERE handle = 'kim755030';
 
@@ -74,9 +74,9 @@ SELECT id, '제목 "><script>alert(1)</script>', '본문', '<p>본문</p>', '요
 INSERT INTO post (author_id, title, content_md, content_html, excerpt, thumbnail_url, status, visibility,
                   view_count, like_count, comment_count, edit_version, published_at, first_public_at, created_at,
                   updated_at)
-SELECT id, '사진이 있는 글', '![첫 사진](images/2026/09/3f2a9c1e.png)',
-       '<p><img src="http://localhost:9000/blog/images/2026/09/3f2a9c1e.png" alt="첫 사진"></p>', '사진 한 장',
-       'http://localhost:9000/blog/images/2026/09/3f2a9c1e_thumb.webp', 'PUBLISHED', 'PUBLIC', 0, 0, 0, 1,
+SELECT id, '사진이 있는 글', '![첫 사진](images/2026/09/3f2a9c1e-5b7d-4e2a-9c1f-0a1b2c3d4e5f.png)',
+       '<p><img src="http://localhost:9000/blog/images/2026/09/3f2a9c1e-5b7d-4e2a-9c1f-0a1b2c3d4e5f.png" alt="첫 사진"></p>', '사진 한 장',
+       'http://localhost:9000/blog/images/2026/09/3f2a9c1e-5b7d-4e2a-9c1f-0a1b2c3d4e5f_thumb.webp', 'PUBLISHED', 'PUBLIC', 0, 0, 0, 1,
        '2026-09-22 10:00:00.000005+00', '2026-09-22 10:00:00.000005+00', '2026-09-22 09:00:00+00',
        '2026-09-22 10:00:00+00'
   FROM member WHERE handle = 'kim755030';
