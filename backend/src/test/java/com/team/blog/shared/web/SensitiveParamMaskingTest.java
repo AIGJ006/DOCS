@@ -50,6 +50,23 @@ class SensitiveParamMaskingTest {
     }
 
     @Test
+    void masksAiSuggestValues() {
+        // 013 T029: 외부 AI 키, 추천 요청의 제목·본문 (research R11)
+        assertThat(SensitiveParamMasking.mask("x-goog-api-key: AIzaTestKey123"))
+                .isEqualTo("x-goog-api-key: ***");
+        assertThat(
+                        SensitiveParamMasking.mask(
+                                "[x-goog-api-key:\"AIzaTestKey123\", Accept:\"*/*\"]"))
+                .isEqualTo("[x-goog-api-key: ***, Accept:\"*/*\"]");
+        assertThat(
+                        SensitiveParamMasking.mask(
+                                "{\"title\":\"비밀 제목\",\"contentMd\":\"본문 \\\"인용\\\"\",\"refresh\":false}"))
+                .isEqualTo("{\"title\":\"***\",\"contentMd\":\"***\",\"refresh\":false}");
+        assertThat(SensitiveParamMasking.mask("x-goog-api-key=abc&title=hello"))
+                .isEqualTo("x-goog-api-key=***&title=***");
+    }
+
+    @Test
     void leavesOtherNamesAlone() {
         assertThat(SensitiveParamMasking.mask("csrftoken=abc&mytoken=1&handle=kim"))
                 .isEqualTo("csrftoken=abc&mytoken=1&handle=kim");
