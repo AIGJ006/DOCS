@@ -13,7 +13,7 @@
 
 ## Requirement Completeness
 
-- [ ] No [NEEDS CLARIFICATION] markers remain
+- [x] No [NEEDS CLARIFICATION] markers remain
 - [x] Requirements are testable and unambiguous
 - [x] Success criteria are measurable
 - [x] Success criteria are technology-agnostic (no implementation details)
@@ -31,6 +31,7 @@
 
 ## Notes
 
+- **2026-10-08 clarify 반영**: NEEDS CLARIFICATION 표시를 모두 spec Clarifications(Session 2026-10-08, 민서 확정)의 답으로 고쳤다. 아래 "남음" 기록은 clarify 전 상태다.
 - Items marked incomplete require spec updates before `/speckit-clarify` or `/speckit-plan`
 - **NEEDS CLARIFICATION 2개 남음** (영향 큰 순):
   1. FR-030 — 비공개·친구 공개 글을 외부 AI로 보낼지 (34 후속 제안 F-1 "미결").

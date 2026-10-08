@@ -13,7 +13,7 @@
 
 ## Requirement Completeness
 
-- [ ] No [NEEDS CLARIFICATION] markers remain
+- [x] No [NEEDS CLARIFICATION] markers remain
 - [x] Requirements are testable and unambiguous
 - [x] Success criteria are measurable
 - [x] Success criteria are technology-agnostic (no implementation details)
@@ -31,6 +31,7 @@
 
 ## Notes
 
+- **2026-10-08 clarify 반영**: NEEDS CLARIFICATION 표시를 모두 spec Clarifications(Session 2026-10-08, 민서 확정)의 답으로 고쳤다. 아래 "남음" 기록은 clarify 전 상태다.
 - Items marked incomplete require spec updates before `/speckit-clarify` or `/speckit-plan`
 - NEEDS CLARIFICATION 1개 남음: FR-031(및 Edge Cases 마지막 항목) — 관리자 조회를 조회수에서 제외할지. 40 R-8·42가 31에 요청했지만 31 W-3에 반영되지 않았다.
 - 구현 용어(테이블·API 경로·Redis 키·이벤트 이름·설정 키)는 브리프 지침대로 마지막 `Implementation Notes (for /speckit-plan)` 절에만 두었다. 본문의 "401/403/404/429" 같은 응답 종류는 원문 결정(404 정책·계정 상태 403)을 옮긴 관찰 가능한 결과라 남겼다.

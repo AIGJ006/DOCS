@@ -1,0 +1,210 @@
+openapi: 3.1.0
+info:
+  title: 좋아요·조회수 API (009-like-view)
+  version: 0.1.0
+  description: |
+    C-LIKE-1·C-VIEW-1 REST 계약. 원문: docs/30-like.md §3, docs/31-view-count.md §4, docs/42-permission-matrix.md §3·§7, docs/02-architecture.md §5-1(O8).
+
+    공통 규칙
+    - 현재 사용자는 세션에서만 꺼낸다.
+    - 좋아요 판정 순서(README 2026-10-07): 401 LOGIN_REQUIRED → 403 계정 상태 → 404 볼 수 없는 글 → 400 CANNOT_LIKE_OWN_POST → 429 TOO_MANY_REQUESTS(맨 끝).
+    - 볼 수 없는 글(없음·임시·비공개·휴지통·관리자 숨김·작성자 탈퇴 유예)은 모두 같은 404 본문이다.
+    - 오류 본문은 공통 형식 {code, message, errors, details}. errors는 항상 배열, 메시지 끝에 마침표 없음.
+    - 상태를 바꾸는 요청은 세션 쿠키(있으면) + `X-XSRF-TOKEN` 헤더(001). 없거나 틀리면 403 CSRF_REJECTED.
+    - 좋아요 수는 목록 카드(005 PostCard.likeCount)·글 상세(005 likeCount)에서 읽는다. "내가 눌렀는지"는 글 상세 응답의 `viewer.likedByMe`(005 필드, 이 기능의 `LikeStatusQueryAdapter`가 채움)로 처음 상태를 받는다.
+servers:
+  - url: http://localhost:8080
+    description: 로컬 Docker Compose
+tags:
+  - name: likes
+    description: 좋아요
+  - name: views
+    description: 조회 기록
+paths:
+  /api/posts/{postId}/like:
+    put:
+      tags: [likes]
+      operationId: likePost
+      summary: 좋아요 상태로
+      description: |
+        이미 좋아요 상태여도 200(수 변화 없음, 이벤트 없음). 실제로 생겼을 때만 like_count +1과 PostLiked.
+        응답의 likeCount는 다른 사람의 변화까지 반영한 지금 값. 좋아요·취소 합쳐 회원당 1분 60번.
+      security:
+        - sessionCookie: []
+      parameters:
+        - $ref: '#/components/parameters/PostId'
+        - $ref: '#/components/parameters/CsrfToken'
+      responses:
+        '200':
+          description: 지금 상태
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/LikeState' }
+              example: { liked: true, likeCount: 13 }
+        '400':
+          description: 자기 글
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+              example: { code: CANNOT_LIKE_OWN_POST, message: 내 글에는 좋아요를 누를 수 없어요, errors: [], details: null }
+        '401': { $ref: '#/components/responses/LoginRequired' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+    delete:
+      tags: [likes]
+      operationId: unlikePost
+      summary: 취소 상태로
+      description: 이미 취소 상태여도 200(변화 없음). 실제로 지워졌을 때만 like_count −1과 PostUnliked. 판정·제한은 PUT과 같다
+      security:
+        - sessionCookie: []
+      parameters:
+        - $ref: '#/components/parameters/PostId'
+        - $ref: '#/components/parameters/CsrfToken'
+      responses:
+        '200':
+          description: 지금 상태
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/LikeState' }
+              example: { liked: false, likeCount: 12 }
+        '400':
+          description: 자기 글 (CANNOT_LIKE_OWN_POST)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+        '401': { $ref: '#/components/responses/LoginRequired' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+
+  /api/posts/{postId}/views:
+    post:
+      tags: [views]
+      operationId: recordPostView
+      summary: 조회 기록
+      description: |
+        비회원도 가능. 셌든 중복이라 안 셌든, 작성자 본인·관리자·봇·미리 불러오기라 기록하지 않았든, Redis 장애로 건너뛰었든 모두 같은 204(본문 없음).
+        볼 수 없는 글은 404(제외 판정보다 먼저). 같은 방문자 1분 60번 초과는 429.
+        방문자 구분: 회원 / `vid` 쿠키 / 쿠키가 없으면 하루짜리 해시. 원래 IP는 저장하지 않는다.
+        화면은 005 useViewBeacon이 보이는 상태 1초 뒤 한 번 보낸다(keepalive, 실패 무시).
+      security:
+        - {}
+        - sessionCookie: []
+      parameters:
+        - $ref: '#/components/parameters/PostId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - name: vid
+          in: cookie
+          required: false
+          description: 방문자 쿠키(UUID). 상세 API·글 상세 페이지 응답이 비회원에게 없으면 발급한다. 형식이 틀리면 없는 것으로 본다
+          schema: { type: string, format: uuid }
+        - name: Sec-Purpose
+          in: header
+          required: false
+          description: "prefetch가 들어 있으면 기록하지 않는다 (Purpose 헤더도 같음)"
+          schema: { type: string }
+      responses:
+        '204': { description: 받음 (센 것과 안 센 것을 구분하지 않음) }
+        '403':
+          description: CSRF 거부
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+
+components:
+  parameters:
+    PostId:
+      name: postId
+      in: path
+      required: true
+      description: 숫자가 아니면 404
+      schema: { type: string, pattern: '^[0-9]+$' }
+    CsrfToken:
+      name: X-XSRF-TOKEN
+      in: header
+      required: true
+      description: CSRF 토큰 (`XSRF-TOKEN` 쿠키 값, 001)
+      schema: { type: string }
+  securitySchemes:
+    sessionCookie:
+      type: apiKey
+      in: cookie
+      name: SESSION
+      description: Spring Session(Redis) 세션 쿠키. HttpOnly, Secure, SameSite=Lax (02 §5).
+
+  headers:
+    RetryAfter:
+      description: 다시 시도할 수 있을 때까지 남은 초
+      schema: { type: integer, minimum: 1 }
+
+  responses:
+    LoginRequired:
+      description: 비회원
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+          example: { code: LOGIN_REQUIRED, message: 로그인이 필요해요, errors: [], details: null }
+    Forbidden:
+      description: |
+        계정 상태 거부(001 `AccountStatusGuard`) 또는 CSRF 거부. 판정 순서상 404보다 먼저다(42 §3).
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+          examples:
+            emailNotVerified:
+              value: { code: EMAIL_NOT_VERIFIED, message: 이메일 인증 후 이용할 수 있어요, errors: [], details: null }
+            withdrawn:
+              value: { code: ACCOUNT_WITHDRAWN, message: 탈퇴 신청한 계정이에요, errors: [], details: null }
+            suspended:
+              value: { code: ACCOUNT_SUSPENDED, message: 정지된 계정이에요, errors: [], details: null }
+            csrfRejected:
+              value: { code: CSRF_REJECTED, message: 요청을 확인하지 못했어요. 페이지를 새로 고친 뒤 다시 시도해 주세요, errors: [], details: null }
+    NotFound:
+      description: 없음·볼 수 없음·남의 것. 본문은 모든 경우 같다(README 2026-10-07).
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+          example: { code: NOT_FOUND, message: 볼 수 없는 페이지예요, errors: [], details: null }
+    TooManyRequests:
+      description: 요청 과다. 판정 순서의 맨 끝(007 Q2). 코드는 `TOO_MANY_REQUESTS` 하나(007 Q3).
+      headers:
+        Retry-After: { $ref: '#/components/headers/RetryAfter' }
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+          example: { code: TOO_MANY_REQUESTS, message: 잠시 후 다시 시도해 주세요, errors: [], details: null }
+    InvalidCursor:
+      description: 풀 수 없거나 다른 목록의 커서
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+          example: { code: INVALID_CURSOR, message: 목록을 처음부터 다시 불러와 주세요, errors: [], details: null }
+
+  schemas:
+    ErrorResponse:
+      type: object
+      description: 공통 오류 본문 (02 §5-1 O8). `errors`는 항상 배열(없으면 []), 메시지 끝에 마침표 없음.
+      required: [code, message, errors, details]
+      properties:
+        code: { type: string, description: 대문자 이유 코드 }
+        message: { type: string }
+        errors:
+          type: array
+          items:
+            type: object
+            required: [field, code, message]
+            properties:
+              field: { type: string }
+              code: { type: string }
+              message: { type: string }
+        details:
+          type: [object, 'null']
+    LikeState:
+      type: object
+      required: [liked, likeCount]
+      properties:
+        liked: { type: boolean }
+        likeCount: { type: integer, minimum: 0 }

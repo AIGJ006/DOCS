@@ -7,29 +7,19 @@ import static com.team.blog.discovery.support.ReadingApi.status;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 
-import com.team.blog.discovery.support.ReadingPermissionActions;
 import com.team.blog.shared.web.NotFoundPageRenderer;
 import com.team.blog.support.permission.AbstractPermissionMatrixIT;
 import com.team.blog.support.permission.Actor;
 import com.team.blog.support.permission.TargetState;
 import jakarta.servlet.http.Cookie;
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.nio.charset.StandardCharsets;
-import java.util.List;
-import java.util.stream.Stream;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.Arguments;
-import org.junit.jupiter.params.provider.MethodSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.test.web.servlet.MvcResult;
 
 /**
- * 005 읽기 권한 매트릭스 러너 (T028, US2 #2, Q-8, SC-009). 004 {@code post-read.csv}에서 {@code owner=005} 행만
- * 실행한다({@code read-detail-api}·{@code read-detail-page}).
+ * 005 읽기 권한 매트릭스 보충 확인 (T028, US2 #2, Q-8, SC-009). {@code post-read.csv}의 {@code owner=005}
+ * 행({@code read-detail-api}·{@code read-detail-page})은 004 공용 러너 {@code PermissionMatrixIT}(004
+ * T045)가 실행기 {@code ReadingPermissionActions}로 돌린다 — 여기서는 행 하나로 보기 어려운 404 동일성만 본다.
  *
  * <p>404는 이유를 구분하지 않는다 — API 본문은 공통 JSON과, 화면 본문은 004 {@link NotFoundPageRenderer} 출력과 바이트 단위로 같고
  * 모두 {@code Cache-Control: private, no-store}다(research R-17, FR-042).
@@ -40,30 +30,6 @@ import org.springframework.test.web.servlet.MvcResult;
 class PostDetailPermissionMatrixIT extends AbstractPermissionMatrixIT {
 
     @Autowired private NotFoundPageRenderer notFoundPageRenderer;
-
-    static Stream<Arguments> rows() throws IOException {
-        try (InputStream in =
-                        PostDetailPermissionMatrixIT.class.getResourceAsStream(
-                                "/permission/post-read.csv");
-                BufferedReader reader =
-                        new BufferedReader(new InputStreamReader(in, StandardCharsets.UTF_8))) {
-            List<String> lines = reader.lines().skip(1).filter(l -> !l.isBlank()).toList();
-            return lines.stream()
-                    .map(line -> line.split(",", -1))
-                    .filter(cols -> ReadingPermissionActions.OWNER.equals(cols[5].strip()))
-                    .map(cols -> Arguments.of((Object[]) cols))
-                    .toList()
-                    .stream();
-        }
-    }
-
-    @ParameterizedTest(name = "{0} × {1} × {2} → {3} {4}")
-    @MethodSource("rows")
-    void post_read_005_행(
-            String actor, String target, String action, String status, String code, String owner)
-            throws Exception {
-        verify(actor, target, action, status, code, owner);
-    }
 
     @Test
     void API_404_본문은_모든_이유에서_같다() throws Exception {

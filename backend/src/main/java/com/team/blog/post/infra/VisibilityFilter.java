@@ -68,4 +68,28 @@ public class VisibilityFilter {
         }
         return new SqlCondition(sql.toString(), params);
     }
+
+    /**
+     * 친구가 보는 블로그 목록 조건 (선택 구현 {@code FRIENDS}, 004 T071, FR-048, research R-14). 전체 공개 글 + 보는 사람이
+     * 수락된 친구일 때의 친구 공개 글. 정렬·커서는 {@code k = (p.published_at, p.id)}이고({@code ORDER BY
+     * p.published_at DESC, p.id DESC} — 친구 공개 글은 최초 공개 일자가 없다) 부분 인덱스 {@code ix_post_blog_friends}의
+     * 술어({@code visibility IN ('PUBLIC','FRIENDS')})를 함께 둔다. 블로그 글 수도 같은 조건의 {@code COUNT(*)}다.
+     *
+     * <p>홈·태그·검색·sitemap 등 공용 목록은 {@link #forViewer}를 그대로 쓴다 — 친구 공개 글은 거기에 나오지 않는다. 친구 공개를 끈 환경이나
+     * 비회원이면 {@link #forViewer}와 같은 글만 남는다(친구 공개 글은 DB에 없거나 EXISTS가 거짓).
+     */
+    public SqlCondition forFriendBlog(Viewer viewer, long authorId) {
+        Map<String, Object> params = new LinkedHashMap<>();
+        params.put("authorId", authorId);
+        params.put("viewerId", viewer.isAuthenticated() ? viewer.id() : -1L);
+        String sql =
+                "p.status = 'PUBLISHED' AND p.visibility IN ('PUBLIC', 'FRIENDS')"
+                        + " AND p.deleted_at IS NULL AND p.hidden_at IS NULL"
+                        + " AND m.withdrawn_at IS NULL AND p.author_id = :authorId"
+                        + " AND (p.visibility = 'PUBLIC' OR EXISTS (SELECT 1 FROM friendship f"
+                        + " WHERE f.member_a_id = LEAST(p.author_id, :viewerId)"
+                        + " AND f.member_b_id = GREATEST(p.author_id, :viewerId)"
+                        + " AND f.status = 'ACCEPTED'))";
+        return new SqlCondition(sql, params);
+    }
 }

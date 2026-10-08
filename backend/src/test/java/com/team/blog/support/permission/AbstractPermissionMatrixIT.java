@@ -10,6 +10,7 @@ import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.Optional;
 import org.junit.jupiter.api.Assumptions;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Autowired;
 
@@ -32,8 +33,13 @@ import org.springframework.beans.factory.annotation.Autowired;
  * 본문 {@code code}(성공이면 비움). 기능별 CSV(예: 006 {@code post-trashed.csv})를 같은 형식으로 더할 수 있다.
  *
  * <p>행마다 DB가 비워진 상태({@link IntegrationTestBase})에서 작성자·대상 글·행위자 세션을 새로 만든다. 실행기가 없는 행동은 {@code
- * pending: <owner>}로 건너뛴다. 쓰기 행동이 거부되면 요청 전후 {@link PostSnapshot}이 같아야 한다(42 §12 #1).
+ * pending: <owner>}로 건너뛰고 {@link PendingRowReport}에 적는다. 쓰기 행동이 거부되면 요청 전후 {@link PostSnapshot}이
+ * 같아야 한다(42 §12 #1).
+ *
+ * <p>{@link #verifyWithForeignOwner}는 같은 행을 요청에 다른 회원 번호({@code authorId} 등)를 끼워 넣어 실행한다(42 §12 #2,
+ * {@link OwnerFieldInjector}) — 결과가 같고, 대상 글의 작성자가 바뀌지 않고, 끼워 넣은 회원의 글이 생기지 않아야 한다.
  */
+@ExtendWith(PendingRowReport.class)
 public abstract class AbstractPermissionMatrixIT extends IntegrationTestBase {
 
     @Autowired private ObjectProvider<PermissionAction> actionBeans;
@@ -47,12 +53,46 @@ public abstract class AbstractPermissionMatrixIT extends IntegrationTestBase {
             String expectedCode,
             String owner)
             throws Exception {
+        run(actor, targetState, action, expectedStatus, expectedCode, owner, false);
+    }
+
+    /**
+     * 쓰기 행을 요청에 다른 회원 번호를 끼워 넣어 실행한다 (42 §12 #2). 읽기 행동은 대상이 아니다(건너뜀). 기대 결과는 CSV 행 그대로이고, 추가로 대상
+     * 글의 {@code author_id}가 그대로이며 끼워 넣은 회원 이름으로 된 글이 없어야 한다.
+     */
+    protected void verifyWithForeignOwner(
+            String actor,
+            String targetState,
+            String action,
+            String expectedStatus,
+            String expectedCode,
+            String owner)
+            throws Exception {
+        run(actor, targetState, action, expectedStatus, expectedCode, owner, true);
+    }
+
+    private void run(
+            String actor,
+            String targetState,
+            String action,
+            String expectedStatus,
+            String expectedCode,
+            String owner,
+            boolean injectForeignOwner)
+            throws Exception {
+        String row = actor + " × " + targetState + " × " + action;
         PermissionAction executor = registry().find(action).orElse(null);
         if (executor == null) {
+            PendingRowReport.record(
+                    getClass(), owner, row + (injectForeignOwner ? " (+authorId)" : ""));
             Assumptions.abort("pending: " + owner);
             return;
         }
         assertThat(executor.owner()).as("CSV owner 열과 실행기 owner").isEqualTo(owner);
+        if (injectForeignOwner) {
+            Assumptions.assumeTrue(executor.isWrite(), "읽기 행동은 작성자 번호 끼워 넣기 대상이 아님");
+            row += " (+authorId)";
+        }
 
         Scenario scenario = arrange(Actor.valueOf(actor), TargetState.valueOf(targetState));
         Optional<PostSnapshot> before =
@@ -60,9 +100,19 @@ public abstract class AbstractPermissionMatrixIT extends IntegrationTestBase {
                         ? Optional.empty()
                         : PostSnapshot.take(jdbc, scenario.postId());
 
-        ActionResult result = executor.perform(mockMvc, scenario.session(), scenario.postId());
+        ActionResult result;
+        Long foreign = null;
+        if (injectForeignOwner) {
+            long foreignId = members().member().create();
+            foreign = foreignId;
+            result =
+                    OwnerFieldInjector.armed(
+                            foreignId,
+                            () -> executor.perform(mockMvc, scenario.session(), scenario.postId()));
+        } else {
+            result = executor.perform(mockMvc, scenario.session(), scenario.postId());
+        }
 
-        String row = actor + " × " + targetState + " × " + action;
         if ("INCLUDED".equals(expectedStatus) || "EXCLUDED".equals(expectedStatus)) {
             assertThat(result.included())
                     .as(row + " 목록 포함 여부")
@@ -79,6 +129,24 @@ public abstract class AbstractPermissionMatrixIT extends IntegrationTestBase {
             assertThat(PostSnapshot.take(jdbc, scenario.postId()))
                     .as(row + " 거부된 요청 전후 DB 값")
                     .contains(before.get());
+        }
+        if (foreign != null) {
+            if (scenario.postId() != null && before.isPresent()) {
+                assertThat(
+                                jdbc.queryForList(
+                                        "SELECT author_id FROM post WHERE id = ?",
+                                        Long.class,
+                                        scenario.postId()))
+                        .as(row + " 대상 글 작성자")
+                        .allMatch(id -> id == scenario.authorId());
+            }
+            assertThat(
+                            jdbc.queryForObject(
+                                    "SELECT count(*) FROM post WHERE author_id = ?",
+                                    Long.class,
+                                    foreign))
+                    .as(row + " 끼워 넣은 회원 이름의 글")
+                    .isZero();
         }
     }
 

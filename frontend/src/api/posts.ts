@@ -2,10 +2,22 @@
  * 글 작성·임시 저장·발행 API (002, contracts/openapi.yaml). 001 `client.ts`(CSRF 헤더·오류 본문) 위에 둔다.
  * 004의 공개 범위 변경 함수 등 다른 기능의 함수는 이 파일에 더한다.
  */
-import { apiDelete, apiGet, apiPost, apiPut, CSRF_COOKIE, CSRF_HEADER } from './client';
+import {
+  apiDelete,
+  apiGet,
+  apiPost,
+  apiPut,
+  CSRF_COOKIE,
+  CSRF_HEADER,
+  type RequestOptions,
+} from './client';
 import type { PostCardPage, PostDetailResponse } from './types/reading';
 
-export type Visibility = 'PUBLIC' | 'PRIVATE';
+/**
+ * 공개 범위 (004 contracts `Visibility`). 공통 값은 `PUBLIC`·`PRIVATE`이고, `FRIENDS`는 선택 구현을 적용한 환경에서만 온다
+ * (고를 수 있는 값은 `features/visibility/visibilityOptions.ts`가 정한다).
+ */
+export type Visibility = 'PUBLIC' | 'PRIVATE' | 'FRIENDS';
 export type PostStatus = 'DRAFT' | 'PUBLISHED';
 
 /** 에디터에 여는 내용 — 현재 버전 = max(Redis, post_draft, post)의 출처. */
@@ -105,6 +117,26 @@ export function saveWorkingCopy(postId: number, body: SaveRequest) {
 /** [변경 취소] — 발행 글의 작업본을 버린다(204). 작업본이 없어도 성공, 임시글은 409 NOT_PUBLISHED. */
 export function discardWorkingCopy(postId: number): Promise<void> {
   return apiDelete<void>(`/api/posts/${postId}/working-copy`);
+}
+
+/** 공개 범위 변경 응답 (004 contracts `VisibilityChangeResponse`). */
+export interface SetVisibilityResult {
+  visibility: Visibility;
+  /** 한 번도 "발행 + 전체 공개"가 된 적 없으면 null */
+  firstPublicAt: string | null;
+}
+
+/**
+ * 공개 범위 지정 (004 T038, `PUT /api/posts/{postId}/visibility`). 다시 발행하지 않고 즉시 바뀌며 "수정됨"이 생기지 않는다.
+ * 같은 값이면 아무것도 바뀌지 않고 200이다. 남의 글·없는 글·휴지통 글은 404 `NOT_FOUND`, 잘못된 값은 400 `INVALID_VISIBILITY`.
+ * `options.notFoundScreen: false`면 404여도 공통 404 화면으로 넘어가지 않는다(006 내 글 관리의 줄 단위 오류).
+ */
+export function setVisibility(
+  postId: number,
+  visibility: Visibility,
+  options?: RequestOptions,
+): Promise<SetVisibilityResult> {
+  return apiPut<SetVisibilityResult>(`/api/posts/${postId}/visibility`, { visibility }, options);
 }
 
 function readCookie(name: string): string | null {

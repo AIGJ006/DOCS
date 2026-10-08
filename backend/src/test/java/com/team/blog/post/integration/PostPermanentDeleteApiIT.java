@@ -27,7 +27,7 @@ import org.springframework.test.web.servlet.MvcResult;
 
 /**
  * 영구 삭제 {@code DELETE /api/posts/{postId}/permanent} (006 T052, US4, FR-029, SC-004, research R19).
- * 권한 매트릭스 행은 {@code TrashPermissionMatrixIT}가 {@code PurgePostAction}으로 실행한다. 딸린 행 정리는 {@code
+ * 권한 매트릭스 행은 004 {@code PermissionMatrixIT}가 {@code PurgePostAction}으로 실행한다. 딸린 행 정리는 {@code
  * PostPurgeIT}가 본다.
  */
 @Import(PostTestConfig.class)

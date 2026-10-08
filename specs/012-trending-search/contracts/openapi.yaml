@@ -1,0 +1,333 @@
+openapi: 3.1.0
+info:
+  title: 트렌딩·검색·sitemap API (012-trending-search)
+  version: 0.1.0
+  description: |
+    원문: docs/32-trending.md §4·§5, docs/33-search.md §2·§3·§5, docs/02-architecture.md §5-1(O8), docs/06 §3(노출 표).
+
+    공통 규칙
+    - 비회원도 쓴다. 글 결과는 보는 사람과 관계없이 공용 노출 조건(공개·발행·휴지통 아님·숨김 아님·작성자 탈퇴 유예 아님)만 통과한 글이다.
+    - 탈퇴 유예 회원의 `/api/**` 요청은 001 게이트가 403 ACCOUNT_WITHDRAWN. `/sitemap.xml`은 게이트 밖이다.
+    - 오류 본문은 공통 형식 {code, message, errors, details}. errors는 항상 배열, 메시지 끝에 마침표 없음.
+    - 카드(PostCard)는 005 계약과 같다. 카드 수는 9개 고정(`size`를 받지 않음).
+    - 검색 판정 순서: 403(게이트) → 404(블로그 안 검색의 블로그) → 400(검색어·커서) → 429(맨 끝).
+    - 응답에 HTML 문자열이 없다. 주변 문장은 글자와 강조 범위로 준다(research R9).
+servers:
+  - url: http://localhost:8080
+    description: 로컬 Docker Compose
+tags:
+  - name: trending
+  - name: search
+  - name: sitemap
+paths:
+  /api/posts/trending:
+    get:
+      tags: [trending]
+      operationId: listTrendingPosts
+      summary: 트렌딩 글 목록
+      description: |
+        10분마다 만든 순위 목록(상위 100개, 30분 보관)을 커서로 이어 읽는다. 첫 요청은 최신 순위, [더 보기]는 커서의 순위를 끝까지 따른다.
+        그 사이 볼 수 없게 된 글은 건너뛰고 9개를 채운다. 순위 보관소 장애(또는 순위가 아직 없음) 때는 즉시 계산한 첫 9개와 nextCursor null.
+      parameters:
+        - name: cursor
+          in: query
+          required: false
+          description: 앞 페이지의 nextCursor (목록 구분 `trending`)
+          schema: { type: string, maxLength: 512 }
+      responses:
+        '200':
+          description: 한 페이지 (트렌딩 글이 없으면 items가 빈 배열)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PostCardPage' }
+        '400': { $ref: '#/components/responses/InvalidCursor' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '410':
+          description: 커서의 순위 목록이 만료됨. 화면은 안내 후 커서 없이 다시 부른다
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+              example: { code: SNAPSHOT_EXPIRED, message: 순위가 새로 바뀌었어요, errors: [], details: null }
+
+  /api/search/posts:
+    get:
+      tags: [search]
+      operationId: searchPosts
+      summary: 글 검색
+      description: |
+        검색어는 NFC → 앞뒤 공백 제거 → 50자 → 띄어쓰기로 나눔 → 1글자 버림 → 앞 5단어. 모든 단어가 들어 있는 글만(AND).
+        2글자 단어는 제목·태그, 3글자 이상은 제목·태그·본문(원문, 코드 블록 포함)에서 찾는다. `%`·`_`·`\`는 글자 그대로.
+        관련도순: ① 모든 단어가 제목 → ② 제목 또는 태그 → ③ 어딘가. 단계 안은 최초 공개 최신 → 번호 큰 순. 최신순: 모든 단어가 어딘가에 있는 글을 최초 공개 최신순.
+        같은 방문자(회원/방문자 쿠키/해시)는 글·사람 검색 합쳐 1분 30번.
+      parameters:
+        - name: q
+          in: query
+          required: true
+          schema: { type: string, maxLength: 200 }
+        - name: sort
+          in: query
+          required: false
+          schema: { type: string, enum: [relevance, latest], default: relevance }
+        - name: cursor
+          in: query
+          required: false
+          description: 같은 검색어·정렬·블로그의 nextCursor만 받는다
+          schema: { type: string, maxLength: 512 }
+        - name: blog
+          in: query
+          required: false
+          description: 블로그 안 검색이면 그 블로그 주소(대소문자 무시). 없음·탈퇴 유예면 404
+          schema: { type: string }
+        - name: vid
+          in: cookie
+          required: false
+          description: 009 방문자 쿠키 (요청 제한 키)
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: 한 페이지
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PostSearchPage' }
+              example:
+                items:
+                  - id: 41
+                    url: /@kim755030/posts/41
+                    title: 트랜잭션 격리 수준 정리
+                    excerpt: 격리 수준 네 가지를 예제로…
+                    thumbnailUrl: null
+                    firstPublicAt: '2026-10-07T03:00:00Z'
+                    commentCount: 2
+                    likeCount: 5
+                    author: { handle: kim755030, nickname: 김민서, profileImageUrl: null }
+                    snippet:
+                      text: '…스프링에서 **트랜잭션** 전파 속성은 `REQUIRED`가 기본이고 새 트랜잭…'
+                      marks: [[9, 12], [42, 45]]   # q=트랜잭
+                nextCursor: null
+                notice: null
+        '400':
+          description: 남는 단어가 없음(SEARCH_QUERY_TOO_SHORT) 또는 커서 오류(INVALID_CURSOR)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+              examples:
+                tooShort:
+                  value: { code: SEARCH_QUERY_TOO_SHORT, message: 두 글자 이상 입력해 주세요, errors: [], details: null }
+                cursor:
+                  value: { code: INVALID_CURSOR, message: 목록을 처음부터 다시 불러와 주세요, errors: [], details: null }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+
+  /api/search/people:
+    get:
+      tags: [search]
+      operationId: searchPeople
+      summary: 사람 검색
+      description: |
+        검색어를 단어로 나누지 않고 공백과 맨 앞 `@`를 지운 한 덩어리(2글자 이상)로 닉네임·블로그 주소에서 대소문자 무시 부분 일치.
+        정확히 일치하는 회원 먼저, 탈퇴 신청·익명 처리 회원 제외, 최대 20명. 요청 제한은 글 검색과 합산.
+      parameters:
+        - name: q
+          in: query
+          required: true
+          schema: { type: string, maxLength: 200 }
+      responses:
+        '200':
+          description: 결과 (없으면 빈 배열)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PeopleSearchResult' }
+              example:
+                items:
+                  - { handle: kim7550, nickname: 김민서, profileImageUrl: null, bioFirstLine: 백엔드 공부 기록 }
+        '400':
+          description: 덩어리가 2글자 미만
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+              example: { code: SEARCH_QUERY_TOO_SHORT, message: 두 글자 이상 입력해 주세요, errors: [], details: null }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+
+  /sitemap.xml:
+    get:
+      tags: [sitemap]
+      operationId: getSitemap
+      summary: 검색 엔진용 사이트 지도
+      description: |
+        요청 때마다 공용 노출 조건으로 만든다(캐시 없음). 공개 글 정규 주소(lastmod = 재발행 일자 또는 최초 공개 일자)와
+        공개 글이 1개 이상인 블로그 주소, 첫 화면. 친구 공개·비공개·휴지통·숨김·작성자 탈퇴 유예 글은 없다.
+      responses:
+        '200':
+          description: sitemap 0.9 XML
+          headers:
+            Cache-Control:
+              schema: { type: string, const: no-cache }
+          content:
+            application/xml:
+              schema: { type: string }
+              example: |
+                <?xml version="1.0" encoding="UTF-8"?>
+                <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+                  <url><loc>http://localhost:8080/</loc></url>
+                  <url><loc>http://localhost:8080/@kim755030/posts/41</loc><lastmod>2026-10-07T03:00:00Z</lastmod></url>
+                  <url><loc>http://localhost:8080/@kim755030</loc><lastmod>2026-10-07T03:00:00Z</lastmod></url>
+                </urlset>
+
+components:
+  securitySchemes:
+    sessionCookie:
+      type: apiKey
+      in: cookie
+      name: SESSION
+      description: Spring Session(Redis) 세션 쿠키. HttpOnly, Secure, SameSite=Lax (02 §5).
+
+  headers:
+    RetryAfter:
+      description: 다시 시도할 수 있을 때까지 남은 초
+      schema: { type: integer, minimum: 1 }
+
+  responses:
+    LoginRequired:
+      description: 비회원
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+          example: { code: LOGIN_REQUIRED, message: 로그인이 필요해요, errors: [], details: null }
+    Forbidden:
+      description: |
+        계정 상태 거부(001 `AccountStatusGuard`) 또는 CSRF 거부. 판정 순서상 404보다 먼저다(42 §3).
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+          examples:
+            emailNotVerified:
+              value: { code: EMAIL_NOT_VERIFIED, message: 이메일 인증 후 이용할 수 있어요, errors: [], details: null }
+            withdrawn:
+              value: { code: ACCOUNT_WITHDRAWN, message: 탈퇴 신청한 계정이에요, errors: [], details: null }
+            suspended:
+              value: { code: ACCOUNT_SUSPENDED, message: 정지된 계정이에요, errors: [], details: null }
+            csrfRejected:
+              value: { code: CSRF_REJECTED, message: 요청을 확인하지 못했어요. 페이지를 새로 고친 뒤 다시 시도해 주세요, errors: [], details: null }
+    NotFound:
+      description: 없음·볼 수 없음·남의 것. 본문은 모든 경우 같다(README 2026-10-07).
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+          example: { code: NOT_FOUND, message: 볼 수 없는 페이지예요, errors: [], details: null }
+    TooManyRequests:
+      description: 요청 과다. 판정 순서의 맨 끝(007 Q2). 코드는 `TOO_MANY_REQUESTS` 하나(007 Q3).
+      headers:
+        Retry-After: { $ref: '#/components/headers/RetryAfter' }
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+          example: { code: TOO_MANY_REQUESTS, message: 잠시 후 다시 시도해 주세요, errors: [], details: null }
+    InvalidCursor:
+      description: 풀 수 없거나 다른 목록의 커서
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+          example: { code: INVALID_CURSOR, message: 목록을 처음부터 다시 불러와 주세요, errors: [], details: null }
+
+  schemas:
+    ErrorResponse:
+      type: object
+      description: 공통 오류 본문 (02 §5-1 O8). `errors`는 항상 배열(없으면 []), 메시지 끝에 마침표 없음.
+      required: [code, message, errors, details]
+      properties:
+        code: { type: string, description: 대문자 이유 코드 }
+        message: { type: string }
+        errors:
+          type: array
+          items:
+            type: object
+            required: [field, code, message]
+            properties:
+              field: { type: string }
+              code: { type: string }
+              message: { type: string }
+        details:
+          type: [object, 'null']
+    AuthorSummary:
+      type: object
+      description: 005 계약과 같다
+      required: [handle, nickname, profileImageUrl]
+      properties:
+        handle: { type: string }
+        nickname: { type: string }
+        profileImageUrl: { type: [string, 'null'] }
+    PostCard:
+      type: object
+      description: 005 계약 PostCard와 같다 (10 §2·§4-2)
+      required: [id, url, title, excerpt, thumbnailUrl, firstPublicAt, commentCount, likeCount, author]
+      properties:
+        id: { type: integer, format: int64 }
+        url: { type: string }
+        title: { type: string, maxLength: 100 }
+        excerpt: { type: [string, 'null'], maxLength: 200 }
+        thumbnailUrl: { type: [string, 'null'] }
+        firstPublicAt: { type: string, format: date-time }
+        commentCount: { type: integer, minimum: 0 }
+        likeCount: { type: integer, minimum: 0 }
+        author: { $ref: '#/components/schemas/AuthorSummary' }
+    PostCardPage:
+      type: object
+      required: [items, nextCursor]
+      properties:
+        items:
+          type: array
+          maxItems: 9
+          items: { $ref: '#/components/schemas/PostCard' }
+        nextCursor: { type: [string, 'null'] }
+    Snippet:
+      type: object
+      description: 검색어 주변 문장. 원문 그대로(서식 기호 포함), 앞뒤가 잘렸으면 `…`. 화면은 text를 marks 범위로 잘라 텍스트 노드와 <mark>로만 그린다
+      required: [text, marks]
+      properties:
+        text: { type: string, maxLength: 200 }
+        marks:
+          type: array
+          description: 강조 범위 [시작, 끝) — UTF-16 단위(JS 문자열 색인), 겹치지 않고 오름차순
+          items:
+            type: array
+            minItems: 2
+            maxItems: 2
+            items: { type: integer, minimum: 0 }
+    PostSearchItem:
+      allOf:
+        - $ref: '#/components/schemas/PostCard'
+        - type: object
+          required: [snippet]
+          properties:
+            snippet: { $ref: '#/components/schemas/Snippet' }
+    PostSearchPage:
+      type: object
+      required: [items, nextCursor, notice]
+      properties:
+        items:
+          type: array
+          maxItems: 9
+          items: { $ref: '#/components/schemas/PostSearchItem' }
+        nextCursor: { type: [string, 'null'] }
+        notice:
+          type: [string, 'null']
+          enum: [TWO_CHAR_TITLE_TAG_ONLY, null]
+          description: 2글자 단어가 있으면 "두 글자 단어는 제목·태그에서만 찾았어요"
+    PersonItem:
+      type: object
+      required: [handle, nickname, profileImageUrl, bioFirstLine]
+      properties:
+        handle: { type: string }
+        nickname: { type: string }
+        profileImageUrl: { type: [string, 'null'] }
+        bioFirstLine: { type: [string, 'null'] }
+    PeopleSearchResult:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          maxItems: 20
+          items: { $ref: '#/components/schemas/PersonItem' }

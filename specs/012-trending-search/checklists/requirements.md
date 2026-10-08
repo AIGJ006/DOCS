@@ -13,7 +13,7 @@
 
 ## Requirement Completeness
 
-- [ ] No [NEEDS CLARIFICATION] markers remain
+- [x] No [NEEDS CLARIFICATION] markers remain
 - [x] Requirements are testable and unambiguous
 - [x] Success criteria are measurable
 - [x] Success criteria are technology-agnostic (no implementation details)
@@ -31,6 +31,7 @@
 
 ## Notes
 
+- **2026-10-08 clarify 반영**: NEEDS CLARIFICATION 표시를 모두 spec Clarifications(Session 2026-10-08, 민서 확정)의 답으로 고쳤다. 아래 "남음" 기록은 clarify 전 상태다.
 - Items marked incomplete require spec updates before `/speckit-clarify` or `/speckit-plan`
 - **NEEDS CLARIFICATION 1개 남음** (FR-005): 트렌딩의 "남의 댓글 작성자 수"에서 관리자가 숨긴 댓글을 뺄지. 43 문서가 32에 요청했으나(상태 "요청") 32에 반영되지 않았다.
 - 구현 세부(쿼리, 저장소 키, 인덱스, API 경로, 커서 형식, 오류 코드)는 `Implementation Notes (for /speckit-plan)` 섹션에만 두었다. 본문의 "유니코드 정규화(NFC)", "이스케이프"는 사용자에게 보이는 결과(같은 글자 판정, HTML이 실행되지 않음)를 정의하는 용어로 남겼다.

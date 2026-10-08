@@ -1,3 +1,5 @@
+import type { ViewerFlags } from './viewerFlags';
+
 /**
  * 글 읽기 응답 타입 (005 contracts/openapi.yaml 그대로). 목록 카드·블로그 머리말·글 상세.
  */
@@ -41,18 +43,8 @@ export interface BlogHeader {
   isMe: boolean;
 }
 
-/**
- * 화면 버튼 판단용 보는 사람 기준 값.
- *
- * (구현 메모) 004 T060 `api/types/viewerFlags.ts`가 아직 없어 여기 둔다. 004가 만들면 `ViewerFlags`를
- * 그 파일에서 가져와 확장한다(이름·뜻은 같게 맞췄다).
- */
-export interface ViewerFlags {
-  loggedIn: boolean;
-  emailVerified: boolean;
-  isAdmin: boolean;
-  isAuthor: boolean;
-}
+/** 화면 버튼 판단용 보는 사람 기준 값 — 004 `viewerFlags.ts`가 정의한다(이름·뜻 그대로). */
+export type { ViewerFlags } from './viewerFlags';
 
 /** 상세의 보는 사람 기준 값 (contracts `PostDetail.viewer`). */
 export interface PostDetailViewer extends ViewerFlags {

@@ -13,7 +13,7 @@
 
 ## Requirement Completeness
 
-- [ ] No [NEEDS CLARIFICATION] markers remain
+- [x] No [NEEDS CLARIFICATION] markers remain
 - [x] Requirements are testable and unambiguous
 - [x] Success criteria are measurable
 - [x] Success criteria are technology-agnostic (no implementation details)
@@ -31,6 +31,7 @@
 
 ## Notes
 
+- **2026-10-08 clarify 반영**: NEEDS CLARIFICATION 표시를 모두 spec Clarifications(Session 2026-10-08, 민서 확정)의 답으로 고쳤다. 아래 "남음" 기록은 clarify 전 상태다.
 - Items marked incomplete require spec updates before `/speckit-clarify` or `/speckit-plan`
 - **NEEDS CLARIFICATION 1개 남음** (FR-008): 정지 중 회원의 탈퇴 요청 경로와 영구 정지 계정의 개인정보 보유 기간 — 13 §3-2가 "미정 (검증 M11, 43 §6과 함께 정한다)"으로 남김.
 - 원문에 규정이 없어 Assumptions로 둔 것: 복구 기한이 지났지만 정리 작업 전인 짧은 사이의 로그인(유예 상태 규칙을 그대로 적용), 관리자 권한 해제 방법(범위 밖).

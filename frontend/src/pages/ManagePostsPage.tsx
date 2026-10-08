@@ -7,7 +7,7 @@ import {
   type ManageTab,
   type VisibilityFilter,
 } from '../api/managePosts';
-import { createPost } from '../api/posts';
+import { createPost, setVisibility, type SetVisibilityResult, type Visibility } from '../api/posts';
 import { useConfirm } from '../components/useConfirm';
 import { useToast } from '../components/useToast';
 import { useSession } from '../features/auth/useSession';
@@ -15,7 +15,11 @@ import DraftRow from '../features/manage-posts/DraftRow';
 import ManageTabs from '../features/manage-posts/ManageTabs';
 import PublishedRow from '../features/manage-posts/PublishedRow';
 import TrashRow from '../features/manage-posts/TrashRow';
-import { DISCARD_CONFIRM, TRASH_NOTICE } from '../features/manage-posts/confirmDialogs';
+import {
+  DISCARD_CONFIRM,
+  MAKE_PUBLIC_CONFIRM,
+  TRASH_NOTICE,
+} from '../features/manage-posts/confirmDialogs';
 import { useManagePosts } from '../features/manage-posts/useManagePosts';
 import { useRowAction } from '../features/manage-posts/useRowAction';
 import { useTrashActions } from '../features/manage-posts/useTrashActions';
@@ -100,6 +104,26 @@ export default function ManagePostsPage() {
     });
   }
 
+  /** [공개 범위 ▾] (T068, FR-015): 성공하면 그 줄의 값만 바꾼다(다시 발행·"수정됨" 없음). 실패는 그 줄 아래에 */
+  async function changeVisibility(
+    row: ManagePostItem,
+    next: Visibility,
+  ): Promise<SetVisibilityResult | null> {
+    let saved: SetVisibilityResult | null = null;
+    await rowAction.run(row.id, () => setVisibility(row.id, next, { notFoundScreen: false }), {
+      onSuccess: (result) => {
+        saved = result;
+        list.updateRow(row.id, { visibility: result.visibility });
+      },
+    });
+    return saved;
+  }
+
+  /** 공개로 바꿀 때만 확인한다 (FR-015 "모든 사람이 볼 수 있게 돼요") */
+  function confirmVisibility(from: Visibility, to: Visibility) {
+    return to === 'PUBLIC' && from !== 'PUBLIC' ? confirm(MAKE_PUBLIC_CONFIRM) : true;
+  }
+
   async function newPost() {
     setCreating(true);
     setPageError(null);
@@ -137,6 +161,8 @@ export default function ManagePostsPage() {
           handle={me?.handle ?? null}
           onTrash={(r) => void actions.trash(r)}
           onDiscard={(r) => void discard(r)}
+          confirmVisibility={confirmVisibility}
+          onVisibilityChange={changeVisibility}
         />
       );
     }

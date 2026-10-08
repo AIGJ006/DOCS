@@ -85,12 +85,116 @@ describe('PublishedRow', () => {
     expect(screen.getByRole('alert')).toHaveTextContent('이유');
   });
 
-  it.todo(
-    'US5_1 공개 → 비공개는 확인창 없이 PUT /api/posts/{id}/visibility — 004 VisibilitySelect·공개 범위 API가 생기면 (T068)',
-  );
-  it.todo(
-    'US5_2 비공개 → 공개는 "모든 사람이 볼 수 있게 돼요" 확인 뒤 호출, [취소]면 호출 없음 — 004 대기 (T068)',
-  );
+  function publishedRow(visibility: 'PUBLIC' | 'PRIVATE') {
+    return manageItem(51, {
+      title: '공개 범위를 바꿀 글',
+      status: 'PUBLISHED',
+      visibility,
+      publishedAt: '2026-10-01T01:00:00Z',
+      editedAt: null,
+    });
+  }
+
+  async function openPublished(visibility: 'PUBLIC' | 'PRIVATE', next: 'PUBLIC' | 'PRIVATE') {
+    const mock = stubFetch({
+      'GET /api/me/posts': () =>
+        json(200, {
+          items: [publishedRow(visibility)],
+          nextCursor: null,
+          counts: { drafts: 0, published: 1, trash: 0 },
+        }),
+      'PUT /api/posts/51/visibility': () =>
+        json(200, {
+          visibility: next,
+          firstPublicAt: next === 'PUBLIC' ? '2026-10-08T03:00:00.123456Z' : null,
+        }),
+    });
+    render(
+      <MemoryRouter initialEntries={['/manage/posts?tab=published']}>
+        <Routes>
+          <Route path="/manage/posts" element={<ManagePostsPage />} />
+        </Routes>
+      </MemoryRouter>,
+    );
+    await screen.findByText('공개 범위를 바꿀 글');
+    return mock;
+  }
+
+  it('US5_1 공개 → 비공개는 확인창 없이 PUT /api/posts/{id}/visibility, 배지만 🔒로 바뀌고 "수정됨"이 생기지 않는다', async () => {
+    const user = userEvent.setup();
+    document.cookie = 'XSRF-TOKEN=token-1; path=/';
+    const mock = await openPublished('PUBLIC', 'PRIVATE');
+    const row = screen.getByRole('listitem');
+    expect(within(row).getByText('공개')).toHaveClass('sr-only');
+
+    await user.selectOptions(within(row).getByRole('combobox', { name: '공개 범위' }), 'PRIVATE');
+
+    await waitFor(() => expect(within(row).getByText('비공개')).toHaveClass('sr-only'));
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    const calls = requestsTo(mock, 'PUT', '/api/posts/51/visibility');
+    expect(calls).toHaveLength(1);
+    expect(JSON.parse(String(calls[0][1]?.body))).toEqual({ visibility: 'PRIVATE' });
+    expect(row).toHaveTextContent('발행 2026.10.01');
+    expect(row).not.toHaveTextContent('수정됨');
+  });
+
+  it('US5_2 비공개 → 공개는 "모든 사람이 볼 수 있게 돼요" 확인 뒤 호출, [취소]면 호출 없음', async () => {
+    const user = userEvent.setup();
+    document.cookie = 'XSRF-TOKEN=token-1; path=/';
+    const mock = await openPublished('PRIVATE', 'PUBLIC');
+    const row = screen.getByRole('listitem');
+    const select = within(row).getByRole('combobox', { name: '공개 범위' });
+
+    await user.selectOptions(select, 'PUBLIC');
+    let dialog = screen.getByRole('dialog');
+    expect(dialog).toHaveTextContent('모든 사람이 볼 수 있게 돼요');
+    await user.click(within(dialog).getByRole('button', { name: '취소' }));
+
+    await waitFor(() => expect(select).toHaveValue('PRIVATE'));
+    expect(requestsTo(mock, 'PUT', '/api/posts/51/visibility')).toHaveLength(0);
+
+    await user.selectOptions(select, 'PUBLIC');
+    dialog = screen.getByRole('dialog');
+    await user.click(within(dialog).getByRole('button', { name: '공개로 바꾸기' }));
+
+    await waitFor(() => expect(within(row).getByText('공개')).toHaveClass('sr-only'));
+    expect(select).toHaveValue('PUBLIC');
+    expect(requestsTo(mock, 'PUT', '/api/posts/51/visibility')).toHaveLength(1);
+  });
+
+  it('공개 범위 변경이 404면 그 줄 아래 "이미 처리된 글" 안내이고 값은 그대로', async () => {
+    const user = userEvent.setup();
+    document.cookie = 'XSRF-TOKEN=token-1; path=/';
+    const mock = stubFetch({
+      'GET /api/me/posts': () =>
+        json(200, {
+          items: [publishedRow('PUBLIC')],
+          nextCursor: null,
+          counts: { drafts: 0, published: 1, trash: 0 },
+        }),
+      'PUT /api/posts/51/visibility': () =>
+        json(404, {
+          code: 'NOT_FOUND',
+          message: '볼 수 없는 페이지예요',
+          errors: [],
+          details: null,
+        }),
+    });
+    render(
+      <MemoryRouter initialEntries={['/manage/posts?tab=published']}>
+        <Routes>
+          <Route path="/manage/posts" element={<ManagePostsPage />} />
+        </Routes>
+      </MemoryRouter>,
+    );
+    await screen.findByText('공개 범위를 바꿀 글');
+    const select = screen.getByRole('combobox', { name: '공개 범위' });
+
+    await user.selectOptions(select, 'PRIVATE');
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('이미 처리된 글이에요');
+    expect(requestsTo(mock, 'PUT', '/api/posts/51/visibility')).toHaveLength(1);
+  });
 
   it('US5_3 [변경 취소]는 확인 뒤 작업본을 버리고 [수정 중] 배지가 사라지며 [수정]으로 바뀐다', async () => {
     const user = userEvent.setup();
