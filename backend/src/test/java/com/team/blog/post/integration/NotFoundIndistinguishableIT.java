@@ -123,6 +123,72 @@ class NotFoundIndistinguishableIT extends IntegrationTestBase {
         }
     }
 
+    /** 화면 응답 (상태·본문 바이트·Content-Type·Cache-Control — {@code Date} 제외). */
+    private record Page(int status, List<Byte> body, String contentType, String cacheControl) {
+        static Page of(MvcResult result) {
+            var response = result.getResponse();
+            byte[] bytes = response.getContentAsByteArray();
+            List<Byte> body = new java.util.ArrayList<>(bytes.length);
+            for (byte b : bytes) {
+                body.add(b);
+            }
+            return new Page(
+                    response.getStatus(),
+                    body,
+                    response.getContentType(),
+                    response.getHeader("Cache-Control"));
+        }
+
+        String html() {
+            byte[] bytes = new byte[body.size()];
+            for (int i = 0; i < bytes.length; i++) {
+                bytes[i] = body.get(i);
+            }
+            return new String(bytes, java.nio.charset.StandardCharsets.UTF_8);
+        }
+    }
+
+    private String handleOf(long postId) {
+        return jdbc.queryForObject(
+                "SELECT m.handle FROM post p JOIN member m ON m.id = p.author_id WHERE p.id = ?",
+                String.class,
+                postId);
+    }
+
+    private Page page(String handle, Object postId, Cookie session) throws Exception {
+        var request = get("/@{handle}/posts/{postId}", handle, postId);
+        if (session != null) {
+            request.cookie(session);
+        }
+        return Page.of(mockMvc.perform(request).andReturn());
+    }
+
+    /** 004 T074 (quickstart 시나리오 2, SC-002): 글 화면 주소도 볼 수 없는 글과 없는 번호가 같은 404 화면이다. */
+    @Test
+    void 글_화면_주소의_404도_이유와_무관하게_바이트까지_같다() throws Exception {
+        Map<State, Long> unseen = unseenPosts();
+        long visible = posts.create(members().member().create(), State.PUBLISHED_PUBLIC);
+        String someHandle = handleOf(visible);
+        Cookie member = TestLogin.loginAs(mockMvc, members().member().create());
+        byte[] rendered = notFoundPageRenderer.render().getBody();
+
+        for (Cookie session : Arrays.asList(null, member)) {
+            Page expected = page(someHandle, posts.nonexistentId(), session);
+            assertThat(expected.status()).isEqualTo(404);
+            assertThat(expected.cacheControl()).isEqualTo("private, no-store");
+            assertThat(expected.contentType()).startsWith("text/html");
+            assertThat(expected.html())
+                    .isEqualTo(new String(rendered, java.nio.charset.StandardCharsets.UTF_8))
+                    .contains("<meta property=\"og:title\" content=\"볼 수 없는 글이에요\">")
+                    .contains("<meta name=\"robots\" content=\"noindex\">");
+            for (Map.Entry<State, Long> e : unseen.entrySet()) {
+                assertThat(page(handleOf(e.getValue()), e.getValue(), session))
+                        .as(e.getKey() + " (" + (session == null ? "비회원" : "회원") + ")")
+                        .isEqualTo(expected);
+            }
+        }
+    }
+
     @Test
     void 공통_404_화면은_요청과_무관하게_같다() {
         ResponseEntity<byte[]> first = notFoundPageRenderer.render();

@@ -3,6 +3,7 @@ package com.team.blog.shared.security.integration;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.team.blog.support.permission.AbstractPermissionMatrixIT;
+import com.team.blog.support.permission.PendingRowReport;
 import com.team.blog.support.permission.PermissionAction;
 import com.team.blog.support.permission.actions.SetVisibilityAction;
 import java.io.BufferedReader;
@@ -11,7 +12,9 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
+import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvFileSource;
@@ -54,6 +57,22 @@ class PermissionMatrixIT extends AbstractPermissionMatrixIT {
             String actor, String target, String action, String status, String code, String owner)
             throws Exception {
         verifyWithForeignOwner(actor, target, action, status, code, owner);
+    }
+
+    /** 아직 착수하지 않은 Tier B·C 기능 — 이 owner의 행만 대기로 남아도 된다 (014 숨김, 007 댓글). */
+    private static final Set<String> NOT_STARTED = Set.of("014", "007");
+
+    /**
+     * 004 T075 (SC-001): Tier A 행(저장·발행·변경 취소·삭제·복구·영구 삭제·공개 범위·읽기)은 건너뜀 0건. 실행 후 대기 행이 착수 전 기능
+     * 소유뿐인지 본다.
+     */
+    @AfterAll
+    static void Tier_A_대기_행은_0건() {
+        Map<String, List<String>> pending =
+                PendingRowReport.pendingOwners(PermissionMatrixIT.class);
+        assertThat(pending.keySet())
+                .as("대기 행 " + PendingRowReport.summary(pending))
+                .isSubsetOf(NOT_STARTED);
     }
 
     @Test
