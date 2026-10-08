@@ -6,6 +6,9 @@ import type { CursorListStatus } from '../features/post-list/useCursorList';
  */
 export const ALL_SEEN_TEXT = '모든 글을 다 봤어요';
 export const LOAD_FAILED_TEXT = '불러오지 못했어요';
+/** 첫 목록을 불러오지 못했을 때 — 목록 화면이 버튼 대신 보인다 (FR-016). */
+export const INITIAL_LOAD_FAILED_TEXT = '글을 불러오지 못했어요';
+export const LOADING_TEXT = '불러오는 중…';
 
 export interface LoadMoreButtonProps {
   status: CursorListStatus;
@@ -35,7 +38,7 @@ export default function LoadMoreButton({ status, done, onLoadMore, onRetry }: Lo
   return (
     <p style={{ textAlign: 'center' }}>
       <button type="button" onClick={onLoadMore} disabled={status === 'loading'}>
-        {status === 'loading' ? '불러오는 중…' : '더 보기'}
+        {status === 'loading' ? LOADING_TEXT : '더 보기'}
       </button>
     </p>
   );
