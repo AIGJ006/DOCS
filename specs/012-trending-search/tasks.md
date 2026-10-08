@@ -138,16 +138,16 @@ description: "Task list for 012-trending-search (트렌딩·검색)"
 
 ### Tests for User Story 3 ⚠️
 
-- [ ] T030 [P] [US3] `T/discovery/integration/PeopleSearchIT.java` — US3 #1·#2: 유예·익명 처리 제외, 정지 회원 포함, 정확히 일치 먼저(닉네임·주소 각각), 최대 20명, `김 민서`·`@kim7550` 덩어리, 1글자 400, `%`·`_` 글자 그대로, 프로필 사진·소개 첫 줄
-- [ ] T031 [P] [US3] `T/discovery/integration/BlogSearchIT.java` — US3 #3: 그 블로그 공개 글만, 없는 주소·유예 회원 블로그 404(본문 고정), 대문자 주소도 같은 결과, 블로그 주인이 검색해도 공개 글만, 블로그별 커서 분리(다른 블로그 커서 400)
-- [ ] T032 [P] [US3] `T/discovery/integration/SearchRateLimitIT.java` — FR-037: 회원·`vid`·쿠키 없는 IP+UA 각각 31번째 429 + `Retry-After`, 글·사람 합산, Redis 정지 중 통과, 판정 순서(429가 맨 끝 — 31번째라도 블로그 404가 먼저), 로그에 검색어 원문 없음 (009 머지 후)
+- [X] T030 [P] [US3] `T/discovery/integration/PeopleSearchIT.java` — US3 #1·#2: 유예·익명 처리 제외, 정지 회원 포함, 정확히 일치 먼저(닉네임·주소 각각), 최대 20명, `김 민서`·`@kim7550` 덩어리, 1글자 400, `%`·`_` 글자 그대로, 프로필 사진·소개 첫 줄 (구현 메모: 닉네임은 V1 uq_member_nickname(lower) 때문에 같은 값 둘을 만들 수 없어 '김민서'·'김민서탈퇴'로 확인. 정지 회원 포함도 확인)
+- [X] T031 [P] [US3] `T/discovery/integration/BlogSearchIT.java` — US3 #3: 그 블로그 공개 글만, 없는 주소·유예 회원 블로그 404(본문 고정), 대문자 주소도 같은 결과, 블로그 주인이 검색해도 공개 글만, 블로그별 커서 분리(다른 블로그 커서 400)
+- [X] T032 [P] [US3] `T/discovery/integration/SearchRateLimitIT.java` — FR-037: 회원·`vid`·쿠키 없는 IP+UA 각각 31번째 429 + `Retry-After`, 글·사람 합산, Redis 정지 중 통과, 판정 순서(429가 맨 끝 — 31번째라도 블로그 404가 먼저), 로그에 검색어 원문 없음 (009 머지 후) (구현 메모: Redis 정지 시험은 세션도 Redis에 있어 vid 쿠키 방문자로 확인. 로그는 OutputCaptureExtension, Redis 키에 검색어·vid 원문 없음도 확인)
 - [ ] T033 [P] [US3] 화면 테스트 `F/features/search/__tests__/PeopleResultItem.test.tsx`와 `SearchPage.test.tsx`에 사람 탭(결과·빈 상태·1글자 안내), `F/pages/__tests__/BlogPage.test.tsx`에 블로그 검색창·`?q=` 결과
 
 ### Implementation for User Story 3
 
-- [ ] T034 [US3] `B/discovery/infra/PeopleSearchRepository.java`(research R10 SQL)와 `B/discovery/application/search/PeopleSearchService.java`, `SearchController`에 `GET /api/search/people` (T030 통과)
-- [ ] T035 [US3] `SearchController`·`PostSearchService`에 `blog` 매개변수(001 `findReadableBlogOwner` → 없으면 `NotFoundException`, 커서 목록 구분에 주인 번호) (T031 통과)
-- [ ] T036 [US3] (**009 머지 후**) `B/discovery/application/search/SearchRateLimit.java`(`ratelimit:search:{visitorKey}`, 009 `VisitorKeyResolver`, 001 `RateLimiter.acquireOrThrow`, 판정 순서 맨 끝)를 두 API에 붙인다 (T032 통과)
+- [X] T034 [US3] `B/discovery/infra/PeopleSearchRepository.java`(research R10 SQL)와 `B/discovery/application/search/PeopleSearchService.java`, `SearchController`에 `GET /api/search/people` (T030 통과) (구현 메모: 소개 첫 줄은 서버가 잘라 bioFirstLine으로 준다(첫 줄바꿈 앞, 앞뒤 공백 제거, 비면 null))
+- [X] T035 [US3] `SearchController`·`PostSearchService`에 `blog` 매개변수(001 `findReadableBlogOwner` → 없으면 `NotFoundException`, 커서 목록 구분에 주인 번호) (T031 통과)
+- [X] T036 [US3] (**009 머지 후**) `B/discovery/application/search/SearchRateLimit.java`(`ratelimit:search:{visitorKey}`, 009 `VisitorKeyResolver`, 001 `RateLimiter.acquireOrThrow`, 판정 순서 맨 끝)를 두 API에 붙인다 (T032 통과)
 - [ ] T037 [US3] `F/features/search/PeopleResultItem.tsx`, `SearchPage` 사람 탭, `F/api/discovery.ts`에 `searchPeople(q)`, 005 `F/pages/BlogPage.tsx`에 "이 블로그에서 검색" 입력과 `?q=` 결과(목록 자리, 같은 카드·정렬 탭), 005 `PageShellController`의 `/@{handle}` 셸에서 `q`가 있으면 `noindex` (T033 통과)
 
 **Checkpoint**: 모든 User Story 완료
