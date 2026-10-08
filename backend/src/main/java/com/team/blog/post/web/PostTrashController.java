@@ -33,4 +33,11 @@ public class PostTrashController {
     public RestoreResponse restore(@CurrentUser Long memberId, @PathVariable long postId) {
         return RestoreResponse.from(trashService.restore(memberId, postId));
     }
+
+    /** 휴지통 글 영구 삭제 (확인창은 화면이 띄운다, FR-029). 휴지통에 없는 글은 404. 이메일 인증 전에도 허용한다. */
+    @DeleteMapping("/api/posts/{postId}/permanent")
+    public TrashResponse.Purged purge(@CurrentUser Long memberId, @PathVariable long postId) {
+        trashService.purgePermanently(memberId, postId);
+        return TrashResponse.Purged.INSTANCE;
+    }
 }

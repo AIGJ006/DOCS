@@ -122,6 +122,21 @@ public class PostTrashService {
         return new RestoreOutcome(post.status(), post.visibility());
     }
 
+    /**
+     * 휴지통 글을 바로 완전히 지운다 (FR-029~035, 13 §2-4). 휴지통에 없는 글·남의 글·없는 글은 모두 같은 404다. 확인창은 화면이 띄운다. 딸린 행
+     * 정리와 {@code PostPurged} 발행은 {@link PostPurgeService}가 한다.
+     */
+    @Transactional
+    public void purgePermanently(long me, long postId) {
+        accountStatusGuard.requireActive(me, ActionKind.CONTENT_CLEANUP);
+        TrashablePost post = lockOwned(postId, me, "영구 삭제");
+        if (!post.isTrashed()) {
+            throw new PostNotFoundException("영구 삭제: 휴지통 글 아님");
+        }
+        purgeService.purge(postId, me, true);
+        log.info("영구 삭제: postId={} authorId={}", postId, me);
+    }
+
     private void flushPendingAutosave(long postId) {
         try {
             autosaves.flushNow(postId);

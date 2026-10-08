@@ -9,6 +9,8 @@ import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.time.temporal.ChronoUnit;
+import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -88,10 +90,27 @@ public class TrashPostRepository {
 
     /** {@code cutoff} 전에 휴지통에 들어간 글 번호 (오래된 순, 최대 {@code limit}개). */
     public List<Long> findExpiredIds(Instant cutoff, int limit) {
+        return findExpiredIds(cutoff, limit, List.of());
+    }
+
+    /**
+     * {@link #findExpiredIds(Instant, int)}에서 {@code excluded} 글을 뺀다 — 휴지통 비우기 배치가 같은 실행에서 실패한 글을
+     * 다시 고르지 않게 한다(T062).
+     */
+    public List<Long> findExpiredIds(Instant cutoff, int limit, Collection<Long> excluded) {
+        Map<String, Object> params = new HashMap<>();
+        params.put("cutoff", odt(cutoff));
+        params.put("limit", limit);
+        String exclude = "";
+        if (!excluded.isEmpty()) {
+            exclude = " AND id NOT IN (:excluded)";
+            params.put("excluded", List.copyOf(excluded));
+        }
         return jdbc.queryForList(
                 "SELECT id FROM post WHERE deleted_at IS NOT NULL AND deleted_at < :cutoff"
+                        + exclude
                         + " ORDER BY deleted_at, id LIMIT :limit",
-                Map.of("cutoff", odt(cutoff), "limit", limit),
+                params,
                 Long.class);
     }
 
