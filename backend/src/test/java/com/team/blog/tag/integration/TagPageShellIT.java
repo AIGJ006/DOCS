@@ -129,4 +129,60 @@ class TagPageShellIT extends IntegrationTestBase {
         assertThat(body(none)).contains("<div id=\"root\">").doesNotContain("공개 글");
         assertThat(bytes(privateOnly)).isEqualTo(bytes(none));
     }
+
+    private String handleOf(long memberId) {
+        return jdbc.queryForObject(
+                "SELECT handle FROM member WHERE id = ?", String.class, memberId);
+    }
+
+    @Test
+    void 블로그_필터_대문자는_301() throws Exception {
+        String handle = handleOf(members().member().create());
+
+        MvcResult upper = api().getRaw(null, "/@" + handle + "?from=x&tag=JPA&y=1");
+        assertThat(status(upper)).isEqualTo(301);
+        assertThat(upper.getResponse().getHeader("Location"))
+                .isEqualTo("/@" + handle + "?from=x&tag=jpa&y=1");
+        assertThat(upper.getResponse().getHeader("Cache-Control")).isEqualTo("private, no-cache");
+
+        // 쿼리 값의 인코딩: c#는 %23, c++는 %2B (+는 쿼리에서 공백이 된다)
+        MvcResult sharp = api().getRaw(null, "/@" + handle + "?tag=C%23");
+        assertThat(sharp.getResponse().getHeader("Location"))
+                .isEqualTo("/@" + handle + "?tag=c%23");
+        MvcResult plus = api().getRaw(null, "/@" + handle + "?tag=%23C%2B%2B");
+        assertThat(plus.getResponse().getHeader("Location"))
+                .isEqualTo("/@" + handle + "?tag=c%2B%2B");
+        MvcResult spaced = api().getRaw(null, "/@" + handle + "?tag=Spring%20Boot");
+        assertThat(spaced.getResponse().getHeader("Location"))
+                .isEqualTo("/@" + handle + "?tag=spring-boot");
+
+        for (String ok : List.of("jpa", "c%23", "c%2B%2B", "%EC%9E%90%EB%B0%94")) {
+            MvcResult result = api().getRaw(null, "/@" + handle + "?tag=" + ok);
+            assertThat(status(result)).as(ok).isEqualTo(200);
+            assertThat(body(result)).contains("<div id=\"root\">");
+        }
+    }
+
+    @Test
+    void 블로그_필터_형식_오류는_404() throws Exception {
+        String handle = handleOf(members().member().create());
+        for (String bad : List.of("%F0%9F%94%A5", "", "%23", "c%40d", "a".repeat(31))) {
+            String path = "/@" + handle + "?tag=" + bad;
+            assertNotFoundPage(api().getRaw(null, path), path);
+        }
+        // 없는 블로그는 tag 값과 상관없이 같은 404
+        assertNotFoundPage(api().getRaw(null, "/@nobody-here?tag=jpa"), "nobody");
+    }
+
+    @Test
+    void handle_대문자와_tag_대문자가_함께면_handle_먼저() throws Exception {
+        String handle = handleOf(members().member().create());
+        MvcResult result = api().getRaw(null, "/@" + handle.toUpperCase() + "?tag=JPA");
+        assertThat(status(result)).isEqualTo(301);
+        assertThat(result.getResponse().getHeader("Location"))
+                .isEqualTo("/@" + handle + "?tag=JPA");
+
+        MvcResult bad = api().getRaw(null, "/@" + handle.toUpperCase() + "?tag=%F0%9F%94%A5");
+        assertThat(status(bad)).isEqualTo(301);
+    }
 }

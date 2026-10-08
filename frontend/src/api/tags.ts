@@ -34,7 +34,9 @@ export function suggestTags(q: string, signal?: AbortSignal): Promise<TagSuggest
   return apiGet<TagSuggestion[]>(`/api/tags/suggest?q=${encodeURIComponent(q)}`, options);
 }
 
-/** 블로그 태그 줄. 없는 블로그는 404. */
+/** 블로그 태그 줄. 없는 블로그는 404 — 404 화면 전환은 머리말 요청이 맡으므로 여기서는 하지 않는다. */
 export function getBlogTags(handle: string): Promise<BlogTags> {
-  return apiGet<BlogTags>(`/api/members/${encodeURIComponent(handle)}/tags`);
+  return apiGet<BlogTags>(`/api/members/${encodeURIComponent(handle)}/tags`, {
+    notFoundScreen: false,
+  });
 }

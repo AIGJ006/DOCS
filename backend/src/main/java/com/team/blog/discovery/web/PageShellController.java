@@ -17,6 +17,8 @@ import com.team.blog.shared.web.shell.LinkPreviewMeta;
 import com.team.blog.shared.web.shell.SpaShellRenderer;
 import com.team.blog.tag.application.TagQueryService;
 import jakarta.servlet.http.HttpServletRequest;
+import java.net.URLDecoder;
+import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.Optional;
 import org.springframework.http.HttpHeaders;
@@ -109,8 +111,9 @@ public class PageShellController {
     }
 
     /**
-     * 블로그 주소의 첫 응답 (005 T050, FR-022, research R-27): ① 대문자 handle → 301 소문자(쿼리 유지) → ② 없는 블로그·탈퇴
-     * 유예·익명 처리 → 공통 404 화면 → ③ 200 셸 + 블로그 미리보기 메타.
+     * 블로그 주소의 첫 응답 (005 T050, FR-022, research R-27): ① 대문자 handle → 301 소문자(쿼리 유지) → (008) {@code
+     * ?tag=} 형식 오류면 공통 404 화면, 정규화 결과와 다르면 그 값만 바꿔 301 → ② 없는 블로그·탈퇴 유예·익명 처리 → 공통 404 화면 → ③ 200 셸
+     * + 블로그 미리보기 메타.
      */
     @GetMapping("/@{handle}")
     public ResponseEntity<byte[]> blogShell(
@@ -118,6 +121,28 @@ public class PageShellController {
         String normalized = MemberQueryService.normalizeHandle(handle);
         if (!handle.equals(normalized)) {
             return movedPermanently("/@" + normalized, request);
+        }
+        // 008 태그 필터 (contracts/normalization.md §4): handle 301 다음 → 형식 오류 404 화면 → 다르면 301
+        String tag = request.getParameter("tag");
+        if (tag != null) {
+            Optional<String> canonicalTag = tagQueryService.normalizeQuery(tag);
+            if (canonicalTag.isEmpty()) {
+                return notFoundPage.render();
+            }
+            if (!canonicalTag.get().equals(tag)) {
+                return ResponseEntity.status(HttpStatus.MOVED_PERMANENTLY)
+                        .header(
+                                HttpHeaders.LOCATION,
+                                "/@"
+                                        + handle
+                                        + "?"
+                                        + replaceQueryValue(
+                                                request.getQueryString(),
+                                                "tag",
+                                                queryValue(canonicalTag.get())))
+                        .header(HttpHeaders.CACHE_CONTROL, CacheControlPolicy.NO_CACHE)
+                        .build();
+            }
         }
         BlogOwner owner;
         try {
@@ -169,6 +194,34 @@ public class PageShellController {
             return metaFactory.unavailable();
         }
         return metaFactory.forPublicPost(row);
+    }
+
+    /**
+     * 쿼리 값 인코딩 (화면 {@code tagQueryValue}와 같은 모양). {@code +}는 쿼리에서 공백으로 읽히므로 {@code %2B}로, {@code
+     * #}는 {@code %23}으로 보낸다. 정규화된 태그 이름에는 공백이 없다.
+     */
+    static String queryValue(String value) {
+        return URLEncoder.encode(value, StandardCharsets.UTF_8);
+    }
+
+    /** 원래 쿼리 문자열에서 {@code name}의 첫 값만 바꾸고 나머지 값·순서는 그대로 둔다. */
+    static String replaceQueryValue(String rawQuery, String name, String encodedValue) {
+        StringBuilder out = new StringBuilder();
+        boolean replaced = false;
+        for (String part : rawQuery.split("&", -1)) {
+            if (!out.isEmpty()) {
+                out.append('&');
+            }
+            int eq = part.indexOf('=');
+            String rawName = eq < 0 ? part : part.substring(0, eq);
+            if (!replaced && name.equals(URLDecoder.decode(rawName, StandardCharsets.UTF_8))) {
+                out.append(rawName).append('=').append(encodedValue);
+                replaced = true;
+            } else {
+                out.append(part);
+            }
+        }
+        return out.toString();
     }
 
     /** 원래 쿼리 문자열을 유지한 영구 이동 (research R-32). */

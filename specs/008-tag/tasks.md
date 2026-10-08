@@ -201,18 +201,18 @@ description: "Task list for 008-tag (태그와 태그별 글 목록)"
 
 ### Tests for User Story 5 ⚠️
 
-- [ ] T054 [P] [US5] 통합 테스트 `T/tag/integration/BlogTagIT.java`: `글_수_많은_순으로_태그와_수`(US5 #1, `initialVisible` = 10, 최대 100), `필터는_그_태그_글만_9개와_커서`(US5 #2, 커서 구분 `blog:{h}:tag:{t}` — 필터 없는 블로그 커서·태그 페이지 커서는 400), `비공개_전용_태그는_줄에_없다`(US5 #4, 주인이 봐도), `없는_블로그는_404`, `API의_정규화되지_않은_tag는_404`
-- [ ] T055 [P] [US5] `TagPageShellIT`에 추가: `블로그_필터_대문자는_301`(US5 #3, `/@kim?tag=JPA` → `/@kim?tag=jpa`, 다른 쿼리 유지), `블로그_필터_형식_오류는_404`, `handle_대문자와_tag_대문자가_함께면_handle_먼저`
-- [ ] T056 [P] [US5] 권한 실행기 `T/tag/integration/permission/BlogTagsAction.java`(`blog.tags`)
-- [ ] T057 [P] [US5] 화면 테스트 `F/components/__tests__/BlogTagStrip.test.tsx`(10개 + [태그 더 보기] → 나머지 펼침, 버튼은 남은 수 표시, 태그 없으면 줄 숨김)와 `F/pages/__tests__/BlogPage.test.tsx` 추가(`?tag=jpa`면 "#jpa 글 5개 [필터 해제]" + 그 태그 목록, [필터 해제]는 `?tag` 없는 주소로, 태그 줄 밖 태그면 "#이름 [필터 해제]")
+- [X] T054 [P] [US5] 통합 테스트 `T/tag/integration/BlogTagIT.java`: `글_수_많은_순으로_태그와_수`(US5 #1, `initialVisible` = 10, 최대 100), `필터는_그_태그_글만_9개와_커서`(US5 #2, 커서 구분 `blog:{h}:tag:{t}` — 필터 없는 블로그 커서·태그 페이지 커서는 400), `비공개_전용_태그는_줄에_없다`(US5 #4, 주인이 봐도), `없는_블로그는_404`, `API의_정규화되지_않은_tag는_404` (구현 메모: 없는 태그 필터는 빈 목록·커서 검사 같음 시험을 더했다)
+- [X] T055 [P] [US5] `TagPageShellIT`에 추가: `블로그_필터_대문자는_301`(US5 #3, `/@kim?tag=JPA` → `/@kim?tag=jpa`, 다른 쿼리 유지), `블로그_필터_형식_오류는_404`, `handle_대문자와_tag_대문자가_함께면_handle_먼저` (구현 메모: MockMvc는 쿼리의 +를 공백으로 읽지 않아 공백은 %20으로 보냈다. c++는 %2B%2B로 301)
+- [X] T056 [P] [US5] 권한 실행기 `T/tag/integration/permission/BlogTagsAction.java`(`blog.tags`) (구현 메모: T042와 함께 만들었다)
+- [X] T057 [P] [US5] 화면 테스트 `F/components/__tests__/BlogTagStrip.test.tsx`(10개 + [태그 더 보기] → 나머지 펼침, 버튼은 남은 수 표시, 태그 없으면 줄 숨김)와 `F/pages/__tests__/BlogPage.test.tsx` 추가(`?tag=jpa`면 "#jpa 글 5개 [필터 해제]" + 그 태그 목록, [필터 해제]는 `?tag` 없는 주소로, 태그 줄 밖 태그면 "#이름 [필터 해제]") (구현 메모: 태그 더 보기 버튼 문구는 '태그 더 보기 +N')
 
 ### Implementation for User Story 5
 
-- [ ] T058 [US5] `TagQueryRepository.blogTags(viewer, ownerId, limit)`(`forViewer(viewer, ownerId)` 조건, 글 수 많은 순·이름 순)와 `TagQueryService.blogTags`, `B/tag/web/BlogTagController.java`(`GET /api/members/{handle}/tags`, 주인 찾기는 005 `BlogQueryService.requireOwner` — tag → discovery 의존을 피하려면 001 `MemberQueryService.findReadableBlogOwner`를 직접 부른다)를 구현한다(T054 일부 통과)
-- [ ] T059 [US5] `B/discovery/application/BlogQueryService.java`의 `listPosts(handle, tag, cursor, viewer)`: `tag`가 있으면 `normalizeQuery`와 같지 않으면 `NotFoundException`, 태그 번호 없으면 빈 페이지, 있으면 `ListScope.blogTag` + `CardFilter(ownerId, tagId)`. `B/discovery/web/BlogController.java`에 `@RequestParam(required = false) String tag`를 더한다(T054 통과)
-- [ ] T060 [US5] `PageShellController.blogShell`에 `?tag=` 처리(contracts/normalization.md §4 — handle 301 다음, 실패 404 화면, 다르면 301 `UriComponentsBuilder`로 그 값만 바꿔 인코딩)를 더한다(T055 통과)
-- [ ] T061 [US5] `F/components/BlogTagStrip.tsx`와 `F/pages/BlogPage.tsx`(태그 줄은 머리말 아래, `useSearchParams`의 `tag`가 있으면 필터 머리말 + `listBlogPosts(handle, cursor, tag)`, 뒤로 가기 복원 키 `blog:{h}:tag:{t}`)를 구현한다. `headerSlot`·`sidebarSlot` 자리는 그대로 둔다(T057 통과)
-- [ ] T062 [US5] T056 행 통과 확인 — 이로써 `tag-list.csv` 전 행이 `pending` 없이 통과한다(SC-004)
+- [X] T058 [US5] `TagQueryRepository.blogTags(viewer, ownerId, limit)`(`forViewer(viewer, ownerId)` 조건, 글 수 많은 순·이름 순)와 `TagQueryService.blogTags`, `B/tag/web/BlogTagController.java`(`GET /api/members/{handle}/tags`, 주인 찾기는 005 `BlogQueryService.requireOwner` — tag → discovery 의존을 피하려면 001 `MemberQueryService.findReadableBlogOwner`를 직접 부른다)를 구현한다(T054 일부 통과) (구현 메모: BlogTagsView{items, initialVisible})
+- [X] T059 [US5] `B/discovery/application/BlogQueryService.java`의 `listPosts(handle, tag, cursor, viewer)`: `tag`가 있으면 `normalizeQuery`와 같지 않으면 `NotFoundException`, 태그 번호 없으면 빈 페이지, 있으면 `ListScope.blogTag` + `CardFilter(ownerId, tagId)`. `B/discovery/web/BlogController.java`에 `@RequestParam(required = false) String tag`를 더한다(T054 통과) (구현 메모: 기존 listPosts(handle, cursor, viewer)는 tag=null로 넘기는 겹 메서드로 남겼다)
+- [X] T060 [US5] `PageShellController.blogShell`에 `?tag=` 처리(contracts/normalization.md §4 — handle 301 다음, 실패 404 화면, 다르면 301 `UriComponentsBuilder`로 그 값만 바꿔 인코딩)를 더한다(T055 통과) (구현 메모: Location의 tag 값은 URLEncoder(+→%2B, #→%23)로 만들고 원래 쿼리의 나머지 값·순서는 그대로 둔다. ?tag= 빈 값도 형식 오류 404)
+- [X] T061 [US5] `F/components/BlogTagStrip.tsx`와 `F/pages/BlogPage.tsx`(태그 줄은 머리말 아래, `useSearchParams`의 `tag`가 있으면 필터 머리말 + `listBlogPosts(handle, cursor, tag)`, 뒤로 가기 복원 키 `blog:{h}:tag:{t}`)를 구현한다. `headerSlot`·`sidebarSlot` 자리는 그대로 둔다(T057 통과) (구현 메모: getBlogTags는 notFoundScreen:false(404 화면 전환은 머리말 요청이 맡음), 태그 줄 실패면 줄 없이 계속. 필터 결과가 없으면 '이 태그로 공개한 글이 없어요')
+- [X] T062 [US5] T056 행 통과 확인 — 이로써 `tag-list.csv` 전 행이 `pending` 없이 통과한다(SC-004) (구현 메모: tag-list.csv 119행 pending 없이 통과)
 
 **Checkpoint**: 모든 스토리가 독립적으로 동작한다
 

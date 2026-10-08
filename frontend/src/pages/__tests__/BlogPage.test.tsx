@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes, useNavigate } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -200,5 +200,87 @@ describe('BlogPage', () => {
     expect(requestsTo(fetchMock, 'GET', '/api/members/kim755030/posts')).toHaveLength(2);
     expect(screen.getByText('모든 글을 다 봤어요')).toBeInTheDocument();
     vi.restoreAllMocks();
+  });
+});
+
+/** 블로그 태그 줄·필터 (008 T057, US5 #1·#2). */
+describe('BlogPage 태그 필터', () => {
+  beforeEach(() => {
+    sessionStorage.clear();
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  const STRIP = {
+    items: [
+      { name: 'spring', postCount: 7 },
+      { name: 'jpa', postCount: 5 },
+    ],
+    initialVisible: 10,
+  };
+
+  it('머리말 아래 태그 줄을 보인다', async () => {
+    stubFetch({
+      'GET /api/members/kim755030': () => json(200, header()),
+      'GET /api/members/kim755030/posts': () => json(200, page(range(12, 9), 'c1')),
+      'GET /api/members/kim755030/tags': () => json(200, STRIP),
+    });
+    renderBlog();
+    const strip = await screen.findByRole('list', { name: '블로그 태그' });
+    expect(strip).toHaveTextContent('#spring 7');
+    expect(screen.queryByRole('link', { name: '필터 해제' })).not.toBeInTheDocument();
+  });
+
+  it('?tag=jpa면 "#jpa 글 5개 [필터 해제]"와 그 태그 목록', async () => {
+    const fetchMock = stubFetch({
+      'GET /api/members/kim755030': () => json(200, header()),
+      'GET /api/members/kim755030/posts': () => json(200, page([5, 4, 3, 2, 1], null)),
+      'GET /api/members/kim755030/tags': () => json(200, STRIP),
+    });
+    renderBlog('/@kim755030?tag=jpa');
+
+    const filter = await screen.findByRole('status', { name: '태그 필터' });
+    await waitFor(() => expect(filter).toHaveTextContent('#jpa 글 5개'));
+    expect(within(filter).getByRole('link', { name: '필터 해제' })).toHaveAttribute(
+      'href',
+      '/@kim755030',
+    );
+    await waitFor(() => expect(screen.getAllByTestId('post-card')).toHaveLength(5));
+    const [call] = requestsTo(fetchMock, 'GET', '/api/members/kim755030/posts');
+    expect(String(call[0])).toContain('tag=jpa');
+  });
+
+  it('[필터 해제]를 누르면 ?tag 없는 주소로 전체 목록을 다시 부른다', async () => {
+    const fetchMock = stubFetch({
+      'GET /api/members/kim755030': () => json(200, header()),
+      'GET /api/members/kim755030/posts': () => json(200, page([5], null)),
+      'GET /api/members/kim755030/tags': () => json(200, STRIP),
+    });
+    const user = userEvent.setup();
+    renderBlog('/@kim755030?tag=jpa');
+    await user.click(await screen.findByRole('link', { name: '필터 해제' }));
+
+    await waitFor(() =>
+      expect(requestsTo(fetchMock, 'GET', '/api/members/kim755030/posts')).toHaveLength(2),
+    );
+    const calls = requestsTo(fetchMock, 'GET', '/api/members/kim755030/posts');
+    expect(String(calls[1][0])).not.toContain('tag=');
+    expect(screen.queryByRole('status', { name: '태그 필터' })).not.toBeInTheDocument();
+  });
+
+  it('태그 줄 밖 태그면 "#이름 [필터 해제]"', async () => {
+    stubFetch({
+      'GET /api/members/kim755030': () => json(200, header()),
+      'GET /api/members/kim755030/posts': () => json(200, page([], null)),
+      'GET /api/members/kim755030/tags': () => json(200, STRIP),
+    });
+    renderBlog('/@kim755030?tag=c%23');
+    const filter = await screen.findByRole('status', { name: '태그 필터' });
+    await screen.findByRole('list', { name: '블로그 태그' });
+    expect(filter).toHaveTextContent('#c#');
+    expect(filter).not.toHaveTextContent('글');
+    expect(within(filter).getByRole('link', { name: '필터 해제' })).toBeInTheDocument();
   });
 });

@@ -84,6 +84,30 @@ public class TagQueryRepository {
                 .list();
     }
 
+    /**
+     * 블로그 태그 줄 (008 T058): 그 블로그의 목록 대상 글(블로그 목록과 같은 {@code forViewer(viewer, ownerId)})에 쓰인 태그와 글
+     * 수, 글 수 많은 순·이름 순 {@code limit}개. 주인이 봐도 자기 비공개 글의 태그는 없다(06 V-8).
+     */
+    public List<TagCountRow> blogTags(Viewer viewer, long ownerId, int limit) {
+        SqlCondition condition = visibilityFilter.forViewer(viewer, ownerId);
+        Map<String, Object> params = new LinkedHashMap<>(condition.params());
+        params.put("ownerId", ownerId);
+        params.put("limit", limit);
+        return jdbc.sql(
+                        "SELECT t.name, count(*) AS post_count FROM post_tag pt"
+                                + " JOIN post p ON p.id = pt.post_id"
+                                + " JOIN member m ON m.id = p.author_id"
+                                + " JOIN tag t ON t.id = pt.tag_id"
+                                + " WHERE p.author_id = :ownerId AND "
+                                + condition.sql()
+                                + " GROUP BY t.id, t.name"
+                                + " ORDER BY post_count DESC, t.name ASC"
+                                + " LIMIT :limit")
+                .params(params)
+                .query(TagQueryRepository::countRow)
+                .list();
+    }
+
     private static TagCountRow countRow(ResultSet rs, int rowNum) throws SQLException {
         return new TagCountRow(rs.getString("name"), rs.getLong("post_count"));
     }

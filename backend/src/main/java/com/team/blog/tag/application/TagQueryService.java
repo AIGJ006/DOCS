@@ -1,6 +1,7 @@
 package com.team.blog.tag.application;
 
 import com.team.blog.shared.error.NotFoundException;
+import com.team.blog.shared.security.Viewer;
 import com.team.blog.tag.domain.TagNormalizer;
 import com.team.blog.tag.infra.TagQueryRepository;
 import java.util.Optional;
@@ -56,6 +57,16 @@ public class TagQueryService {
     public TagSummaryView summary(String name) {
         requireCanonical(name);
         return new TagSummaryView(name, repository.countPublic(name));
+    }
+
+    /** 블로그 태그 줄 — 블로그 목록과 같은 조건, 최대 {@code blog.tag.blog-strip.limit}개와 처음 보일 개수. */
+    public BlogTagsView blogTags(Viewer viewer, long ownerId) {
+        TagProperties.BlogStrip strip = properties.blogStrip();
+        return new BlogTagsView(
+                repository.blogTags(viewer, ownerId, strip.limit()).stream()
+                        .map(row -> new TagCountView(row.name(), row.postCount()))
+                        .toList(),
+                strip.initial());
     }
 
     /** 태그 번호 (discovery 카드 목록의 태그 조건). 없으면 빈 값. */
