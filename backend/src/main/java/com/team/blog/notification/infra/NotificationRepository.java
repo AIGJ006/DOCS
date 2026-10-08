@@ -291,4 +291,90 @@ public class NotificationRepository {
                         .update()
                 > 0;
     }
+
+    // ---- 매일 정리 (contracts §10) ----
+
+    /** ① 보관 기간이 지난 알림을 최대 {@code batch}개 지운다 ({@code ix_notification_cleanup}). */
+    public int deleteOlderThan(Instant cutoff, int batch) {
+        return jdbc.sql(
+                        """
+                        DELETE FROM notification
+                         WHERE id IN (SELECT id FROM notification WHERE updated_at < :cutoff
+                                       ORDER BY updated_at LIMIT :batch)
+                        """)
+                .param("cutoff", Timestamp.from(cutoff))
+                .param("batch", batch)
+                .update();
+    }
+
+    /** ② {@code since} 뒤에 알림을 받은 사람만 최신 {@code keep}개를 넘는 알림을 지운다. */
+    public int trimPerMember(Instant since, int keep) {
+        return jdbc.sql(
+                        """
+                        DELETE FROM notification n
+                        USING (
+                          SELECT r.receiver_id, k.updated_at AS cut_at, k.id AS cut_id
+                            FROM (SELECT DISTINCT receiver_id FROM notification WHERE updated_at > :since) r
+                            CROSS JOIN LATERAL (
+                              SELECT x.updated_at, x.id FROM notification x
+                               WHERE x.receiver_id = r.receiver_id
+                               ORDER BY x.updated_at DESC, x.id DESC
+                              OFFSET :offset LIMIT 1
+                            ) k
+                        ) c
+                        WHERE n.receiver_id = c.receiver_id
+                          AND (n.updated_at, n.id) < (c.cut_at, c.cut_id)
+                        """)
+                .param("since", Timestamp.from(since))
+                .param("offset", keep - 1)
+                .update();
+    }
+
+    // ---- 탈퇴 정리 (contracts §11) ----
+
+    /**
+     * @param received 받은 알림 삭제 수
+     * @param groups 사람을 뺀 남의 묶음 수
+     * @param emptied 0명이 되어 지운 묶음 수
+     * @param acted 내가 행동한 하나짜리 삭제 수
+     */
+    public record PurgeResult(int received, int groups, int emptied, int acted) {}
+
+    /** 탈퇴 회원의 알림 정리 ①~④. 호출한 쪽 트랜잭션 안. {@code = ANY(:ids)}는 목록을 펼치는 {@code IN (:ids)}로 쓴다(같은 뜻). */
+    public PurgeResult purgeMember(long memberId) {
+        int received =
+                jdbc.sql("DELETE FROM notification WHERE receiver_id = :m")
+                        .param("m", memberId)
+                        .update();
+        List<Long> ids =
+                jdbc.sql(
+                                """
+                                SELECT id FROM notification
+                                 WHERE id IN (SELECT notification_id FROM notification_actor
+                                               WHERE actor_id = :m)
+                                 ORDER BY id FOR UPDATE
+                                """)
+                        .param("m", memberId)
+                        .query(Long.class)
+                        .list();
+        jdbc.sql("DELETE FROM notification_actor WHERE actor_id = :m")
+                .param("m", memberId)
+                .update();
+        int emptied = 0;
+        if (!ids.isEmpty()) {
+            recount(ids);
+            emptied =
+                    jdbc.sql("DELETE FROM notification WHERE id IN (:ids) AND actor_count = 0")
+                            .param("ids", ids)
+                            .update();
+        }
+        int acted =
+                jdbc.sql("DELETE FROM notification WHERE last_actor_id = :m AND group_key IS NULL")
+                        .param("m", memberId)
+                        .update();
+        jdbc.sql("DELETE FROM notification_mute WHERE member_id = :m")
+                .param("m", memberId)
+                .update();
+        return new PurgeResult(received, ids.size(), emptied, acted);
+    }
 }

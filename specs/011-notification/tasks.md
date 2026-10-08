@@ -207,12 +207,12 @@ description: "Task list for 011-notification (도메인 이벤트·인앱 알림
 
 ### Tests for User Story 6 ⚠️
 
-- [ ] T048 [P] [US6] `T/notification/integration/NotificationSettingsIT.java` — US6 #1·#2: 새 회원 5종 true, `LIKE: false` 저장 뒤 새 좋아요 알림 0·기존 알림 그대로·다른 종류는 생김, 다시 켜면 생김, 키 빠짐·문자열 값 400 `VALIDATION_FAILED`, 모르는 키 400, 인증 전 회원 가능, 남은 세션의 정지 `PUT` 403
+- [X] T048 [P] [US6] `T/notification/integration/NotificationSettingsIT.java` — US6 #1·#2: 새 회원 5종 true, `LIKE: false` 저장 뒤 새 좋아요 알림 0·기존 알림 그대로·다른 종류는 생김, 다시 켜면 생김, 키 빠짐·문자열 값 400 `VALIDATION_FAILED`, 모르는 키 400, 인증 전 회원 가능, 남은 세션의 정지 `PUT` 403
 - [ ] T049 [P] [US6] 화면 테스트 `F/features/notification/__tests__/NotificationSettingsSection.test.tsx` — 스위치 5개(`role="switch"`, 이름), 바꾸면 `PUT`(빠르게 두 번 바꾸면 마지막 상태), 실패하면 되돌림 + "잠시 후 다시 시도해 주세요", 안내 "운영 알림(신고 결과·숨김)은 끌 수 없어요"
 
 ### Implementation for User Story 6
 
-- [ ] T050 [US6] `B/notification/application/NotificationSettingsService.java`(`get`·`put`, `ACCOUNT_WRITE`)와 `B/notification/web/NotificationSettingsController.java`(`GET`·`PUT /api/me/notification-settings`, 본문 record 5개 `@NotNull Boolean`, 모르는 키 거부 — `@JsonIgnoreProperties(ignoreUnknown = false)`) (T048 통과)
+- [X] T050 [US6] `B/notification/application/NotificationSettingsService.java`(`get`·`put`, `ACCOUNT_WRITE`)와 `B/notification/web/NotificationSettingsController.java`(`GET`·`PUT /api/me/notification-settings`, 본문 record 5개 `@NotNull Boolean`, 모르는 키 거부 — `@JsonIgnoreProperties(ignoreUnknown = false)`) (T048 통과) (구현 메모: @JsonIgnoreProperties 대신 본문을 Map으로 받아 Service가 5개 키·boolean·모르는 키를 칸별 오류로 모아 400(빠짐 REQUIRED, 타입 INVALID_VALUE, 모르는 키 UNKNOWN_FIELD). 응답·GET도 no-store)
 - [ ] T051 [US6] `F/api/notifications.ts`에 `getNotificationSettings`·`putNotificationSettings`, `F/features/notification/NotificationSettingsSection.tsx`, 001 설정 화면에 "알림" 칸 붙이기(001 T122가 없으면 `/settings` 자리에 칸만 — 001 T122 머지 후 옮김, 001 담당에게 알림) (T049 통과)
 
 **Checkpoint**: 알림 종류 끄기 완료
@@ -227,15 +227,15 @@ description: "Task list for 011-notification (도메인 이벤트·인앱 알림
 
 ### Tests for User Story 7 ⚠️
 
-- [ ] T052 [P] [US7] `T/notification/integration/NotificationCleanupIT.java` — US7 #1·#2, SC-008: 91일 된 알림 삭제·89일 남음, 2,500개를 묶음 1,000씩 지움, 오늘 1,001개를 받은 회원 → 최신 1,000개(경계 `(updated_at, id)` 같은 시각 포함), 오늘 받지 않은 회원은 1,200개여도 이번 정리 대상 아님, ShedLock 이름 `notificationCleanup`, 지운 수 INFO 로그
-- [ ] T053 [P] [US7] `T/notification/integration/NotificationWithdrawalPurgeIT.java` — US7 #3·#4: 유예 중 알림 그대로·복구 후 그대로, order 70 실행 뒤 받은 알림 0, B·C·D 좋아요 묶음에서 B 정리 → 인원 2·`last_actor_id` 다시 계산(읽은 묶음 포함), B 혼자였던 묶음 삭제, B가 남긴 댓글·새 글 알림(하나짜리) 0, B의 끄기 설정 0, 015 단계 트랜잭션(`MANDATORY`) 밖에서 부르면 예외
+- [X] T052 [P] [US7] `T/notification/integration/NotificationCleanupIT.java` — US7 #1·#2, SC-008: 91일 된 알림 삭제·89일 남음, 2,500개를 묶음 1,000씩 지움, 오늘 1,001개를 받은 회원 → 최신 1,000개(경계 `(updated_at, id)` 같은 시각 포함), 오늘 받지 않은 회원은 1,200개여도 이번 정리 대상 아님, ShedLock 이름 `notificationCleanup`, 지운 수 INFO 로그 (구현 메모: Clock 대체가 없어 updated_at을 SQL로 과거로 옮겨 검증)
+- [X] T053 [P] [US7] `T/notification/integration/NotificationWithdrawalPurgeIT.java` — US7 #3·#4: 유예 중 알림 그대로·복구 후 그대로, order 70 실행 뒤 받은 알림 0, B·C·D 좋아요 묶음에서 B 정리 → 인원 2·`last_actor_id` 다시 계산(읽은 묶음 포함), B 혼자였던 묶음 삭제, B가 남긴 댓글·새 글 알림(하나짜리) 0, B의 끄기 설정 0, 015 단계 트랜잭션(`MANDATORY`) 밖에서 부르면 예외 (구현 메모: Bean 목록 검사(T057)도 이 파일에 둠)
 
 ### Implementation for User Story 7
 
-- [ ] T054 [US7] `B/notification/application/NotificationCleanupJob.java`(`@Scheduled(cron = "${blog.notification.cleanup.cron}", zone = "${blog.time-zone}")` + `@SchedulerLock(name = "notificationCleanup", lockAtMostFor = "PT1H")`, ① 90일 묶음 반복 ② 1,000개 — contracts §10, 단계마다 `TransactionTemplate`)과 `NotificationRepository.deleteOlderThan`·`trimPerMember` (T052 통과)
-- [ ] T055 [US7] (015가 아직 없으면) `B/shared/application/withdraw/WithdrawalPurgeStep.java`(`int order(); void purge(long memberId);`, 015 contracts/purge-steps.md §1 — 015 tasks T009와 같은 파일, 먼저 하는 쪽이 만듦)
-- [ ] T056 [US7] `B/notification/application/NotificationWithdrawalPurgeStep.java`(`order() = 70`, `@Transactional(propagation = MANDATORY)`, contracts §11 ①~④ — ②의 네 문장은 따로 실행)와 `NotificationRepository`의 탈퇴 정리 메서드 (T053 통과, T055 다음)
-- [ ] T057 [US7] 015 `required-orders` 기본값에 70이 있는지 확인하고(015 research R16), 없으면 015 담당에게 알린다. `NotificationWithdrawalPurgeStep`이 Bean으로 등록되는지 `WithdrawalPurgeStep` 목록 테스트(015 `WithdrawPurgeJob` 테스트가 있으면 거기에) 1개
+- [X] T054 [US7] `B/notification/application/NotificationCleanupJob.java`(`@Scheduled(cron = "${blog.notification.cleanup.cron}", zone = "${blog.time-zone}")` + `@SchedulerLock(name = "notificationCleanup", lockAtMostFor = "PT1H")`, ① 90일 묶음 반복 ② 1,000개 — contracts §10, 단계마다 `TransactionTemplate`)과 `NotificationRepository.deleteOlderThan`·`trimPerMember` (T052 통과)
+- [X] T055 [US7] (015가 아직 없으면) `B/shared/application/withdraw/WithdrawalPurgeStep.java`(`int order(); void purge(long memberId);`, 015 contracts/purge-steps.md §1 — 015 tasks T009와 같은 파일, 먼저 하는 쪽이 만듦) (구현 메모: 015가 main에 있어 기존 파일을 그대로 씀, 새로 만들지 않음)
+- [X] T056 [US7] `B/notification/application/NotificationWithdrawalPurgeStep.java`(`order() = 70`, `@Transactional(propagation = MANDATORY)`, contracts §11 ①~④ — ②의 네 문장은 따로 실행)와 `NotificationRepository`의 탈퇴 정리 메서드 (T053 통과, T055 다음) (구현 메모: 015 임시 단계 InterimNotificationWithdrawalPurgeStep 삭제)
+- [X] T057 [US7] 015 `required-orders` 기본값에 70이 있는지 확인하고(015 research R16), 없으면 015 담당에게 알린다. `NotificationWithdrawalPurgeStep`이 Bean으로 등록되는지 `WithdrawalPurgeStep` 목록 테스트(015 `WithdrawPurgeJob` 테스트가 있으면 거기에) 1개 (구현 메모: required-orders 기본값에 70이 이미 있음, 등록 테스트는 NotificationWithdrawalPurgeIT)
 
 **Checkpoint**: 모든 User Story 완료
 
