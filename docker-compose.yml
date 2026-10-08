@@ -63,8 +63,8 @@ services:
       S3_ENDPOINT: http://minio:9000
       STORAGE_ROOT_USER: ${STORAGE_ROOT_USER:?STORAGE_ROOT_USER를 .env에 넣어 주세요}
       STORAGE_ROOT_PASSWORD: ${STORAGE_ROOT_PASSWORD:?STORAGE_ROOT_PASSWORD를 .env에 넣어 주세요}
-      BLOG_IMAGE_STORAGE_ACCESS_KEY: ${BLOG_IMAGE_STORAGE_ACCESS_KEY:?BLOG_IMAGE_STORAGE_ACCESS_KEY를 .env에 넣어 주세요}
-      BLOG_IMAGE_STORAGE_SECRET_KEY: ${BLOG_IMAGE_STORAGE_SECRET_KEY:?BLOG_IMAGE_STORAGE_SECRET_KEY를 .env에 넣어 주세요}
+      BLOG_IMAGE_STORAGE_ACCESS_KEY: ${BLOG_IMAGE_STORAGE_ACCESS_KEY:-blog-app-local}
+      BLOG_IMAGE_STORAGE_SECRET_KEY: ${BLOG_IMAGE_STORAGE_SECRET_KEY:-blog-app-local-secret}
     volumes:
       - ./scripts/minio-init.sh:/minio-init.sh:ro
     depends_on:
@@ -97,6 +97,9 @@ services:
       SPRING_MAIL_PORT: "1025"
       # 서버 → 저장소는 compose 안 주소, 브라우저 → 저장소(서명 주소)는 localhost:9000 (003 research R20)
       BLOG_IMAGE_STORAGE_ENDPOINT: http://minio:9000
+      # 로컬 전용 기본값(.env에 없을 때). minio-init과 같은 값이어야 한다
+      BLOG_IMAGE_STORAGE_ACCESS_KEY: ${BLOG_IMAGE_STORAGE_ACCESS_KEY:-blog-app-local}
+      BLOG_IMAGE_STORAGE_SECRET_KEY: ${BLOG_IMAGE_STORAGE_SECRET_KEY:-blog-app-local-secret}
     ports:
       - "8080:8080"
     depends_on:
