@@ -141,21 +141,21 @@ description: "Task list for 009-like-view (좋아요와 조회수)"
 
 ### Tests for User Story 3 ⚠️
 
-- [ ] T024 [P] [US3] 단위 테스트 `T/interaction/unit/VisitorKeyResolverTest.java`(m:/v:/h:, `vid` 형식 틀리면 h:, 같은 날 같은 IP·UA → 같은 h:, 비밀값 바뀌면 다른 h:, 키에 IP 문자열 없음)와 `T/interaction/unit/ViewExclusionTest.java`(봇 단어 대소문자 무시, `Sec-Purpose: prefetch`·`Purpose: prefetch`, 작성자·관리자)
-- [ ] T025 [P] [US3] 통합 테스트 `T/interaction/integration/ViewRecordIT.java`: `24시간_1회`(US3 #1, v1 5번·v2·v3 → 반영 뒤 3), `동시_50번은_1번`(US3 #2·SC-006), `30분_5회_설정`(US3 #3, `@TestPropertySource`, 기간 지나면 다시 셈 — 짧은 기간으로), `작성자는_세지_않는다`(US3 #4), `관리자는_세지_않는다`(FR-031), `봇과_prefetch는_세지_않는다`, `센_것과_안_센_것의_응답이_같다`(US3 #6 — 상태·헤더·본문), `볼_수_없는_글은_404`, `같은_방문자_61번째는_429`, `상세를_먼저_열면_첫_조회와_새로고침이_같은_방문자`(research R5 — 상세 응답의 `vid`를 다음 요청에 실음)
-- [ ] T026 [P] [US3] 반영 통합 테스트 `T/interaction/integration/ViewFlushJobIT.java`: `1분_반영으로_누적과_일별이_함께`(US4 #1), `자정_넘긴_조회는_그_날짜에`(US4 #2, `Clock` 고정), `중간에_멈춰도_다음_실행이_남은_것만_반영한다`(US3 #8·SC-009 — `view:processing:*`를 미리 만들고 일부 글은 이미 반영된 상태로), `완전_삭제된_글은_건너뛴다`, `updated_at은_바뀌지_않는다`(FR-030), `실행_후_처리_대기_묶음_0개`
-- [ ] T027 [P] [US3] 장애 통합 테스트 `T/interaction/integration/ViewRedisOutageIT.java`: `RedisOutage` 동안 상세 API 200(비회원 기준)·페이지 셸 200·조회 기록 204, 복구 뒤 정상 기록(US3 #7, SC-008)
-- [ ] T028 [P] [US3] 개인정보 통합 테스트 `T/interaction/integration/ViewPrivacyIT.java`: `X-Forwarded-For`(신뢰 프록시 설정)로 IP `203.0.113.77`·`vid` 고정 값으로 기록 → Redis 전체 키·값 덤프, `post_view_daily`, 캡처한 로그(Logback `ListAppender`)에서 두 문자열 0건(SC-010)
-- [ ] T029 [P] [US3] 권한 실행기 `T/interaction/integration/permission/ViewAction.java`(`post.view`, `isWrite=false`) — `like-view.csv` `post.view` 행
+- [X] T024 [P] [US3] 단위 테스트 `T/interaction/unit/VisitorKeyResolverTest.java`(m:/v:/h:, `vid` 형식 틀리면 h:, 같은 날 같은 IP·UA → 같은 h:, 비밀값 바뀌면 다른 h:, 키에 IP 문자열 없음)와 `T/interaction/unit/ViewExclusionTest.java`(봇 단어 대소문자 무시, `Sec-Purpose: prefetch`·`Purpose: prefetch`, 작성자·관리자)
+- [X] T025 [P] [US3] 통합 테스트 `T/interaction/integration/ViewRecordIT.java`: `24시간_1회`(US3 #1, v1 5번·v2·v3 → 반영 뒤 3), `동시_50번은_1번`(US3 #2·SC-006), `30분_5회_설정`(US3 #3, `@TestPropertySource`, 기간 지나면 다시 셈 — 짧은 기간으로), `작성자는_세지_않는다`(US3 #4), `관리자는_세지_않는다`(FR-031), `봇과_prefetch는_세지_않는다`, `센_것과_안_센_것의_응답이_같다`(US3 #6 — 상태·헤더·본문), `볼_수_없는_글은_404`, `같은_방문자_61번째는_429`, `상세를_먼저_열면_첫_조회와_새로고침이_같은_방문자`(research R5 — 상세 응답의 `vid`를 다음 요청에 실음) (구현 메모: 30분_5회는 시험 전용 컨텍스트(@TestPropertySource)를 늘리지 않으려고 RedisViewStore.record에 1초 기간·5회를 직접 넘겨 확인)
+- [X] T026 [P] [US3] 반영 통합 테스트 `T/interaction/integration/ViewFlushJobIT.java`: `1분_반영으로_누적과_일별이_함께`(US4 #1), `자정_넘긴_조회는_그_날짜에`(US4 #2, `Clock` 고정), `중간에_멈춰도_다음_실행이_남은_것만_반영한다`(US3 #8·SC-009 — `view:processing:*`를 미리 만들고 일부 글은 이미 반영된 상태로), `완전_삭제된_글은_건너뛴다`, `updated_at은_바뀌지_않는다`(FR-030), `실행_후_처리_대기_묶음_0개` (구현 메모: Clock 고정 대신 날짜가 다른 모음 키(view:pending:{d})로 자정 경계 확인 — 반영 날짜는 키에 실린 기록 날짜)
+- [X] T027 [P] [US3] 장애 통합 테스트 `T/interaction/integration/ViewRedisOutageIT.java`: `RedisOutage` 동안 상세 API 200(비회원 기준)·페이지 셸 200·조회 기록 204, 복구 뒤 정상 기록(US3 #7, SC-008) (구현 메모: docker pause는 연결을 끊지 않아 시간 초과 명령이 복구 순간 늦게 실행될 수 있어, 복구 직후 반영으로 기준을 잡고 새 방문자 +1만 확인)
+- [X] T028 [P] [US3] 개인정보 통합 테스트 `T/interaction/integration/ViewPrivacyIT.java`: `X-Forwarded-For`(신뢰 프록시 설정)로 IP `203.0.113.77`·`vid` 고정 값으로 기록 → Redis 전체 키·값 덤프, `post_view_daily`, 캡처한 로그(Logback `ListAppender`)에서 두 문자열 0건(SC-010) (구현 메모: MockMvc는 RemoteIpValve를 거치지 않아 remoteAddr를 직접 지정. 로그는 OutputCaptureExtension으로 캡처)
+- [X] T029 [P] [US3] 권한 실행기 `T/interaction/integration/permission/ViewAction.java`(`post.view`, `isWrite=false`) — `like-view.csv` `post.view` 행
 
 ### Implementation for User Story 3
 
-- [ ] T030 [P] [US3] `B/interaction/application/VisitorKeyResolver.java`(하루 비밀값 `view:salt:{d}` `SET NX`+TTL, 날짜별 메모리 캐시, `ClientIp.of`)를 구현한다(T024 통과)
-- [ ] T031 [P] [US3] Lua `R/redis/view-record.lua`와 `B/interaction/infra/RedisViewStore.java`(`record(postId, key, date)`, `renamePending()`, `scanProcessing()`, `hscan(key)`, `hdel(key, postId)` — 모두 `RedisGuard`, 트랜잭션 밖)를 만든다
-- [ ] T032 [US3] `B/interaction/application/ViewRecordService.java`(contracts/view-pipeline.md §1 순서, OOM 예외도 204로, 결과 코드 DEBUG 로그만)와 `B/interaction/web/ViewController.java`(`POST /api/posts/{postId}/views` → 204, 비회원 허용, CSRF는 001 기본)를 구현한다(T025·T027 통과)
-- [ ] T033 [US3] `B/interaction/web/VisitorIdCookieFilter.java`(contracts §2: 대상 경로·비회원·`vid` 없음 → `Set-Cookie`, 응답 상태 무관)를 등록한다(T025 `vid` 테스트 통과). 005 `PageShellControllerIT`·`PostDetailApiIT`를 함께 돌린다
-- [ ] T034 [US3] `B/interaction/application/ViewFlushJob.java`(contracts §3, `@Scheduled(fixedDelayString)` + `@SchedulerLock("view-flush")`, 글마다 `TransactionTemplate`)를 구현한다(T026 통과)
-- [ ] T035 [US3] T028·T029 통과 확인. `F/api/posts.ts`의 `recordPostView` 구현 메모("009 소유 — 아직 없으면 404")를 지운다(동작은 그대로)
+- [X] T030 [P] [US3] `B/interaction/application/VisitorKeyResolver.java`(하루 비밀값 `view:salt:{d}` `SET NX`+TTL, 날짜별 메모리 캐시, `ClientIp.of`)를 구현한다(T024 통과) (구현 메모: vid도 Redis 키에 원문 대신 sha256(base64url) 해시로 넣음(data-model v:{vid}와 다름, SC-010에서 vid 원문 0건))
+- [X] T031 [P] [US3] Lua `R/redis/view-record.lua`와 `B/interaction/infra/RedisViewStore.java`(`record(postId, key, date)`, `renamePending()`, `scanProcessing()`, `hscan(key)`, `hdel(key, postId)` — 모두 `RedisGuard`, 트랜잭션 밖)를 만든다 (구현 메모: 메서드 이름: record·salt·scan(pattern)·claim(pendingKey)·entries(key)·remove(key, postId). 반영 쪽 장애는 ViewStoreUnavailableException)
+- [X] T032 [US3] `B/interaction/application/ViewRecordService.java`(contracts/view-pipeline.md §1 순서, OOM 예외도 204로, 결과 코드 DEBUG 로그만)와 `B/interaction/web/ViewController.java`(`POST /api/posts/{postId}/views` → 204, 비회원 허용, CSRF는 001 기본)를 구현한다(T025·T027 통과)
+- [X] T033 [US3] `B/interaction/web/VisitorIdCookieFilter.java`(contracts §2: 대상 경로·비회원·`vid` 없음 → `Set-Cookie`, 응답 상태 무관)를 등록한다(T025 `vid` 테스트 통과). 005 `PageShellControllerIT`·`PostDetailApiIT`를 함께 돌린다 (구현 메모: 005 PageShellControllerIT·PostDetailApiIT는 main에 없어 PostDetailPermissionMatrixIT·TagPageShellIT·NotFoundIndistinguishableIT·SecurityHeadersIT로 대신 확인)
+- [X] T034 [US3] `B/interaction/application/ViewFlushJob.java`(contracts §3, `@Scheduled(fixedDelayString)` + `@SchedulerLock("view-flush")`, 글마다 `TransactionTemplate`)를 구현한다(T026 통과)
+- [X] T035 [US3] T028·T029 통과 확인. `F/api/posts.ts`의 `recordPostView` 구현 메모("009 소유 — 아직 없으면 404")를 지운다(동작은 그대로)
 
 **Checkpoint**: 조회수가 1분 안에 반영되고 장애·중단에 안전하다
 

@@ -203,9 +203,7 @@ export function getPostDetail(postId: number | string): Promise<PostDetailRespon
 
 /**
  * 조회 기록 (005 FR-041). 응답을 기다리지 않고 실패도 무시한다 — 재시도하지 않는다.
- * `keepalive: true`라 화면을 떠나도 요청이 이어진다.
- *
- * (구현 메모) `/api/posts/{id}/views`는 009 좋아요·조회수 기능 소유다 — 아직 없으면 404가 오고 그대로 무시한다.
+ * `keepalive: true`라 화면을 떠나도 요청이 이어진다. 서버(009)는 센 것과 안 센 것 모두 204로 답한다.
  */
 export function recordPostView(postId: number | string): void {
   const headers: Record<string, string> = { Accept: 'application/json' };
