@@ -208,8 +208,8 @@ description: "Task list for 004-visibility-permission (공개 범위와 권한)"
 
 ### Implementation for User Story 5
 
-- [X] T056 [US5] 기본 공개 범위 값 검증 확인: 001 T118의 `PATCH /api/me/settings`가 `defaultVisibility`를 post 모듈 `VisibilityRegistry.require(raw, "defaultVisibility")`로 검사하는지 확인한다(001 소유, 004는 고치지 않음 — 허용값 = 등록된 VisibilityRule 집합, data-model §3). T055가 이 확인을 대신한다 (depends on T013) (구현 메모: 확인 보류 — 001 설정 API가 이 브랜치에 없다. 001이 `VisibilityRegistry.require(raw, "defaultVisibility")`를 쓰면 T055의 400 칸이 통과한다(001 브랜치와 합친 뒤 DefaultVisibilityIT를 돌린다). 004는 001 파일을 고치지 않았다)
-- [X] T057 [P] [US5] 설정 화면 선택지 공유: 001 `frontend/src/pages/SettingsPage.tsx`의 기본 공개 범위 선택이 `frontend/src/features/visibility/visibilityOptions.ts`(T038)를 쓰도록 연결한다(값·라벨 한 곳 관리) (구현 메모: 001 `SettingsPage.tsx`가 아직 없다(`/settings`는 Placeholder). 001이 만들 때 `VisibilitySelect`를 값만 고르는 모드 + `label="새 글 기본 공개 범위"`로 쓰면 선택지·라벨이 `visibilityOptions.ts` 한 곳에서 온다 — 그 쓰임을 VisibilitySelect 테스트에 더했다. 001 소유 화면은 만들지 않았다)
+- [ ] T056 [US5] 기본 공개 범위 값 검증 확인: 001 T118의 `PATCH /api/me/settings`가 `defaultVisibility`를 post 모듈 `VisibilityRegistry.require(raw, "defaultVisibility")`로 검사하는지 확인한다(001 소유, 004는 고치지 않음 — 허용값 = 등록된 VisibilityRule 집합, data-model §3). T055가 이 확인을 대신한다 (depends on T013) (구현 메모: 확인 보류 — 001 설정 API가 이 브랜치에 없다. 001이 `VisibilityRegistry.require(raw, "defaultVisibility")`를 쓰면 T055의 400 칸이 통과한다(001 브랜치와 합친 뒤 DefaultVisibilityIT를 돌린다). 004는 001 파일을 고치지 않았다)
+- [ ] T057 [P] [US5] 설정 화면 선택지 공유: 001 `frontend/src/pages/SettingsPage.tsx`의 기본 공개 범위 선택이 `frontend/src/features/visibility/visibilityOptions.ts`(T038)를 쓰도록 연결한다(값·라벨 한 곳 관리) (구현 메모: 001 `SettingsPage.tsx`가 아직 없다(`/settings`는 Placeholder). 001이 만들 때 `VisibilitySelect`를 값만 고르는 모드 + `label="새 글 기본 공개 범위"`로 쓰면 선택지·라벨이 `visibilityOptions.ts` 한 곳에서 온다 — 그 쓰임을 VisibilitySelect 테스트에 더했다. 001 소유 화면은 만들지 않았다)
 
 **Checkpoint**: 기본 공개 범위가 공개 범위 변경과 같은 값 규칙을 씀
 
