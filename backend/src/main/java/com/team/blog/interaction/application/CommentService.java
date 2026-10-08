@@ -33,12 +33,11 @@ import org.springframework.transaction.support.TransactionTemplate;
  * 댓글 쓰기·고치기·지우기 (007 T031·T040, research R2·R4·R6·R7·R9).
  *
  * <p>판정 순서(FR-009, Clarifications Q2): 401(컨트롤러) → 403 계정 상태 → 404 글·댓글 → 400 내용·대상(수정은 409 숨김) →
- * 429 요청 제한. 요청 제한은 Redis를 쓰므로 트랜잭션 밖에서 세고, 앞 단계에서 걸린 요청은 세지 않는다. 그래서 트랜잭션 없이 한 번 미리 확인한
- * 뒤 요청 제한을 세고, 트랜잭션에서 잠금과 함께 다시 확인한다.
+ * 429 요청 제한. 요청 제한은 Redis를 쓰므로 트랜잭션 밖에서 세고, 앞 단계에서 걸린 요청은 세지 않는다. 그래서 트랜잭션 없이 한 번 미리 확인한 뒤 요청 제한을
+ * 세고, 트랜잭션에서 잠금과 함께 다시 확인한다.
  *
- * <p>잠금은 항상 최상위 → 답글 순서다. 답글 작성은 최상위 {@code FOR SHARE}, 삭제는 최상위 {@code FOR UPDATE} — 삭제와 답글이 동시에
- * 오면 하나씩 처리된다(FR-014). 10초 중복 방지는 {@code pg_advisory_xact_lock}으로 같은 요청끼리 줄을 세운다(R7). 로그에 내용을 남기지
- * 않는다.
+ * <p>잠금은 항상 최상위 → 답글 순서다. 답글 작성은 최상위 {@code FOR SHARE}, 삭제는 최상위 {@code FOR UPDATE} — 삭제와 답글이 동시에 오면
+ * 하나씩 처리된다(FR-014). 10초 중복 방지는 {@code pg_advisory_xact_lock}으로 같은 요청끼리 줄을 세운다(R7). 로그에 내용을 남기지 않는다.
  */
 @Service
 public class CommentService {
@@ -96,7 +95,8 @@ public class CommentService {
         PostView post = requireWritablePost(postId, viewer);
         String content = CommentText.normalize(rawContent);
         requireContent(content);
-        Placement placement = replyToCommentId == null ? null : placeReply(post, me, replyToCommentId);
+        Placement placement =
+                replyToCommentId == null ? null : placeReply(post, me, replyToCommentId);
         rateLimiter.acquireOrThrow(
                 "ratelimit:comment:" + me,
                 properties.rateLimit().create().limit(),
@@ -108,7 +108,8 @@ public class CommentService {
                 tx.execute(
                         status -> {
                             comments.advisoryLock(
-                                    CommentRepository.dedupeKey(me, postId, content, replyToCommentId));
+                                    CommentRepository.dedupeKey(
+                                            me, postId, content, replyToCommentId));
                             var duplicate =
                                     comments.findRecentDuplicate(
                                             me,
@@ -170,7 +171,8 @@ public class CommentService {
                         status -> {
                             CommentRow locked =
                                     requireOwnedAlive(
-                                            comments.findOwnedForUpdate(commentId, me).orElse(null));
+                                            comments.findOwnedForUpdate(commentId, me)
+                                                    .orElse(null));
                             if (locked.isHidden()) {
                                 throw new BusinessRuleException(CommentReasonCode.COMMENT_HIDDEN);
                             }
@@ -184,8 +186,8 @@ public class CommentService {
     }
 
     /**
-     * 내 댓글 지우기 ({@code DELETE /api/comments/{commentId}}). 글 읽기 확인을 하지 않는다 — 글이 비공개·휴지통·숨김이어도 내 댓글은 지울
-     * 수 있다(research R9 제안). 답글 있는 최상위는 자리로 남기고, 그 밖은 행을 지운다. 자리인 최상위의 마지막 답글을 지우면 자리도 지운다.
+     * 내 댓글 지우기 ({@code DELETE /api/comments/{commentId}}). 글 읽기 확인을 하지 않는다 — 글이 비공개·휴지통·숨김이어도 내 댓글은
+     * 지울 수 있다(research R9 제안). 답글 있는 최상위는 자리로 남기고, 그 밖은 행을 지운다. 자리인 최상위의 마지막 답글을 지우면 자리도 지운다.
      */
     public void delete(long commentId, long me) {
         accountStatusGuard.requireActive(me, ActionKind.CONTENT_CLEANUP);

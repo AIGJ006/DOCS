@@ -77,7 +77,8 @@ public class CommentCursor {
             throw new InvalidCursorException("comment cursor direction");
         }
         try {
-            return new Position(Instant.EPOCH.plus(micros, ChronoUnit.MICROS), id, direction != null);
+            return new Position(
+                    Instant.EPOCH.plus(micros, ChronoUnit.MICROS), id, direction != null);
         } catch (DateTimeException | ArithmeticException e) {
             throw new InvalidCursorException("comment cursor time out of range");
         }

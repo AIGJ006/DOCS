@@ -29,8 +29,7 @@ public class CommentQueryRepository {
 
     /** 최상위 댓글을 기준 다음부터 {@code limit}개 (기준이 {@code null}이면 처음부터). */
     public List<CommentRow> findRoots(long postId, Instant afterAt, Long afterId, int limit) {
-        String cursor =
-                afterAt == null ? "" : " AND (created_at, id) > (:t, :cid)";
+        String cursor = afterAt == null ? "" : " AND (created_at, id) > (:t, :cid)";
         JdbcClient.StatementSpec spec =
                 jdbc.sql(
                                 SELECT

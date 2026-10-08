@@ -18,8 +18,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * 댓글 조회 공개 Service (007 T021·T032·T052, research R8·R11). 006이 만든 {@link #commentIdsOfPost(long)}(신고 종료
- * 단계용)를 넘겨받아 그대로 두고, 목록·답글 펼치기·바로 가기를 더했다.
+ * 댓글 조회 공개 Service (007 T021·T032·T052, research R8·R11). 006이 만든 {@link
+ * #commentIdsOfPost(long)}(신고 종료 단계용)를 넘겨받아 그대로 두고, 목록·답글 펼치기·바로 가기를 더했다.
  *
  * <p>보기 권한은 글 읽기 권한과 같다: 004 {@link PostReadService#requireReadable} + 발행됨(작성자 본인의 임시글도 404). 응답의
  * {@code Cache-Control}은 그 글 상태로 정한다(FR-015).
@@ -62,8 +62,8 @@ public class CommentQueryService {
     }
 
     /**
-     * 댓글 목록 한 페이지. {@code cursor}가 있으면 그 위치(다음 또는 이전 방향), 없고 {@code around}가 그 글의 보이는 댓글이면 그 댓글의 최상위부터,
-     * 그 밖에는 첫 페이지.
+     * 댓글 목록 한 페이지. {@code cursor}가 있으면 그 위치(다음 또는 이전 방향), 없고 {@code around}가 그 글의 보이는 댓글이면 그 댓글의
+     * 최상위부터, 그 밖에는 첫 페이지.
      */
     public Result<CommentPage> page(long postId, String cursor, String around, Viewer viewer) {
         PostView post = requirePublished(postId, viewer);
@@ -155,13 +155,16 @@ public class CommentQueryService {
     }
 
     private CommentPage assemble(
-            PostView post, Viewer viewer, List<CommentRow> roots, String next, String prev, Long focus) {
+            PostView post,
+            Viewer viewer,
+            List<CommentRow> roots,
+            String next,
+            String prev,
+            Long focus) {
         return assemble(post, viewer, roots, next, prev, focus, Map.of());
     }
 
-    /**
-     * 최상위 + 답글 미리보기를 조립한다. {@code expanded}에 든 최상위는 미리보기 대신 그 답글 목록(바로 가기 대상까지)을 쓴다.
-     */
+    /** 최상위 + 답글 미리보기를 조립한다. {@code expanded}에 든 최상위는 미리보기 대신 그 답글 목록(바로 가기 대상까지)을 쓴다. */
     private CommentPage assemble(
             PostView post,
             Viewer viewer,
@@ -190,7 +193,8 @@ public class CommentQueryService {
             if (replies != null && total > replies.rows().size() && !replies.rows().isEmpty()) {
                 CommentRow last = replies.rows().get(replies.rows().size() - 1);
                 repliesNext =
-                        cursors.next(CommentCursor.repliesOf(root.id()), last.createdAt(), last.id());
+                        cursors.next(
+                                CommentCursor.repliesOf(root.id()), last.createdAt(), last.id());
             }
             items.add(RootCommentView.of(batch.view(root), total, replyViews, repliesNext));
         }
@@ -198,8 +202,8 @@ public class CommentQueryService {
     }
 
     /**
-     * 바로 가기 (research R11). 대상이 그 글의 보이는 댓글(정상, 또는 보는 사람 자신의 숨김 댓글 — 작성자 탈퇴 아님)이 아니면 {@code
-     * null} — 호출한 쪽이 첫 페이지를 준다(응답 모양이 같아 무시 여부가 드러나지 않음).
+     * 바로 가기 (research R11). 대상이 그 글의 보이는 댓글(정상, 또는 보는 사람 자신의 숨김 댓글 — 작성자 탈퇴 아님)이 아니면 {@code null} —
+     * 호출한 쪽이 첫 페이지를 준다(응답 모양이 같아 무시 여부가 드러나지 않음).
      */
     private CommentPage around(PostView post, Viewer viewer, long targetId) {
         CommentRow target = comments.findForAround(targetId, post.id()).orElse(null);
@@ -244,7 +248,9 @@ public class CommentQueryService {
             } else if (index >= properties.replyPreview()) {
                 int total = comments.countReplies(root.id());
                 expanded =
-                        Map.of(root.id(), new Replies(total, new ArrayList<>(replies.subList(0, index + 1))));
+                        Map.of(
+                                root.id(),
+                                new Replies(total, new ArrayList<>(replies.subList(0, index + 1))));
             }
         }
         int size = properties.pageSize();

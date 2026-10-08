@@ -98,7 +98,8 @@ public final class CommentFixtures {
         public long create() {
             Instant created = createdAt != null ? createdAt : Instant.now();
             Instant updated = updatedAt != null ? updatedAt : created;
-            String text = deleted ? "" : (content != null ? content : "댓글 " + SEQ.incrementAndGet());
+            String text =
+                    deleted ? "" : (content != null ? content : "댓글 " + SEQ.incrementAndGet());
             Long admin = hidden ? new MemberFixtures(jdbc).member().role("ADMIN").create() : null;
             long id =
                     jdbc.queryForObject(

@@ -39,7 +39,8 @@ public class CreateCommentAction implements PermissionAction {
         List<Map<String, Object>> before = support.snapshot(postId);
         return support.checked(
                 mockMvc.perform(
-                                TestLogin.withCsrf(post("/api/posts/{id}/comments", postId), session)
+                                TestLogin.withCsrf(
+                                                post("/api/posts/{id}/comments", postId), session)
                                         .contentType(MediaType.APPLICATION_JSON)
                                         .content("{\"content\":\"권한 시험\"}"))
                         .andReturn(),

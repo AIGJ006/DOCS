@@ -1,6 +1,5 @@
 package com.team.blog.interaction.support;
 
-import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -15,6 +14,7 @@ import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
+import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 import tools.jackson.databind.json.JsonMapper;
 
 /** 007 댓글 API 호출 도우미 (테스트 전용). 상태를 바꾸는 요청에는 CSRF 쿠키·헤더를 붙인다. */
@@ -96,7 +96,10 @@ public final class CommentApi {
     }
 
     public MvcResult delete(Cookie session, Object commentId) throws Exception {
-        return mockMvc.perform(TestLogin.withCsrf(MockMvcRequestBuilders.delete("/api/comments/{id}", commentId), session))
+        return mockMvc.perform(
+                        TestLogin.withCsrf(
+                                MockMvcRequestBuilders.delete("/api/comments/{id}", commentId),
+                                session))
                 .andReturn();
     }
 

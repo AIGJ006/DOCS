@@ -9,8 +9,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 /**
  * 글 카운터 공개 Service (007 T009, research R5). 다른 모듈(interaction)은 {@code post} 테이블을 직접 고치지 않고 이것으로
- * 카운터를 바꾼다(원칙 II). 부르는 쪽의 트랜잭션 안에서만 쓸 수 있다({@code MANDATORY}) — 댓글 행 변경과 카운터가 같은 트랜잭션에서
- * 바뀐다(05 J-2, SC-002).
+ * 카운터를 바꾼다(원칙 II). 부르는 쪽의 트랜잭션 안에서만 쓸 수 있다({@code MANDATORY}) — 댓글 행 변경과 카운터가 같은 트랜잭션에서 바뀐다(05 J-2,
+ * SC-002).
  *
  * <p>값이 0 아래로 가면 {@code ck_post_counts} 위반으로 트랜잭션 전체가 실패한다(일관성 깨짐을 숨기지 않는다). 009가 {@code
  * adjustLikeCount}를 이 클래스에 더한다.

@@ -21,7 +21,8 @@ class PostCounterServiceIT extends IntegrationTestBase {
     @Autowired TransactionTemplate tx;
 
     private int count(long postId) {
-        return jdbc.queryForObject("SELECT comment_count FROM post WHERE id = ?", Integer.class, postId);
+        return jdbc.queryForObject(
+                "SELECT comment_count FROM post WHERE id = ?", Integer.class, postId);
     }
 
     @Test

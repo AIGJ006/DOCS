@@ -65,6 +65,7 @@ public final class CommentText {
     }
 
     private static boolean isBlank(String value) {
-        return value.codePoints().allMatch(cp -> Character.isWhitespace(cp) || Character.isSpaceChar(cp));
+        return value.codePoints()
+                .allMatch(cp -> Character.isWhitespace(cp) || Character.isSpaceChar(cp));
     }
 }

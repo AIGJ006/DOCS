@@ -16,8 +16,8 @@ import org.springframework.transaction.annotation.Transactional;
 /**
  * 탈퇴 30일 정리의 댓글 단계 (007 T048, contracts/events.md §2-2, 21 §11 SQL 2-a~2-d, FR-039).
  *
- * <p>015 {@code CommentWithdrawalPurgeStep}({@code WithdrawalPurgeStep} order 20 — 그 회원의 글을 지우는 order 10
- * 다음)이 자기 단계 트랜잭션 안에서 부른다({@code MANDATORY}). 단계 클래스는 015 tasks가 만든다. 015가 부를 서명:
+ * <p>015 {@code CommentWithdrawalPurgeStep}({@code WithdrawalPurgeStep} order 20 — 그 회원의 글을 지우는
+ * order 10 다음)이 자기 단계 트랜잭션 안에서 부른다({@code MANDATORY}). 단계 클래스는 015 tasks가 만든다. 015가 부를 서명:
  *
  * <pre>{@code
  * PurgeResult purgeByAuthor(long memberId);

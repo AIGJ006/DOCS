@@ -43,7 +43,8 @@ class CommentTextTest {
     @Test
     void 공백만이면_COMMENT_REQUIRED() {
         String normalized = CommentText.normalize(" ​\n\t 　 ");
-        assertThat(CommentText.check(normalized, 1000)).contains(CommentReasonCode.COMMENT_REQUIRED);
+        assertThat(CommentText.check(normalized, 1000))
+                .contains(CommentReasonCode.COMMENT_REQUIRED);
         assertThat(CommentText.check("", 1000)).contains(CommentReasonCode.COMMENT_REQUIRED);
     }
 

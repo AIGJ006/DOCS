@@ -7,9 +7,9 @@ import org.springframework.http.HttpStatus;
 /**
  * 댓글 이유 코드 (007 data-model §4-3, FR-008). 문구 끝에 마침표를 붙이지 않는다(README "정해진 것").
  *
- * <p>{@link #COMMENT_REQUIRED}·{@link #COMMENT_TOO_LONG}·{@link #REPLY_TARGET_UNAVAILABLE}는 공통 {@code
- * VALIDATION_FAILED} 본문의 칸 오류({@code errors[]})로 싣는다. {@link #COMMENT_HIDDEN}만 최상위 {@code code}다(409).
- * 요청 과다는 공통 {@code TOO_MANY_REQUESTS}(007 Clarifications Q3).
+ * <p>{@link #COMMENT_REQUIRED}·{@link #COMMENT_TOO_LONG}·{@link #REPLY_TARGET_UNAVAILABLE}는 공통
+ * {@code VALIDATION_FAILED} 본문의 칸 오류({@code errors[]})로 싣는다. {@link #COMMENT_HIDDEN}만 최상위 {@code
+ * code}다(409). 요청 과다는 공통 {@code TOO_MANY_REQUESTS}(007 Clarifications Q3).
  */
 public enum CommentReasonCode implements ReasonCode {
     /** 정리한 내용이 빈 값 (field {@code content}). */

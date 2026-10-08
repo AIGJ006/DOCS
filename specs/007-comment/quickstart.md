@@ -66,15 +66,15 @@ docker compose up -d postgres redis minio
 
 ## 4. SC-008 측정
 
-시드: 글 1만 건, 댓글 10만 건(한 글에 최상위 2천 + 답글이 많은 최상위 몇 개 — 하나는 답글 5천), 회원 2천 명.
+측정: 2026-10-08, `CommentPerformanceIT`(`-Dblog.perf=true`, Testcontainers PostgreSQL 18, MockMvc). 시드: 글 1만 건, 댓글 10만 건(한 글에 최상위 2천 + 답글이 많은 최상위 몇 개 — 하나는 답글 5천), 회원 2천 명.
 
 | 측정 | 요청 | 기준 | 결과 |
 |---|---|---|---|
-| 첫 페이지 p95 (20회) | `GET /api/posts/{큰 글}/comments` | 300ms, SQL 4번 | |
-| 마지막 페이지 근처 | 커서 이어서 | 300ms | |
-| 답글 5천 최상위의 답글 펼치기 | `GET /api/comments/{root}/replies` | 300ms | |
-| around (깊은 답글) | `?around=` | 300ms | |
-| EXPLAIN | 최상위·LATERAL 답글 | `ix_comment_root`·`ix_comment_reply` 사용 | |
+| 첫 페이지 p95 (20회) | `GET /api/posts/{큰 글}/comments` | 300ms, SQL 4번 | p50 8.8ms · p95 13.4ms, SQL 5번(글 판정 1 + 댓글 4) |
+| 마지막 페이지 근처 | 커서 이어서 | 300ms | 96쪽: p50 9.3ms · p95 17.5ms, SQL 5번 |
+| 답글 5천 최상위의 답글 펼치기 | `GET /api/comments/{root}/replies` | 300ms | p50 8.3ms · p95 11.8ms, SQL 5번 |
+| around (깊은 답글) | `?around=` | 300ms | 상한 100을 넘는 답글: p50 9.3ms · p95 11.4ms, SQL 11번 |
+| EXPLAIN | 최상위·LATERAL 답글 | `ix_comment_root`·`ix_comment_reply` 사용 | 둘 다 Index Only Scan (최상위 0.05ms, 미리보기 0.16ms) |
 
 ## 5. 다른 기능 확인 (있을 때)
 

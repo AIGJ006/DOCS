@@ -18,8 +18,8 @@ import org.springframework.stereotype.Component;
 
 /**
  * 행 → {@link CommentView} (007 T020, research R8·R10). 작성자·대상 회원 표시는 001 {@link
- * MemberQueryService#findDisplays}로, 프로필 사진은 {@link ProfileImageQuery#currentKeysOf}로 한 번씩만 읽는다 — 댓글 수와
- * 상관없이 SQL 2번(사진을 보일 작성자가 없으면 1번).
+ * MemberQueryService#findDisplays}로, 프로필 사진은 {@link ProfileImageQuery#currentKeysOf}로 한 번씩만 읽는다 —
+ * 댓글 수와 상관없이 SQL 2번(사진을 보일 작성자가 없으면 1번).
  */
 @Component
 public class CommentViewAssembler {
@@ -29,7 +29,9 @@ public class CommentViewAssembler {
     private final ImageUrlResolver imageUrls;
 
     public CommentViewAssembler(
-            MemberQueryService members, ProfileImageQuery profileImages, ImageUrlResolver imageUrls) {
+            MemberQueryService members,
+            ProfileImageQuery profileImages,
+            ImageUrlResolver imageUrls) {
         this.members = members;
         this.profileImages = profileImages;
         this.imageUrls = imageUrls;

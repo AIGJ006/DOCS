@@ -12,8 +12,8 @@ import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Repository;
 
 /**
- * 댓글 쓰기 저장소 (007 T014, research R6·R7·R9). 잠금은 항상 "최상위 → 답글" 순서로 잡는다 — 교착이 없다. 로그·예외 메시지에 내용을
- * 남기지 않는다.
+ * 댓글 쓰기 저장소 (007 T014, research R6·R7·R9). 잠금은 항상 "최상위 → 답글" 순서로 잡는다 — 교착이 없다. 로그·예외 메시지에 내용을 남기지
+ * 않는다.
  */
 @Repository
 public class CommentRepository {
@@ -45,7 +45,10 @@ public class CommentRepository {
 
     /** 잠금 없이 한 행. */
     public Optional<CommentRow> find(long id) {
-        return jdbc.sql(SELECT + " WHERE id = :id").param("id", id).query(CommentRow::map).optional();
+        return jdbc.sql(SELECT + " WHERE id = :id")
+                .param("id", id)
+                .query(CommentRow::map)
+                .optional();
     }
 
     /** 잠금 없이 내 댓글 (미리 확인용). */

@@ -16,8 +16,8 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 
 /**
- * 댓글 권한 실행기 공용 (007 T017·T029·T038, research R13). 대상 댓글 준비와 거부 전후 댓글 행 비교({@code CommentSnapshot})를
- * 맡는다.
+ * 댓글 권한 실행기 공용 (007 T017·T029·T038, research R13). 대상 댓글 준비와 거부 전후 댓글 행 비교({@code
+ * CommentSnapshot})를 맡는다.
  */
 @Profile("test")
 @Component
@@ -55,7 +55,8 @@ public class CommentPermissionSupport {
      */
     long arrangeTarget(MockMvc mockMvc, Cookie session, long postId) throws Exception {
         Long actor = actorId(mockMvc, session);
-        long postAuthor = jdbc.queryForObject("SELECT author_id FROM post WHERE id = ?", Long.class, postId);
+        long postAuthor =
+                jdbc.queryForObject("SELECT author_id FROM post WHERE id = ?", Long.class, postId);
         long commentAuthor =
                 actor != null && isPlainMember(actor, postAuthor)
                         ? actor
@@ -85,11 +86,11 @@ public class CommentPermissionSupport {
             return false;
         }
         return jdbc.queryForObject(
-                "SELECT count(*) FROM member m JOIN auth_identity a ON a.member_id = m.id WHERE"
-                        + " m.id = ? AND m.role = 'USER' AND m.status = 'ACTIVE' AND"
-                        + " a.email_verified_at IS NOT NULL",
-                Long.class,
-                actor)
+                        "SELECT count(*) FROM member m JOIN auth_identity a ON a.member_id = m.id WHERE"
+                                + " m.id = ? AND m.role = 'USER' AND m.status = 'ACTIVE' AND"
+                                + " a.email_verified_at IS NOT NULL",
+                        Long.class,
+                        actor)
                 > 0;
     }
 
@@ -103,7 +104,8 @@ public class CommentPermissionSupport {
         }
         Number id =
                 JsonPath.read(
-                        new String(me.getResponse().getContentAsByteArray(), StandardCharsets.UTF_8),
+                        new String(
+                                me.getResponse().getContentAsByteArray(), StandardCharsets.UTF_8),
                         "$.memberId");
         return id.longValue();
     }

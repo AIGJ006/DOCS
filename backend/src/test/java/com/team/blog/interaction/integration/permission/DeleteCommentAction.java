@@ -41,7 +41,9 @@ public class DeleteCommentAction implements PermissionAction {
                         : CommentPermissionSupport.NONEXISTENT_COMMENT;
         List<Map<String, Object>> before = support.snapshot(postId);
         return support.checked(
-                mockMvc.perform(TestLogin.withCsrf(delete("/api/comments/{id}", commentId), session))
+                mockMvc.perform(
+                                TestLogin.withCsrf(
+                                        delete("/api/comments/{id}", commentId), session))
                         .andReturn(),
                 postId,
                 before);

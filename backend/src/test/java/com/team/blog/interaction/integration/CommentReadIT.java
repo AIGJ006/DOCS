@@ -78,7 +78,13 @@ class CommentReadIT extends IntegrationTestBase {
         long root = comments().on(postId, reader).at(BASE).create();
         List<Integer> replyIds = new ArrayList<>();
         for (int i = 0; i < 25; i++) {
-            replyIds.add((int) comments().on(postId, author).parent(root).at(BASE.plusSeconds(i + 1)).create());
+            replyIds.add(
+                    (int)
+                            comments()
+                                    .on(postId, author)
+                                    .parent(root)
+                                    .at(BASE.plusSeconds(i + 1))
+                                    .create());
         }
         long small = comments().on(postId, reader).at(BASE.plusSeconds(100)).create();
         for (int i = 0; i < 8; i++) {
@@ -102,7 +108,8 @@ class CommentReadIT extends IntegrationTestBase {
                 .containsExactlyElementsOf(replyIds.subList(23, 25));
         assertThat((String) read(second, "$.nextCursor")).isNull();
 
-        MvcResult smallReplies = api().replies(null, small, read(page, "$.items[1].repliesNextCursor"));
+        MvcResult smallReplies =
+                api().replies(null, small, read(page, "$.items[1].repliesNextCursor"));
         assertThat((List<Object>) read(smallReplies, "$.items")).hasSize(5);
     }
 
@@ -116,7 +123,8 @@ class CommentReadIT extends IntegrationTestBase {
         MvcResult page = api().list(null, postId);
         assertThat((Object) read(page, "$.items[0].replies[0].replyTo")).isNull();
         assertThat((String) read(page, "$.items[0].replies[1].replyTo.nickname")).isEqualTo("대상회원");
-        assertThat((String) read(page, "$.items[0].replies[1].replyTo.handle")).isEqualTo("target1");
+        assertThat((String) read(page, "$.items[0].replies[1].replyTo.handle"))
+                .isEqualTo("target1");
     }
 
     @Test
@@ -134,7 +142,12 @@ class CommentReadIT extends IntegrationTestBase {
     @Test
     void 지운_최상위는_자리로_답글은_그대로() throws Exception {
         long root = comments().on(postId, reader).content("지운 원문").deleted().at(BASE).create();
-        comments().on(postId, author).parent(root).content("남은 답글").at(BASE.plusSeconds(1)).create();
+        comments()
+                .on(postId, author)
+                .parent(root)
+                .content("남은 답글")
+                .at(BASE.plusSeconds(1))
+                .create();
 
         MvcResult page = api().list(null, postId);
         assertThat((String) read(page, "$.items[0].state")).isEqualTo("DELETED");
@@ -194,10 +207,12 @@ class CommentReadIT extends IntegrationTestBase {
         long privatePost = posts().create(author, PostFixtures.State.PUBLISHED_PRIVATE);
         MvcResult own = api().list(TestLogin.loginAs(mockMvc, author), privatePost);
         assertThat(status(own)).isEqualTo(200);
-        assertThat(own.getResponse().getHeader(HttpHeaders.CACHE_CONTROL)).isEqualTo("private, no-store");
+        assertThat(own.getResponse().getHeader(HttpHeaders.CACHE_CONTROL))
+                .isEqualTo("private, no-store");
 
         MvcResult open = api().list(null, postId);
-        assertThat(open.getResponse().getHeader(HttpHeaders.CACHE_CONTROL)).isEqualTo("private, no-cache");
+        assertThat(open.getResponse().getHeader(HttpHeaders.CACHE_CONTROL))
+                .isEqualTo("private, no-cache");
     }
 
     @Test
@@ -210,7 +225,11 @@ class CommentReadIT extends IntegrationTestBase {
             long r2 = comments().on(many, reader).at(BASE.plusSeconds(i)).create();
             for (int j = 0; j < 100; j++) {
                 long writer = j % 2 == 0 ? author : reader;
-                comments().on(many, writer).parent(r2).at(BASE.plusSeconds(1000 + i * 100 + j)).create();
+                comments()
+                        .on(many, writer)
+                        .parent(r2)
+                        .at(BASE.plusSeconds(1000 + i * 100 + j))
+                        .create();
             }
         }
         // 글 판정(004) 1번 + 댓글 4번(최상위·답글 미리보기·회원 표시·프로필 사진)
