@@ -37,14 +37,14 @@ public class PostListService {
 
     /**
      * @param scope 목록 구분 (커서가 다른 목록에서 왔는지 보는 기준)
-     * @param authorId 블로그 목록이면 주인, 전체 목록이면 {@code null}
+     * @param filter 블로그 주인·태그 조건 (전체 목록이면 {@link CardFilter#all()})
      * @param cursor 클라이언트가 돌려준 위치 값 (첫 페이지면 {@code null})
      */
     public CursorPage<PostCardView> page(
-            ListScope scope, Long authorId, String cursor, Viewer viewer) {
+            ListScope scope, CardFilter filter, String cursor, Viewer viewer) {
         int pageSize = properties.list().pageSize();
         CursorKey after = cursors.decode(cursor, scope);
-        List<PostCardRow> rows = cards.findCards(viewer, authorId, after, pageSize + 1);
+        List<PostCardRow> rows = cards.findCards(viewer, filter, after, pageSize + 1);
         boolean more = rows.size() > pageSize;
         List<PostCardRow> page = more ? rows.subList(0, pageSize) : rows;
         String nextCursor = null;

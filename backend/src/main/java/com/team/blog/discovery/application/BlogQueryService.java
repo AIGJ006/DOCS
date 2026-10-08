@@ -69,7 +69,8 @@ public class BlogQueryService {
     /** 블로그 글 목록 — SQL은 주인 1번 + 카드 1번. 커서 범위는 {@code blog:{handle}}이다. */
     public CursorPage<PostCardView> listPosts(String handle, String cursor, Viewer viewer) {
         BlogOwner owner = requireOwner(handle);
-        return lists.page(ListScope.blog(owner.handle()), owner.id(), cursor, viewer);
+        return lists.page(
+                ListScope.blog(owner.handle()), CardFilter.author(owner.id()), cursor, viewer);
     }
 
     /** 작은 프로필 사진 키 (썸네일, 없으면 원본). 사진이 없으면 {@code null}. */
