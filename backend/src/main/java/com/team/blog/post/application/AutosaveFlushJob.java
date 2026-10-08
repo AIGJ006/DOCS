@@ -37,6 +37,7 @@ public class AutosaveFlushJob {
     private final AutosaveService autosaveService;
     private final SavedContentImages images;
     private final TransactionTemplate tx;
+    private final PostAuthoringMetrics metrics;
 
     public AutosaveFlushJob(
             RedisGuard redisGuard,
@@ -44,7 +45,9 @@ public class AutosaveFlushJob {
             PostEditRepository edits,
             AutosaveService autosaveService,
             SavedContentImages images,
-            TransactionTemplate tx) {
+            TransactionTemplate tx,
+            PostAuthoringMetrics metrics) {
+        this.metrics = metrics;
         this.redisGuard = redisGuard;
         this.store = store;
         this.edits = edits;
@@ -75,6 +78,7 @@ public class AutosaveFlushJob {
                         e.getClass().getSimpleName());
             }
         }
+        metrics.flushFailed(postIds.size() - done);
         if (!postIds.isEmpty()) {
             log.info("자동 저장 1분 반영: 대상 {}건, 처리 {}건", postIds.size(), done);
         }

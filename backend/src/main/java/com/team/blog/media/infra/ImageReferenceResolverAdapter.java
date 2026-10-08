@@ -21,6 +21,19 @@ import org.springframework.stereotype.Component;
  *
  * <p>// TODO(003): 교체 — 003 이미지 업로드가 {@code ImageUrls.keyOf}·{@code ImageService}로 이 클래스를 대신한다.
  * 규칙(주소 앞부분 목록 + 키 모양, 업로더 확인 쿼리)은 그대로 옮긴다.
+ *
+ * <p><b>교체 점검표 (002 T122)</b> — 003이 바꿀 때 지켜야 할 계약과 그것을 확인하는 테스트:
+ *
+ * <ul>
+ *   <li>{@code keyOf}: 지금 공개 주소·옛 주소 목록({@code public-base-url}·{@code legacy-base-urls}) + 키 모양
+ *       {@code images/{yyyy}/{MM}/{uuid}(_thumb)?.{ext}}일 때만 키. 쿼리·조각이 붙은 주소는 우리 사진이 아니다 — {@code
+ *       ImageReferenceResolverAdapterIT#공개_주소와_키_모양이_맞을_때만_키를_돌려준다}·{@code #옛_주소_목록도_판별한다}
+ *   <li>{@code findOwned}: 올린 회원({@code uploader_id})의 사진만, 키 수와 상관없이 조회 1번 — {@code
+ *       #올린_회원의_사진만_한_번의_조회로_찾는다}, 렌더링 결과는 {@code ContentRendererWiringIT#작성자_사진은_img_남이면_링크}
+ *   <li>공개 주소는 지금 설정값으로 만든다 — {@code #공개_주소는_지금_설정값으로_만든다}
+ *   <li>발행 때 작성자 사진만 연결하고 남의 사진은 링크로 바뀐다 — {@code
+ *       PublishIT#남이_올린_사진은_연결하지_않고_링크로_바꾸며_원래_주인의_연결은_그대로}
+ * </ul>
  */
 @Component
 public class ImageReferenceResolverAdapter implements ImageReferenceResolver {

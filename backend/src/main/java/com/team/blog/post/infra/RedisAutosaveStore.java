@@ -1,5 +1,6 @@
 package com.team.blog.post.infra;
 
+import com.team.blog.post.application.PostAuthoringMetrics;
 import com.team.blog.post.domain.ServerCopy;
 import com.team.blog.shared.infra.redis.RedisGuard;
 import java.time.Duration;
@@ -16,7 +17,6 @@ import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.script.DefaultRedisScript;
 import org.springframework.data.redis.core.script.RedisScript;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 /**
  * Redis 자동 저장 보관소 (002 T033 1부: 읽기·정리). 모든 호출은 {@link RedisGuard}를 거친다 — Redis 장애면 읽기는 빈 결과, 정리는 경고
@@ -42,10 +42,13 @@ public class RedisAutosaveStore {
 
     private final StringRedisTemplate redis;
     private final RedisGuard redisGuard;
+    private final PostAuthoringMetrics metrics;
 
-    public RedisAutosaveStore(StringRedisTemplate redis, RedisGuard redisGuard) {
+    public RedisAutosaveStore(
+            StringRedisTemplate redis, RedisGuard redisGuard, PostAuthoringMetrics metrics) {
         this.redis = redis;
         this.redisGuard = redisGuard;
+        this.metrics = metrics;
     }
 
     /** {@code autosave:post:{postId}}. 없거나 Redis 장애면 empty. */
@@ -66,8 +69,7 @@ public class RedisAutosaveStore {
      * @param newDbVersion 커밋한 새 {@code post.edit_version} v1
      */
     public void release(long postId, long checkedVersion, long newDbVersion) {
-        warnIfInTransaction("release");
-        redisGuard.run(
+        redisGuard.runWrite(
                 () ->
                         redis.execute(
                                 RELEASE,
@@ -75,7 +77,10 @@ public class RedisAutosaveStore {
                                 String.valueOf(checkedVersion),
                                 String.valueOf(newDbVersion),
                                 String.valueOf(postId)),
-                () -> log.warn("Redis 장애로 자동 저장 보관분 정리를 건너뜁니다: postId={}", postId));
+                () -> {
+                    metrics.releaseFailed();
+                    log.warn("Redis 장애로 자동 저장 보관분 정리를 건너뜁니다: postId={}", postId);
+                });
     }
 
     /**
@@ -116,7 +121,7 @@ public class RedisAutosaveStore {
             String contentMd,
             Instant savedAt,
             Duration ttl) {
-        return redisGuard.call(
+        return redisGuard.callWrite(
                 () -> {
                     List<Object> reply =
                             redis.execute(
@@ -182,7 +187,7 @@ public class RedisAutosaveStore {
 
     /** 1분 반영 뒤: 키 버전이 반영한 버전과 같을 때만(또는 키가 없으면) dirty에서 뺀다. */
     public void clearDirtyIfVersion(long postId, long flushedVersion) {
-        redisGuard.run(
+        redisGuard.runWrite(
                 () ->
                         redis.execute(
                                 CLEAR_DIRTY,
@@ -194,8 +199,7 @@ public class RedisAutosaveStore {
 
     /** 버전과 상관없이 지운다 (006 완전 삭제 커밋 후). */
     public void delete(long postId) {
-        warnIfInTransaction("delete");
-        redisGuard.run(
+        redisGuard.runWrite(
                 () -> {
                     redis.delete(AutosaveKeys.post(postId));
                     redis.opsForSet().remove(AutosaveKeys.DIRTY, String.valueOf(postId));
@@ -217,10 +221,13 @@ public class RedisAutosaveStore {
                         savedAt == null ? null : Instant.parse(savedAt)));
     }
 
-    private static void warnIfInTransaction(String operation) {
-        if (TransactionSynchronizationManager.isActualTransactionActive()) {
-            log.warn("자동 저장 보관분 {}를 트랜잭션 안에서 불렀습니다. 커밋 후에 불러야 합니다", operation);
-        }
+    /**
+     * 이 글의 Redis 보관분이 있을 수 있는가 ({@code EXISTS autosave:post:{postId}}). Redis 장애면 "있을 수 있음"(참)으로 답해
+     * 지우는 쪽이 멈추게 한다(빈 임시글 정리 T117).
+     */
+    public boolean mayHaveEntry(long postId) {
+        return redisGuard.call(
+                () -> Boolean.TRUE.equals(redis.hasKey(AutosaveKeys.post(postId))), () -> true);
     }
 
     private static String loadScript(String path) {

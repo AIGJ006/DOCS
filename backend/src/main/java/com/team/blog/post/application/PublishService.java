@@ -54,6 +54,7 @@ public class PublishService {
     private final ApplicationEventPublisher events;
     private final TransactionTemplate tx;
     private final Clock clock;
+    private final PublishIdempotency idempotency;
 
     public PublishService(
             AccountStatusGuard accountStatusGuard,
@@ -67,7 +68,8 @@ public class PublishService {
             ImageService imageService,
             ApplicationEventPublisher events,
             TransactionTemplate tx,
-            Clock clock) {
+            Clock clock,
+            PublishIdempotency idempotency) {
         this.accountStatusGuard = accountStatusGuard;
         this.edits = edits;
         this.validator = validator;
@@ -80,12 +82,17 @@ public class PublishService {
         this.events = events;
         this.tx = tx;
         this.clock = clock;
+        this.idempotency = idempotency;
     }
 
     /**
      * 발행 요청 (판정 순서 401 → 403 → 404 → 400 → 409).
      *
-     * @param idempotencyKey {@code Idempotency-Key} 헤더 값 (중복 판정은 US6)
+     * <p>같은 {@code Idempotency-Key}의 중복 판정(US6)은 요청 키 형식 확인 바로 뒤에 한다. 이 요청이 발행하게 되면 이후 어떤
+     * 실패(400·409·500)에도 키를 풀고, 커밋 후 ⑨ Redis 보관분 정리 → 응답 저장 순으로 마친다. 끝난 같은 요청에는 저장된 응답을 돌려주고 이벤트를 다시
+     * 내지 않는다.
+     *
+     * @param idempotencyKey {@code Idempotency-Key} 헤더 값
      */
     public PublishResult publish(
             long postId,
@@ -102,7 +109,46 @@ public class PublishService {
             throw new PostNotFoundException("발행: 내 글 아님");
         }
         requireIdempotencyKey(idempotencyKey);
+        String key = idempotencyKey.strip();
+        PublishIdempotency.Decision decision =
+                idempotency.begin(
+                        memberId, key, postId, title, contentMd, rawTags, visibility, baseVersion);
+        if (decision instanceof PublishIdempotency.Decision.Replay replay) {
+            return replay.result();
+        }
+        String hash = ((PublishIdempotency.Decision.Proceed) decision).hash();
 
+        boolean committedOk = false;
+        try {
+            PublishResult result =
+                    publishOnce(
+                            postId,
+                            memberId,
+                            title,
+                            contentMd,
+                            rawTags,
+                            visibility,
+                            baseVersion,
+                            key);
+            committedOk = true;
+            idempotency.complete(memberId, key, hash, result);
+            return result;
+        } finally {
+            if (!committedOk) {
+                idempotency.release(memberId, key);
+            }
+        }
+    }
+
+    private PublishResult publishOnce(
+            long postId,
+            long memberId,
+            String title,
+            String contentMd,
+            List<String> rawTags,
+            String visibility,
+            long baseVersion,
+            String idempotencyKey) {
         // ① 검증 ② 렌더링 (트랜잭션 밖)
         PublishValidator.Validated valid =
                 validator.validate(title, contentMd, rawTags, visibility);

@@ -15,6 +15,23 @@ import org.springframework.stereotype.Service;
  *
  * <p>// TODO(008): 008 정규화(NFC·금칙어·{@code TAG_TOO_LONG} 등)로 교체. 지금은 소문자·앞뒤 공백 제거·중복 제거와 DB {@code
  * ck_tag_name} 형식만 본다.
+ *
+ * <p><b>교체 점검표 (002 T122)</b> — 008이 바꿀 때 지켜야 할 계약과 그것을 확인하는 테스트:
+ *
+ * <ul>
+ *   <li>오류는 입력 칸 번호로 {@code tags[i]} 필드에 붙고(정리·중복 제거 전 입력 순서), 형식 오류 코드는 {@code INVALID_TAG}. 008이
+ *       코드를 더해도(예: {@code TAG_TOO_LONG}) 필드 이름 규칙은 유지한다 — 화면이 그 칩 옆에 보인다 — {@code
+ *       PublishValidatorTest#형식이_틀린_태그는_그_칸_번호로_INVALID_TAG}, {@code
+ *       PublishValidatorTest#여러_항목이_틀리면_모두_모은다}, 프런트 {@code PublishDialog.test.tsx}("400 칸 오류를 모두
+ *       보인다")
+ *   <li>개수 제한({@code TOO_MANY_TAGS}, {@code blog.post.max-tags})과 대소문자 중복은 발행 검증이 본다 — {@code
+ *       PublishValidatorTest#태그_11개는_TOO_MANY_TAGS_10개는_통과}·{@code #대소문자_중복은_하나로_센다}
+ *   <li>{@code replacePostTags}(발행 트랜잭션 안): 입력 순서대로 {@code position} 0부터, 태그 수와 상관없이 쿼리 3번 — {@code
+ *       PublishIT#임시글을_전체_공개로_발행하면_누구나_읽는다}, {@code
+ *       PublishQueryCountIT#발행_SQL_수는_태그_사진_수에_비례하지_않는다}
+ *   <li>트랜잭션이 실패하면 태그도 되돌리고 같은 요청 키로 다시 발행할 수 있다 — {@code PublishTransactionIT}, {@code
+ *       PublishIdempotencyIT#트랜잭션이_실패하면_키가_풀려_같은_키_같은_내용으로_다시_발행할_수_있다}
+ * </ul>
  */
 @Service
 public class TagService {

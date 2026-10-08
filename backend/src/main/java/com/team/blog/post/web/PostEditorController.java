@@ -9,17 +9,20 @@ import com.team.blog.post.web.dto.SaveResponse;
 import com.team.blog.post.web.dto.WorkingCopyResponse;
 import com.team.blog.shared.security.CurrentUser;
 import java.net.URI;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * 새 글·에디터 열기·수동 저장 (contracts {@code createPost}·{@code getWorkingCopy}·{@code saveWorkingCopy}).
- * 현재 사용자는 세션에서만 꺼낸다.
+ * 새 글·에디터 열기·수동 저장·변경 취소 (contracts {@code createPost}·{@code getWorkingCopy}·{@code
+ * saveWorkingCopy}·{@code discardWorkingCopy}). 현재 사용자는 세션에서만 꺼낸다.
  */
 @RestController
 public class PostEditorController {
@@ -60,5 +63,12 @@ public class PostEditorController {
     @GetMapping("/api/posts/{postId}/working-copy")
     public WorkingCopyResponse workingCopy(@CurrentUser Long memberId, @PathVariable long postId) {
         return WorkingCopyResponse.from(editorQuery.open(postId, memberId));
+    }
+
+    /** 변경 취소 — 발행 글의 작업본을 버린다 (contracts {@code discardWorkingCopy}, FR-035). 작업본이 없어도 204. */
+    @DeleteMapping("/api/posts/{postId}/working-copy")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void discard(@CurrentUser Long memberId, @PathVariable long postId) {
+        commands.discard(postId, memberId);
     }
 }

@@ -41,7 +41,7 @@ describe('openEditor', () => {
     expect(opened.conflict).toBeNull();
   });
 
-  it('안 보낸 변경의 기준 버전이 서버와 다르면 충돌 — 서버 내용으로 열고 이 기기 내용은 백업', async () => {
+  it('안 보낸 변경의 기준 버전이 서버와 다르면 충돌 — 이 기기 내용으로 열고 서버 내용과 비교, 이 기기 내용은 백업에도', async () => {
     await saveDraft(7, 42, {
       title: '로컬 제목',
       contentMd: '로컬 본문',
@@ -51,8 +51,14 @@ describe('openEditor', () => {
       updatedAt: 1,
     });
     const opened = await openEditor(7, 42, { getWorkingCopy: load, now: () => 1000 });
-    expect(opened.initial).toEqual({ title: '서버 제목', contentMd: '서버 본문', baseVersion: 5 });
-    expect(opened.conflict).toEqual({ title: '로컬 제목', contentMd: '로컬 본문', baseVersion: 3 });
+    expect(opened.initial).toEqual({ title: '로컬 제목', contentMd: '로컬 본문', baseVersion: 3 });
+    expect(opened.dirty).toBe(true);
+    expect(opened.conflict).toEqual({
+      title: '서버 제목',
+      contentMd: '서버 본문',
+      version: 5,
+      savedAt: '2026-10-07T05:03:00Z',
+    });
     expect(await loadBackup(7, 42)).toEqual({
       title: '로컬 제목',
       contentMd: '로컬 본문',

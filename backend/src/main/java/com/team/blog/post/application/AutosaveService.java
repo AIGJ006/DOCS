@@ -14,6 +14,7 @@ import com.team.blog.post.infra.RedisAutosaveStore;
 import com.team.blog.post.infra.RedisAutosaveStore.SaveOutcome;
 import com.team.blog.shared.infra.ratelimit.RateLimitResult;
 import com.team.blog.shared.infra.ratelimit.RateLimiter;
+import com.team.blog.shared.infra.redis.RedisGuard;
 import com.team.blog.shared.security.AccountStatusGuard;
 import com.team.blog.shared.security.ActionKind;
 import java.time.Clock;
@@ -23,8 +24,6 @@ import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.support.TransactionSynchronization;
-import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.transaction.support.TransactionTemplate;
 
 /**
@@ -48,6 +47,7 @@ public class AutosaveService {
     private final PostAuthoringProperties properties;
     private final TransactionTemplate tx;
     private final Clock clock;
+    private final PostAuthoringMetrics metrics;
 
     public AutosaveService(
             AccountStatusGuard accountStatusGuard,
@@ -58,7 +58,9 @@ public class AutosaveService {
             SavedContentImages images,
             PostAuthoringProperties properties,
             TransactionTemplate tx,
-            Clock clock) {
+            Clock clock,
+            PostAuthoringMetrics metrics) {
+        this.metrics = metrics;
         this.accountStatusGuard = accountStatusGuard;
         this.rateLimiter = rateLimiter;
         this.edits = edits;
@@ -123,6 +125,8 @@ public class AutosaveService {
             String contentMd,
             long baseVersion,
             Instant now) {
+        metrics.autosaveDbFallback();
+        log.warn("Redis 장애로 DB에 바로 저장합니다: postId={} memberId={}", postId, memberId);
         List<String> keys = images.ownedKeys(contentMd, memberId);
         return tx.execute(
                 status -> {
@@ -182,21 +186,8 @@ public class AutosaveService {
         return entry.savedAt() != null ? entry.savedAt() : Instant.now();
     }
 
+    /** 커밋 뒤 Redis 정리 (트랜잭션 경계 검사의 허용 목록, T119). 트랜잭션 밖이면 바로. */
     private static void afterCommit(Runnable action) {
-        if (TransactionSynchronizationManager.isSynchronizationActive()) {
-            TransactionSynchronizationManager.registerSynchronization(
-                    new TransactionSynchronization() {
-                        @Override
-                        public void afterCommit() {
-                            try {
-                                action.run();
-                            } catch (RuntimeException e) {
-                                log.warn("자동 저장 보관분 정리 실패: {}", e.getClass().getSimpleName());
-                            }
-                        }
-                    });
-        } else {
-            action.run();
-        }
+        RedisGuard.runAfterCommit(action);
     }
 }
