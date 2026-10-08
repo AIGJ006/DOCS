@@ -357,4 +357,72 @@ describe('BlogPage 태그 필터', () => {
       expect(screen.queryByRole('button', { name: /팔로/ })).not.toBeInTheDocument();
     });
   });
+
+  describe('이 블로그에서 검색 (012 T033)', () => {
+    function searchPage(ids: number[], nextCursor: string | null) {
+      return {
+        items: ids.map((id) => ({
+          ...card(id),
+          snippet: { text: `…스프링 ${id}…`, marks: [[1, 4]] },
+        })),
+        nextCursor,
+        notice: null,
+      };
+    }
+
+    function paramsOf(input: unknown) {
+      return new URL(String(input), 'http://localhost').searchParams;
+    }
+
+    it('머리말 아래 "이 블로그에서 검색" 입력으로 ?q=를 두고 이 블로그 안 결과를 보인다', async () => {
+      const fetchMock = stubFetch({
+        'GET /api/members/kim755030': () => json(200, header()),
+        'GET /api/members/kim755030/posts': () => json(200, page(range(12, 9), 'c1')),
+        'GET /api/search/posts': () => json(200, searchPage([7, 3], null)),
+      });
+      renderBlog();
+      await waitFor(() => expect(screen.getAllByTestId('post-card')).toHaveLength(9));
+
+      await userEvent.type(
+        screen.getByRole('searchbox', { name: '이 블로그에서 검색' }),
+        '스프링{Enter}',
+      );
+
+      await waitFor(() => expect(screen.getAllByTestId('post-card')).toHaveLength(2));
+      const call = requestsTo(fetchMock, 'GET', '/api/search/posts')[0];
+      expect(paramsOf(call[0]).get('q')).toBe('스프링');
+      expect(paramsOf(call[0]).get('blog')).toBe('kim755030');
+      expect(screen.getByText("'스프링' 검색 결과")).toBeInTheDocument();
+      expect(screen.getAllByTestId('card-excerpt')[0].querySelector('mark')?.textContent).toBe(
+        '스프링',
+      );
+      // 블로그 카드처럼 작성자 영역이 없다
+      expect(screen.queryByText('김민서', { selector: '[data-testid="post-card"] *' })).toBeNull();
+    });
+
+    it('?q=로 바로 열면 글 목록은 부르지 않고 정렬 탭이 있다', async () => {
+      const fetchMock = stubFetch({
+        'GET /api/members/kim755030': () => json(200, header()),
+        'GET /api/members/kim755030/posts': () => json(200, page(range(12, 9), 'c1')),
+        'GET /api/search/posts': () => json(200, searchPage([], null)),
+      });
+      renderBlog('/@kim755030?q=%EB%A1%AC%EB%B3%B5%EC%9D%B4%EC%95%BC&sort=latest');
+
+      expect(await screen.findByTestId('search-empty')).toHaveTextContent(
+        "'롬복이야'에 대한 글이 없어요",
+      );
+      expect(requestsTo(fetchMock, 'GET', '/api/members/kim755030/posts')).toHaveLength(0);
+      expect(screen.getByRole('button', { name: '최신순' })).toHaveAttribute(
+        'aria-pressed',
+        'true',
+      );
+      expect(paramsOf(requestsTo(fetchMock, 'GET', '/api/search/posts')[0][0]).get('sort')).toBe(
+        'latest',
+      );
+      expect(screen.getByRole('link', { name: '검색 해제' })).toHaveAttribute(
+        'href',
+        '/@kim755030',
+      );
+    });
+  });
 });

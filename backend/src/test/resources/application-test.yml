@@ -17,6 +17,10 @@ blog:
   # 009 조회 반영 배치(ViewFlushJob)도 시험 중에 스스로 돌지 않게 한다(ViewFlushJobIT는 메서드를 직접 부른다).
   view:
     flush-interval: 24h
+  # 012 트렌딩 스냅샷 작업이 시험 중에 스스로 돌아 Redis 키를 바꾸지 않게 한다(TrendingSnapshotIT는 메서드를 직접 부른다).
+  trending:
+    refresh-cron: "-"
+    refresh-on-startup: false
   # 002 T119: 트랜잭션 안의 Redis 쓰기(RedisGuard.callWrite·runWrite)는 시험에서 예외로 막는다(운영 기본은 경고 로그).
   redis:
     fail-on-write-in-transaction: true

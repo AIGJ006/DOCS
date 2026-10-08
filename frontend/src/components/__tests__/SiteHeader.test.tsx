@@ -177,4 +177,21 @@ describe('AppLayout', () => {
     expect(screen.getByRole('main')).toHaveTextContent('화면');
     await screen.findByRole('link', { name: '로그인' });
   });
+
+  it('012: 검색창(이름 "검색")과 좁은 화면용 [검색] 링크가 테마 버튼보다 앞에 있다', async () => {
+    stubFetch({ 'GET /api/me': anonymous });
+    renderHeader('/');
+
+    const header = screen.getByRole('banner');
+    const box = within(header).getByRole('searchbox', { name: '검색' });
+    const link = within(header).getByRole('link', { name: '검색' });
+    expect(link).toHaveAttribute('href', '/search');
+    const nav = within(header).getByRole('navigation', { name: '사이트 메뉴' });
+    const last = nav.lastElementChild;
+    expect(last?.contains(box)).toBe(false);
+    expect(nav.firstElementChild?.contains(box)).toBe(true);
+
+    await userEvent.type(box, '트랜잭션{Enter}');
+    expect(screen.getByText('본문')).toBeInTheDocument();
+  });
 });

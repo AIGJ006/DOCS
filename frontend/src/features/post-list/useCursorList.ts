@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import type { PostCard, PostCardPage } from '../../api/types/reading';
+import type { PostCard } from '../../api/types/reading';
 import * as listRestore from './listRestore';
 
 /**
@@ -14,10 +14,25 @@ import * as listRestore from './listRestore';
  * - 뒤로 가기 복원(005 T069, US6 #1·#2): `listKey`를 주면 불러온 카드·다음 위치·스크롤 위치를 `listRestore`에 둔다
  *   (카드가 늘 때와 화면을 떠날 때 — 라우트 이동으로 내려갈 때·`pagehide`). `restore`가 true이고 30분 안의 값이 있으면
  *   요청 없이 그 카드로 시작하고 스크롤 위치를 되돌린다.
+ * - 012: 항목 타입을 넓혔다(검색 결과 카드 `PostSearchItem`처럼 `id`가 있는 값이면 된다. 기본은 `PostCard`). 마지막 실패의
+ *   오류를 `error`로 돌려준다(429·410 문구 판단용).
  */
 export type CursorListStatus = 'idle' | 'loading' | 'error';
 
-export type LoadPage = (cursor?: string | null) => Promise<PostCardPage>;
+/** 커서 목록 한 페이지 (`PostCardPage`와 같은 모양). */
+export interface CursorPage<T> {
+  items: T[];
+  nextCursor: string | null;
+}
+
+/** 목록 항목 — 글 번호로 중복을 거른다. */
+export interface CursorItem {
+  id: number;
+}
+
+export type LoadPage<T extends CursorItem = PostCard> = (
+  cursor?: string | null,
+) => Promise<CursorPage<T>>;
 
 export interface CursorListOptions {
   /** 복원 저장소 키 — 홈 `home`, 블로그 `blog:{handle}`. 없으면 보관하지 않는다 */
@@ -26,8 +41,8 @@ export interface CursorListOptions {
   restore?: boolean;
 }
 
-export interface CursorList {
-  items: PostCard[];
+export interface CursorList<T extends CursorItem = PostCard> {
+  items: T[];
   nextCursor: string | null;
   /** 더 없음 (첫 응답을 받은 뒤에만 true) */
   done: boolean;
@@ -36,33 +51,37 @@ export interface CursorList {
   loadedOnce: boolean;
   /** 첫 목록을 불러오지 못했다 ("글을 불러오지 못했어요 [다시 시도]") */
   initialError: boolean;
+  /** 마지막 실패의 오류 (성공하면 null) */
+  error: unknown;
   loadMore: () => Promise<void>;
   retry: () => Promise<void>;
 }
 
-interface ListState {
-  items: PostCard[];
+interface ListState<T extends CursorItem = PostCard> {
+  items: T[];
   nextCursor: string | null;
   status: CursorListStatus;
   loadedOnce: boolean;
   done: boolean;
+  error: unknown;
 }
 
-const INITIAL: ListState = {
+const INITIAL: ListState<never> = {
   items: [],
   nextCursor: null,
   status: 'loading',
   loadedOnce: false,
   done: false,
+  error: null,
 };
 
-interface Boot {
-  state: ListState;
+interface Boot<T extends CursorItem> {
+  state: ListState<T>;
   scrollY: number;
 }
 
 /** 이미 있는 글 번호는 건너뛰고 이어 붙인다 (FR-005). */
-function append(previous: ListState, page: PostCardPage): ListState {
+function append<T extends CursorItem>(previous: ListState<T>, page: CursorPage<T>): ListState<T> {
   const seen = new Set(previous.items.map((item) => item.id));
   return {
     items: [...previous.items, ...page.items.filter((item) => !seen.has(item.id))],
@@ -70,10 +89,14 @@ function append(previous: ListState, page: PostCardPage): ListState {
     done: page.nextCursor === null,
     loadedOnce: true,
     status: 'idle',
+    error: null,
   };
 }
 
-function restoreFrom(listKey: string | undefined, restore: boolean): Boot | null {
+function restoreFrom<T extends CursorItem>(
+  listKey: string | undefined,
+  restore: boolean,
+): Boot<T> | null {
   if (!listKey || !restore) {
     return null;
   }
@@ -83,11 +106,13 @@ function restoreFrom(listKey: string | undefined, restore: boolean): Boot | null
   }
   return {
     state: {
-      items: saved.items,
+      // 보관한 값은 이 목록 키가 넣은 항목이다 (listRestore는 `id`만 확인한다)
+      items: saved.items as unknown as T[],
       nextCursor: saved.nextCursor,
       status: 'idle',
       loadedOnce: true,
       done: saved.nextCursor === null,
+      error: null,
     },
     scrollY: saved.scrollY,
   };
@@ -97,25 +122,28 @@ function currentScrollY(): number {
   return typeof window === 'undefined' ? 0 : window.scrollY || 0;
 }
 
-function persist(listKey: string, state: ListState): void {
+function persist<T extends CursorItem>(listKey: string, state: ListState<T>): void {
   if (state.loadedOnce && state.items.length > 0) {
     listRestore.save(listKey, {
-      items: state.items,
+      items: state.items as unknown as PostCard[],
       nextCursor: state.nextCursor,
       scrollY: currentScrollY(),
     });
   }
 }
 
-export function useCursorList(load: LoadPage, options: CursorListOptions = {}): CursorList {
+export function useCursorList<T extends CursorItem = PostCard>(
+  load: LoadPage<T>,
+  options: CursorListOptions = {},
+): CursorList<T> {
   const { listKey, restore = false } = options;
-  const [boot] = useState<Boot | null>(() => restoreFrom(listKey, restore));
-  const [state, setState] = useState<ListState>(() => boot?.state ?? INITIAL);
-  const [source, setSource] = useState<LoadPage>(() => load);
+  const [boot] = useState<Boot<T> | null>(() => restoreFrom<T>(listKey, restore));
+  const [state, setState] = useState<ListState<T>>(() => boot?.state ?? INITIAL);
+  const [source, setSource] = useState<LoadPage<T>>(() => load);
   const inFlight = useRef(false);
   // 저장된 목록으로 시작한 `load`는 첫 요청을 건너뛴다
-  const skipFirstFetch = useRef<LoadPage | null>(boot ? load : null);
-  const latest = useRef<ListState>(state);
+  const skipFirstFetch = useRef<LoadPage<T> | null>(boot ? load : null);
+  const latest = useRef<ListState<T>>(state);
 
   // load가 바뀌면 렌더 중에 처음 상태로 돌린다(효과 안에서 초기화하지 않는다).
   if (source !== load) {
@@ -148,9 +176,9 @@ export function useCursorList(load: LoadPage, options: CursorListOptions = {}): 
         if (!cancelled) {
           setState((previous) => append(previous, page));
         }
-      } catch {
+      } catch (error) {
         if (!cancelled) {
-          setState((previous) => ({ ...previous, status: 'error' }));
+          setState((previous) => ({ ...previous, status: 'error', error }));
         }
       } finally {
         inFlight.current = false;
@@ -192,8 +220,8 @@ export function useCursorList(load: LoadPage, options: CursorListOptions = {}): 
       try {
         const page = await load(cursor ?? undefined);
         setState((previous) => append(previous, page));
-      } catch {
-        setState((previous) => ({ ...previous, status: 'error' }));
+      } catch (error) {
+        setState((previous) => ({ ...previous, status: 'error', error }));
       } finally {
         inFlight.current = false;
       }

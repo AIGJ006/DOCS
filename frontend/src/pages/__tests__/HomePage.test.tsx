@@ -1,6 +1,6 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { MemoryRouter } from 'react-router-dom';
+import { Link, MemoryRouter, Route, Routes, useNavigate } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { PostCard, PostCardPage } from '../../api/types/reading';
 import { json, requestsTo, stubFetch } from '../../test/fetchRoutes';
@@ -107,5 +107,86 @@ describe('HomePage', () => {
       '글 3',
       '글 2',
     ]);
+  });
+
+  describe('[최신] [트렌딩] 탭 (012 T025)', () => {
+    function BackButton() {
+      const navigate = useNavigate();
+      return (
+        <button type="button" onClick={() => navigate(-1)}>
+          뒤로
+        </button>
+      );
+    }
+
+    function renderAt(entry: string) {
+      return render(
+        <MemoryRouter initialEntries={[entry]}>
+          <Routes>
+            <Route path="/" element={<HomePage />} />
+            <Route
+              path="/:handle/posts/:postId"
+              element={
+                <main>
+                  <BackButton />
+                  <Link to="/">홈</Link>
+                </main>
+              }
+            />
+          </Routes>
+        </MemoryRouter>,
+      );
+    }
+
+    it('기본은 최신 탭이고 트렌딩을 부르지 않는다', async () => {
+      const fetchMock = stubFetch({
+        'GET /api/posts': () => json(200, page(range(20, 9), 'c1')),
+        'GET /api/posts/trending': () => json(200, page([99], null)),
+      });
+      renderAt('/');
+
+      await waitFor(() => expect(screen.getAllByTestId('post-card')).toHaveLength(9));
+      expect(screen.getByRole('tablist', { name: '홈 목록' })).toBeInTheDocument();
+      expect(screen.getByRole('tab', { name: '최신' })).toHaveAttribute('aria-selected', 'true');
+      expect(screen.getByRole('tab', { name: '트렌딩' })).toHaveAttribute('aria-selected', 'false');
+      expect(requestsTo(fetchMock, 'GET', '/api/posts/trending')).toHaveLength(0);
+    });
+
+    it('/?tab=trending을 바로 열면 트렌딩 탭', async () => {
+      const fetchMock = stubFetch({
+        'GET /api/posts': () => json(200, page(range(20, 9), 'c1')),
+        'GET /api/posts/trending': () => json(200, page([99, 98], null)),
+      });
+      renderAt('/?tab=trending');
+
+      await waitFor(() => expect(screen.getAllByTestId('post-card')).toHaveLength(2));
+      expect(screen.getByRole('tab', { name: '트렌딩' })).toHaveAttribute('aria-selected', 'true');
+      expect(screen.getByText('최근 7일 동안 반응이 많은 글 · 10분마다 갱신')).toBeInTheDocument();
+      expect(requestsTo(fetchMock, 'GET', '/api/posts')).toHaveLength(0);
+    });
+
+    it('탭을 누르면 바뀌고 탭마다 복원 키가 따로다', async () => {
+      const fetchMock = stubFetch({
+        'GET /api/posts': () => json(200, page(range(20, 9), 'c1')),
+        'GET /api/posts/trending': () => json(200, page([99, 98], null)),
+      });
+      vi.spyOn(window, 'scrollTo').mockImplementation(() => undefined);
+      renderAt('/');
+      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+      await waitFor(() => expect(screen.getAllByTestId('post-card')).toHaveLength(9));
+
+      await user.click(screen.getByRole('tab', { name: '트렌딩' }));
+      await waitFor(() => expect(screen.getAllByTestId('post-card')).toHaveLength(2));
+      expect(sessionStorage.getItem('list-restore:home')).not.toBeNull();
+      expect(sessionStorage.getItem('list-restore:trending')).not.toBeNull();
+
+      // 트렌딩 글을 열었다가 뒤로 오면 트렌딩 목록을 요청 없이 복원한다
+      await user.click(screen.getByRole('link', { name: /글 99/ }));
+      await user.click(await screen.findByRole('button', { name: '뒤로' }));
+      await waitFor(() => expect(screen.getAllByTestId('post-card')).toHaveLength(2));
+      expect(screen.getByRole('tab', { name: '트렌딩' })).toHaveAttribute('aria-selected', 'true');
+      expect(requestsTo(fetchMock, 'GET', '/api/posts/trending')).toHaveLength(1);
+      expect(requestsTo(fetchMock, 'GET', '/api/posts')).toHaveLength(1);
+    });
   });
 });

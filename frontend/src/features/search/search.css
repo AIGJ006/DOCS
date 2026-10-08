@@ -1,0 +1,168 @@
+/* 검색 (012). 색은 토큰만 쓴다. */
+
+/* 검색어 강조: 색만이 아니라 굵기로도 구분한다 (T042, 대비 4.5:1 — 글자색은 본문색 그대로) */
+.search-mark {
+  background: var(--color-mark-bg);
+  color: var(--color-text);
+  font-weight: 700;
+  border-radius: 2px;
+}
+
+/* 머리말 자리 (SiteHeader): 900px 미만에서는 입력 대신 [검색] 링크 — 머리말이 가로로 넘치지 않게 */
+.site-header-search-narrow {
+  display: none;
+}
+
+@media (max-width: 899px) {
+  .site-header-search-wide {
+    display: none;
+  }
+
+  .site-header-search-narrow {
+    display: inline;
+  }
+}
+
+.search-box {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+}
+
+.search-box input[type='search'] {
+  box-sizing: border-box;
+  width: 12rem;
+  max-width: 100%;
+  padding: 0.3rem 0.75rem;
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  background: var(--color-bg);
+  color: var(--color-text);
+  font: inherit;
+}
+
+.search-box-message {
+  position: absolute;
+  z-index: 6;
+  margin: 2.5rem 0 0;
+  padding: 0.4rem 0.75rem;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 0.5rem;
+  color: var(--color-text);
+  font-size: 0.875rem;
+}
+
+.search-page-form {
+  display: flex;
+  gap: 0.5rem;
+  margin: 0 0 1rem;
+}
+
+.search-page-form input[type='search'] {
+  box-sizing: border-box;
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--color-border);
+  border-radius: 0.5rem;
+  background: var(--color-bg);
+  color: var(--color-text);
+  font: inherit;
+}
+
+/* 탭·정렬 줄 ([글] [사람], [관련도순] [최신순], 홈 [최신] [트렌딩]) */
+.tab-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  margin: 0 0 0.75rem;
+  padding: 0;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.tab-row [role='tab'] {
+  padding: 0.5rem 0.9rem;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  background: transparent;
+  color: var(--color-text-muted);
+  font: inherit;
+  cursor: pointer;
+}
+
+.tab-row [role='tab'][aria-selected='true'] {
+  border-bottom-color: var(--color-brand);
+  color: var(--color-text);
+  font-weight: 700;
+}
+
+.sort-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin: 0 0 0.75rem;
+}
+
+.sort-row button {
+  padding: 0.25rem 0.75rem;
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--color-text-muted);
+  font: inherit;
+  font-size: 0.875rem;
+  cursor: pointer;
+}
+
+.sort-row button[aria-pressed='true'] {
+  border-color: var(--color-brand);
+  color: var(--color-text);
+  font-weight: 700;
+}
+
+.search-notice {
+  margin: 0 0 0.75rem;
+  color: var(--color-text-muted);
+  font-size: 0.875rem;
+}
+
+.search-empty {
+  padding: 3rem 1rem;
+  text-align: center;
+}
+
+.people-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.people-item a {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  min-width: 0;
+  padding: 0.75rem 0;
+  border-bottom: 1px solid var(--color-border);
+  color: var(--color-text);
+  text-decoration: none;
+}
+
+.people-item-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.people-item-text span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.people-item-handle,
+.people-item-bio {
+  color: var(--color-text-muted);
+  font-size: 0.875rem;
+}
