@@ -72,5 +72,5 @@ description: "Task list for 017-category (2단계 카테고리)"
 
 - [X] T044 `B/category/application/CategoryWithdrawalPurgeStep.java` order 15 + `T/category/integration/CategoryWithdrawalPurgeIT.java`(FR-050)
 - [X] T045 `WithdrawalPurgeStep` javadoc 단계 표에 order 15 줄 추가
-- [ ] T046 최신 main 합치기, Flyway 번호 확인, 백엔드 전체 테스트(`./mvnw verify`)·화면 `npm test`·`npm run lint`·`npm run build` 통과
-- [ ] T047 `quickstart.md` 실행 기록, README 기능 표에 017 줄
+- [X] T046 최신 main 합치기, Flyway 번호 확인, 백엔드 전체 테스트(`./mvnw verify`)·화면 `npm test`·`npm run lint`·`npm run build` 통과
+- [X] T047 `quickstart.md` 실행 기록, README 기능 표에 017 줄
