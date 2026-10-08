@@ -9,7 +9,8 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 
-import com.team.blog.account.application.purge.WithdrawPurgeJob;
+import com.team.blog.account.application.purge.WithdrawalPurgeRunner;
+import com.team.blog.account.support.WithdrawalPurgeProbe;
 import com.team.blog.support.IntegrationTestBase;
 import com.team.blog.support.MemberFixtures;
 import com.team.blog.support.TestLogin;
@@ -38,7 +39,8 @@ class AiConsentIT extends IntegrationTestBase {
     private static final String URL = "/api/me/agreements/ai";
 
     @Autowired private FakeAi fakeAi;
-    @Autowired private WithdrawPurgeJob purgeJob;
+    @Autowired private WithdrawalPurgeRunner purgeRunner;
+    @Autowired private WithdrawalPurgeProbe purgeProbe;
 
     private AiSuggestApi api;
 
@@ -262,11 +264,14 @@ class AiConsentIT extends IntegrationTestBase {
         long id = members().member().create();
         api.consent(id);
         jdbc.update(
-                "UPDATE member SET status = 'WITHDRAWN', withdrawn_at = now() - interval '31 days'"
+                "UPDATE member SET status = 'WITHDRAWN', withdrawn_at = now() - interval '400 days'"
                         + " WHERE id = ?",
                 id);
 
-        purgeJob.run(Instant.now());
+        purgeProbe.reset();
+        // 정리 작업 전체(job.run)는 다른 시험이 남긴 탈퇴 회원·배치 한도에 영향을 받으므로 한 회원만 정리한다
+        assertThat(purgeRunner.purgeOne(id, WithdrawalPurgeRunner.Reason.GRACE_EXPIRED))
+                .isEqualTo(WithdrawalPurgeRunner.Outcome.PURGED);
 
         assertThat(
                         jdbc.queryForObject(
