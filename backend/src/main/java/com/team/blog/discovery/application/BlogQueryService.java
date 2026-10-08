@@ -2,6 +2,8 @@ package com.team.blog.discovery.application;
 
 import com.team.blog.account.application.BlogOwner;
 import com.team.blog.account.application.MemberQueryService;
+import com.team.blog.interaction.application.FollowQueryService;
+import com.team.blog.interaction.application.FollowQueryService.HeaderStats;
 import com.team.blog.media.application.ImageUrlResolver;
 import com.team.blog.media.application.ProfileImageQuery;
 import com.team.blog.post.infra.PostQueryRepository;
@@ -25,6 +27,8 @@ import org.springframework.transaction.annotation.Transactional;
  *   <li>태그 필터(008)는 같은 목록 조건에 태그 조건만 더한다. 이름 확인은 008 {@link TagQueryService}로 한다.
  *   <li>프로필 사진은 001 {@link ProfileImageQuery} + {@link ImageUrlResolver}로만 만든다 — member·image를 직접
  *       읽지 않는다.
+ *   <li>팔로워·팔로잉 수와 팔로우 여부(010)는 interaction {@link FollowQueryService#headerStats}로만 만든다 — {@code
+ *       follow}를 직접 읽지 않는다.
  * </ul>
  */
 @Service
@@ -38,6 +42,7 @@ public class BlogQueryService {
     private final PostListService lists;
     private final TagQueryService tags;
     private final PostListCursor cursors;
+    private final FollowQueryService follows;
 
     public BlogQueryService(
             MemberQueryService members,
@@ -46,7 +51,8 @@ public class BlogQueryService {
             ImageUrlResolver imageUrls,
             PostListService lists,
             TagQueryService tags,
-            PostListCursor cursors) {
+            PostListCursor cursors,
+            FollowQueryService follows) {
         this.members = members;
         this.postQueries = postQueries;
         this.profileImages = profileImages;
@@ -54,6 +60,7 @@ public class BlogQueryService {
         this.lists = lists;
         this.tags = tags;
         this.cursors = cursors;
+        this.follows = follows;
     }
 
     /**
@@ -64,16 +71,20 @@ public class BlogQueryService {
                 .orElseThrow(() -> new NotFoundException("blog owner not found: " + handle));
     }
 
-    /** 머리말 — SQL은 주인 1번 + 글 수 1번 + 사진 1번. */
+    /** 머리말 — SQL은 주인 1번 + 글 수 1번 + 사진 1번 + 팔로우 수 2번 + 팔로우 여부 1번(010, 로그인했고 남의 블로그일 때만). */
     public BlogHeaderView getHeader(String handle, Viewer viewer) {
         BlogOwner owner = requireOwner(handle);
+        HeaderStats stats = follows.headerStats(owner.id(), viewer);
         return new BlogHeaderView(
                 owner.handle(),
                 owner.nickname(),
                 owner.bio(),
                 imageUrls.publicUrl(displayImageKey(owner.id())),
                 postQueries.countListedByAuthor(viewer, owner.id()),
-                viewer.isAuthorOf(owner.id()));
+                viewer.isAuthorOf(owner.id()),
+                stats.followerCount(),
+                stats.followingCount(),
+                stats.followedByMe());
     }
 
     /** 블로그 글 목록 — SQL은 주인 1번 + 카드 1번. 커서 범위는 {@code blog:{handle}}이다. */
