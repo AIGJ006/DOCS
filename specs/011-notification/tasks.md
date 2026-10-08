@@ -144,13 +144,13 @@ description: "Task list for 011-notification (도메인 이벤트·인앱 알림
 
 ### Tests for User Story 3 ⚠️
 
-- [ ] T033 [P] [US3] `T/notification/integration/LikeGroupingIT.java` — SC-002, US3 #1~#4·#6: 10명 동시(`ExecutorService` + `CountDownLatch`로 이벤트 10개 동시 처리) → 안 읽은 `LIKE` 1개·`actor_count 10`·`notification_actor` 10행, 한 사람 취소·재클릭 5번 → 알림 1·인원 그대로, B·C 묶음에서 B 취소 → 인원 1·`last_actor_id = C`·`updated_at` 그대로, 남은 사람 0 → 행 삭제, 읽은 묶음에서 취소 → 그대로, 읽은 뒤 새 사람 → 새 묶음, 사람이 더해지면 목록 맨 위 (009 머지 후)
-- [ ] T034 [P] [US3] `T/notification/integration/FollowGroupingIT.java` — SC-003, US3 #5: 7일 안 언팔로우 → 팔로우 반복 3번 → 새 팔로워 알림 1·인원 1, `MutableClock`으로 8일 뒤 다시 팔로우 → 인원 +1(또는 새 묶음), 언팔로우만으로는 알림 0, 안 읽은 묶음에서 언팔로우하면 빠짐 (010 머지 후)
+- [X] T033 [P] [US3] `T/notification/integration/LikeGroupingIT.java` — SC-002, US3 #1~#4·#6: 10명 동시(`ExecutorService` + `CountDownLatch`로 이벤트 10개 동시 처리) → 안 읽은 `LIKE` 1개·`actor_count 10`·`notification_actor` 10행, 한 사람 취소·재클릭 5번 → 알림 1·인원 그대로, B·C 묶음에서 B 취소 → 인원 1·`last_actor_id = C`·`updated_at` 그대로, 남은 사람 0 → 행 삭제, 읽은 묶음에서 취소 → 그대로, 읽은 뒤 새 사람 → 새 묶음, 사람이 더해지면 목록 맨 위 (009 머지 후) (구현 메모: 10명 동시는 NotificationWriter.addLike를 ExecutorService+CountDownLatch로 동시에 직접 부름)
+- [X] T034 [P] [US3] `T/notification/integration/FollowGroupingIT.java` — SC-003, US3 #5: 7일 안 언팔로우 → 팔로우 반복 3번 → 새 팔로워 알림 1·인원 1, `MutableClock`으로 8일 뒤 다시 팔로우 → 인원 +1(또는 새 묶음), 언팔로우만으로는 알림 0, 안 읽은 묶음에서 언팔로우하면 빠짐 (010 머지 후) (구현 메모: MutableClock이 없어 '8일 뒤'는 notification_actor.created_at을 8일 전으로 옮겨 확인. 팔로우·언팔로우는 010 API)
 - [ ] T035 [P] [US3] 화면 테스트 `F/features/notification/__tests__/notificationText.test.ts` — 묶음 문장 "**김민서**님 외 3명이 「제목」을 좋아해요"·"…외 N명이 회원님을 팔로우해요", `othersCount 0`이면 하나짜리 문장
 
 ### Implementation for User Story 3
 
-- [ ] T036 [US3] `NotificationRepository.removeFromUnreadGroup(receiverId, groupKey, actorId)`(contracts §5 네 문장, 잠금 순서 알림 → 사람)와 `NotificationWriter`의 FOLLOW 중복 기간(`follow-dedup-window` 7일, §4 ①), `removeLike`·`removeFollow` (T033·T034 실패 확인)
+- [X] T036 [US3] `NotificationRepository.removeFromUnreadGroup(receiverId, groupKey, actorId)`(contracts §5 네 문장, 잠금 순서 알림 → 사람)와 `NotificationWriter`의 FOLLOW 중복 기간(`follow-dedup-window` 7일, §4 ①), `removeLike`·`removeFollow` (T033·T034 실패 확인) (구현 메모: removeLike·removeFollow는 처리 시점에 다시 좋아요·팔로우 상태면 빼지 않음(취소 뒤 재클릭 순서 뒤바뀜 대비). 다시 계산 UPDATE는 recount(ids)로 묶어 탈퇴 정리와 함께 씀)
 - [ ] T037 [US3] `LikeNotificationListener`에 `PostUnliked`, `FollowNotificationListener`에 `MemberUnfollowed` 처리를 더하고, `notificationText.ts`에 묶음 문장 (T033~T035 통과)
 
 **Checkpoint**: 묶음·중복 방지·취소 반영 완료

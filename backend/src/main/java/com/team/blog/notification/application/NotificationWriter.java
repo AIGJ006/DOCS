@@ -131,6 +131,25 @@ public class NotificationWriter {
         return false;
     }
 
+    /** 좋아요 취소 — 안 읽은 묶음에서 뺀다 (contracts §5). 제외 규칙은 보지 않는다(빼는 일은 언제나 안전). */
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public boolean removeLike(long receiverId, long actorId, long postId) {
+        if (likes.isLiked(postId, actorId)) {
+            // 취소 뒤 다시 누른 상태면 처리 순서가 바뀐 것 — 빼지 않는다
+            return false;
+        }
+        return notifications.removeFromUnreadGroup(receiverId, GroupKey.like(postId), actorId);
+    }
+
+    /** 언팔로우 — 안 읽은 새 팔로워 묶음에서 뺀다 (contracts §5). 언팔로우 자체는 알리지 않는다(FR-016). */
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public boolean removeFollow(long receiverId, long actorId) {
+        if (follows.isFollowing(actorId, receiverId)) {
+            return false;
+        }
+        return notifications.removeFromUnreadGroup(receiverId, GroupKey.follow(), actorId);
+    }
+
     /**
      * 새 글 알림 (contracts §6). 처리 시점에 비회원 기준으로 읽을 수 없으면(이미 비공개·휴지통·숨김·작성자 유예) 만들지 않는다.
      *

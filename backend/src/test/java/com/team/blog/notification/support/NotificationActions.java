@@ -131,5 +131,7 @@ public final class NotificationActions {
 
     public void likeRow(long postId, long member) {
         jdbc.update("INSERT INTO post_like (post_id, member_id) VALUES (?, ?)", postId, member);
+        // 좋아요 수도 맞춘다 (취소 API가 수를 1 줄일 때 CHECK에 걸리지 않게)
+        jdbc.update("UPDATE post SET like_count = like_count + 1 WHERE id = ?", postId);
     }
 }

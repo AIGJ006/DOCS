@@ -5,6 +5,7 @@ import com.team.blog.notification.domain.NotificationType;
 import java.sql.Timestamp;
 import java.sql.Types;
 import java.time.Instant;
+import java.util.List;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Repository;
 
@@ -159,6 +160,65 @@ public class NotificationRepository {
     public int deleteIfEmpty(long notificationId) {
         return jdbc.sql("DELETE FROM notification WHERE id = :id AND actor_count = 0")
                 .param("id", notificationId)
+                .update();
+    }
+
+    // ---- 묶음에서 빼기 (contracts §5, PostUnliked·MemberUnfollowed) ----
+
+    /**
+     * 안 읽은 묶음에서 그 사람을 빼고 인원·마지막 행동자를 다시 계산한다({@code updated_at}은 그대로). 0명이 되면 지운다. 잠금 순서는 저장과 같다(알림
+     * 행 → 사람 행). 읽은 묶음은 그대로 둔다.
+     *
+     * @return 실제로 뺐으면 {@code true}
+     */
+    public boolean removeFromUnreadGroup(long receiverId, GroupKey groupKey, long actorId) {
+        List<Long> ids =
+                jdbc.sql(
+                                """
+                                SELECT id FROM notification
+                                 WHERE receiver_id = :r AND group_key = :gk AND read_at IS NULL
+                                 FOR UPDATE
+                                """)
+                        .param("r", receiverId)
+                        .param("gk", groupKey.value())
+                        .query(Long.class)
+                        .list();
+        if (ids.isEmpty()) {
+            return false;
+        }
+        long id = ids.get(0);
+        int removed =
+                jdbc.sql(
+                                "DELETE FROM notification_actor WHERE notification_id = :id AND actor_id = :a")
+                        .param("id", id)
+                        .param("a", actorId)
+                        .update();
+        if (removed == 0) {
+            return false;
+        }
+        recount(List.of(id));
+        jdbc.sql("DELETE FROM notification WHERE id = :id AND actor_count = 0")
+                .param("id", id)
+                .update();
+        return true;
+    }
+
+    /** 묶음들의 인원·마지막 행동자를 {@code notification_actor}로 다시 계산 ({@code updated_at}은 그대로). */
+    public void recount(List<Long> ids) {
+        if (ids.isEmpty()) {
+            return;
+        }
+        jdbc.sql(
+                        """
+                        UPDATE notification n
+                           SET actor_count = (SELECT count(*) FROM notification_actor x
+                                               WHERE x.notification_id = n.id),
+                               last_actor_id = (SELECT x.actor_id FROM notification_actor x
+                                                 WHERE x.notification_id = n.id
+                                                 ORDER BY x.created_at DESC, x.actor_id DESC LIMIT 1)
+                         WHERE n.id IN (:ids)
+                        """)
+                .param("ids", ids)
                 .update();
     }
 

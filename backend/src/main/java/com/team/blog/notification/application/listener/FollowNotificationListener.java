@@ -2,6 +2,7 @@ package com.team.blog.notification.application.listener;
 
 import com.team.blog.notification.application.NotificationWriter;
 import com.team.blog.shared.event.MemberFollowed;
+import com.team.blog.shared.event.MemberUnfollowed;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.event.TransactionPhase;
@@ -27,5 +28,14 @@ public class FollowNotificationListener {
                 "MemberFollowed",
                 e.followeeId(),
                 () -> writer.addFollow(e.followeeId(), e.followerId()));
+    }
+
+    @Async("eventExecutor")
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    public void on(MemberUnfollowed e) {
+        ListenerSupport.runSafely(
+                "MemberUnfollowed",
+                e.followeeId(),
+                () -> writer.removeFollow(e.followeeId(), e.followerId()));
     }
 }

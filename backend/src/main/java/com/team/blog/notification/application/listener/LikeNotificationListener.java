@@ -2,6 +2,7 @@ package com.team.blog.notification.application.listener;
 
 import com.team.blog.notification.application.NotificationWriter;
 import com.team.blog.shared.event.PostLiked;
+import com.team.blog.shared.event.PostUnliked;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.event.TransactionPhase;
@@ -27,5 +28,14 @@ public class LikeNotificationListener {
                 "PostLiked",
                 e.postId(),
                 () -> writer.addLike(e.postAuthorId(), e.memberId(), e.postId()));
+    }
+
+    @Async("eventExecutor")
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    public void on(PostUnliked e) {
+        ListenerSupport.runSafely(
+                "PostUnliked",
+                e.postId(),
+                () -> writer.removeLike(e.postAuthorId(), e.memberId(), e.postId()));
     }
 }
