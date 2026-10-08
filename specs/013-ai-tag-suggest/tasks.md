@@ -153,13 +153,13 @@ description: "Task list for 013-ai-tag-suggest (AI 태그 추천)"
 
 ### Tests for User Story 3 ⚠️
 
-- [ ] T040 [P] [US3] 테스트 `T/tag/integration/TagSuggestCacheIT.java`: US3 #1~#4, SC-004 — 같은 입력 두 번째 재사용·호출 0·횟수 그대로, 다른 회원 같은 입력 재사용, 태그 하나 붙인 뒤 재사용 + 그 태그 빠짐, 오타 몇 개 → 비슷한 내용 재사용, 문단 추가 → 새 호출, `refresh` → 비슷한 내용 건너뜀·같은 내용은 사용, 같은 내용이 OLLAMA 결과이고 지금 Gemini 가능 + `refresh` → 새로 만듦, 빈 결과·모두 걸러진 결과·실패 → 저장 안 함, `prompt-version` 올리면 새 키, 하루 한도를 다 쓴 회원도 재사용 응답은 200(FR-027), TTL 30일·7일, 키 이름 `ai:tag:v1:{64자}`·`ai:tag:post:{id}`
+- [X] T040 [P] [US3] 테스트 `T/tag/integration/TagSuggestCacheIT.java`: US3 #1~#4, SC-004 — 같은 입력 두 번째 재사용·호출 0·횟수 그대로, 다른 회원 같은 입력 재사용, 태그 하나 붙인 뒤 재사용 + 그 태그 빠짐, 오타 몇 개 → 비슷한 내용 재사용, 문단 추가 → 새 호출, `refresh` → 비슷한 내용 건너뜀·같은 내용은 사용, 같은 내용이 OLLAMA 결과이고 지금 Gemini 가능 + `refresh` → 새로 만듦, 빈 결과·모두 걸러진 결과·실패 → 저장 안 함, `prompt-version` 올리면 새 키, 하루 한도를 다 쓴 회원도 재사용 응답은 200(FR-027), TTL 30일·7일, 키 이름 `ai:tag:v1:{64자}`·`ai:tag:post:{id}` (구현 메모: prompt-version 판은 새 컨텍스트 대신 SuggestCache를 v2 설정으로 직접 만들어 확인)
 
 ### Implementation for User Story 3
 
-- [ ] T041 [US3] `B/tag/application/suggest/SuggestCache.java`(contracts/providers.md §6 — JSON 직렬화, `RedisGuard.call`, `lookup(postId, input, refresh, routeNow)`·`store(…)`)
-- [ ] T042 [US3] `TagSuggestService`에 재사용 단계(research R4 8 — 하루 횟수 앞, 남은 자리 0 판정 뒤)와 저장 규칙 연결(T040 통과)
-- [ ] T043 [US3] 화면: 결과가 있으면 [다시 추천](`refresh: true`), `cached`면 남은 횟수 그대로 — `AiTagSuggest.tsx`·`useTagSuggest.ts`와 `AiTagSuggest.test.tsx`에 두 경우 추가
+- [X] T041 [US3] `B/tag/application/suggest/SuggestCache.java`(contracts/providers.md §6 — JSON 직렬화, `RedisGuard.call`, `lookup(postId, input, refresh, routeNow)`·`store(…)`) (구현 메모: T027과 함께 구현됨. routeNow는 BooleanSupplier geminiAvailableNow(refresh 때만 묻는다))
+- [X] T042 [US3] `TagSuggestService`에 재사용 단계(research R4 8 — 하루 횟수 앞, 남은 자리 0 판정 뒤)와 저장 규칙 연결(T040 통과) (구현 메모: T027과 함께 연결됨. T040으로 확인)
+- [X] T043 [US3] 화면: 결과가 있으면 [다시 추천](`refresh: true`), `cached`면 남은 횟수 그대로 — `AiTagSuggest.tsx`·`useTagSuggest.ts`와 `AiTagSuggest.test.tsx`에 두 경우 추가 (구현 메모: T031과 함께 구현됨. AiTagSuggest.test.tsx의 [다시 추천]·재사용 두 경우)
 
 **Checkpoint**: 반복 요청이 AI를 부르지 않는다
 
