@@ -1,6 +1,6 @@
 /*
  * 공통 기본 스타일 (공통 머리말 작업). 기능 화면의 개별 스타일은 건드리지 않도록 요소 기본값만 최소로 정한다.
- * 색은 tokens.css의 토큰만 쓴다(016 FR-011). 016 T009가 이 파일에 color-scheme 등을 더한다.
+ * 색은 tokens.css의 토큰만 쓴다(016 FR-011). 색이 서서히 바뀌는 transition은 두지 않는다(016 FR-010).
  */
 :root {
   /* 본문 최대 폭. 005 홈이 이미 이 이름을 쓴다. */
@@ -12,6 +12,15 @@
 *::before,
 *::after {
   box-sizing: border-box;
+}
+
+/* 스크롤바·기본 입력칸 등 브라우저가 그리는 요소도 고른 테마를 따른다(016 FR-020). 고정 상태면 기기 설정과 달라도 그 테마. */
+:root[data-theme='light'] {
+  color-scheme: light;
+}
+
+:root[data-theme='dark'] {
+  color-scheme: dark;
 }
 
 html {
@@ -54,6 +63,18 @@ select,
 textarea {
   font: inherit;
   color: inherit;
+}
+
+/* 입력칸 테두리는 알아봐야 하는 테두리라 3:1을 넘는 --color-text-muted (016 research R2).
+ * :where로 우선순위를 0으로 둬서 기능 화면의 클래스 규칙이 언제나 이긴다. */
+:where(
+    input:not([type='checkbox'], [type='radio'], [type='range'], [type='file'], [type='color']),
+    textarea,
+    select
+  ) {
+  border: 1px solid var(--color-text-muted);
+  background: var(--color-surface);
+  color: var(--color-text);
 }
 
 button {

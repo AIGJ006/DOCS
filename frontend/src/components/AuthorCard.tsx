@@ -28,7 +28,8 @@ export default function AuthorCard({ author, isMe, followButton = null }: Author
         margin: '2rem 0 0',
         padding: '1rem',
         borderRadius: '0.5rem',
-        background: 'var(--card-bg, #f8f9fa)',
+        border: '1px solid var(--color-border)',
+        background: 'var(--color-surface)',
       }}
     >
       {author.profileImageUrl ? (
