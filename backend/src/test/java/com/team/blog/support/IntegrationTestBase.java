@@ -5,12 +5,14 @@ import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.context.annotation.Import;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.testcontainers.containers.GenericContainer;
@@ -74,9 +76,18 @@ public abstract class IntegrationTestBase {
         return REDIS;
     }
 
+    /**
+     * 011 공용 이벤트 실행기. 앞선 테스트가 남긴 커밋 뒤 비동기 작업(알림 저장 등)이 아직 행을 쓰는 중에 TRUNCATE하면 교착이 나므로, 비울 때까지 기다린 뒤
+     * 지운다.
+     */
+    @Autowired(required = false)
+    @Qualifier("eventExecutor")
+    private ThreadPoolTaskExecutor eventExecutor;
+
     @BeforeEach
     void resetDatabaseAndRedis() {
         RedisOutage.ensureRunning();
+        awaitEventExecutorIdle();
         List<String> tables =
                 jdbc.queryForList(
                         "SELECT tablename FROM pg_tables WHERE schemaname = 'public'",
@@ -99,6 +110,23 @@ public abstract class IntegrationTestBase {
         mailSender.clear();
         if (circuitBreakers != null) {
             circuitBreakers.getAllCircuitBreakers().forEach(CircuitBreaker::reset);
+        }
+    }
+
+    private void awaitEventExecutorIdle() {
+        if (eventExecutor == null) {
+            return;
+        }
+        java.util.concurrent.ThreadPoolExecutor pool = eventExecutor.getThreadPoolExecutor();
+        long deadline = System.nanoTime() + java.time.Duration.ofSeconds(10).toNanos();
+        while (!(pool.getQueue().isEmpty() && pool.getActiveCount() == 0)
+                && System.nanoTime() < deadline) {
+            try {
+                Thread.sleep(10);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                return;
+            }
         }
     }
 

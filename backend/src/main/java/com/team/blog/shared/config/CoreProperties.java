@@ -6,6 +6,7 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
 import java.net.URI;
+import java.time.Duration;
 import java.time.ZoneId;
 import java.util.List;
 import org.springframework.boot.context.properties.ConfigurationProperties;
@@ -61,9 +62,12 @@ public record CoreProperties(
      * @param coreSize 기본 스레드 수
      * @param maxSize 최대 스레드 수
      * @param queueCapacity 대기열 크기 (가득 차면 경고 로그 후 버림 — 유실 허용)
+     * @param awaitTermination 종료 때 남은 작업을 기다리는 시간 (기본 10초, 이벤트 실행기는 20초 — 011 research R5). 그 안에 못
+     *     끝낸 작업 수는 경고 로그로 남는다
      */
     public record Pool(
             @Min(1) @DefaultValue("2") int coreSize,
             @Min(1) @DefaultValue("4") int maxSize,
-            @Min(0) @DefaultValue("500") int queueCapacity) {}
+            @Min(0) @DefaultValue("500") int queueCapacity,
+            @NotNull @DefaultValue("10s") Duration awaitTermination) {}
 }
