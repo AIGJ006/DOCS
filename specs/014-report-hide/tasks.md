@@ -88,7 +88,7 @@ description: "Task list for 014-report-hide (신고·관리자 숨김·회원 �
 - [ ] T011 `B/post/application/PostModerationService.java`와 `PostSnapshot.java`(post 모듈 새 공개 Service, 쿼리는 `B/post/infra/PostModerationRepository.java` 새 파일)(T010 통과)
 - [ ] T012 [P] 테스트 `T/moderation/integration/ReportCaseRepositoryIT.java`: `ON CONFLICT … DO NOTHING RETURNING`이 대기 사건이 있으면 빈 값, 없으면 새 번호, `HIDDEN` 사건이 있어도 새 `PENDING` 가능, 신고 중복 무시, 닫기 SQL 네 조건(contracts/moderation-sql.md §5), `ck_report_detail`이 `detail` NULL 통과
 - [ ] T013 `B/moderation/infra/ReportCaseRepository.java`·`ReportRepository.java`(`JdbcClient`, contracts/moderation-sql.md §1·§3·§4·§5)(T012 통과)
-- [ ] T014 [P] 001 추가: `B/account/application/MemberQueryService.java`에 `handlesOf`·`nicknamesOf`·`findAdminView`와 `AdminMemberInfo.java`(001 소유 파일, 추가만), 테스트 `T/account/integration/MemberQueryAdminIT.java`(익명 처리 제외, 대문자 주소, 탈퇴 유예 포함, SQL 1번)
+- [ ] T014 [P] 001 추가: `B/account/application/MemberQueryService.java`에 `findAdminView`와 `AdminMemberInfo.java`(001 소유 파일, 추가만), 테스트 `T/account/integration/MemberQueryAdminIT.java`(익명 처리면 empty, 대문자 주소, 탈퇴 유예 포함). 목록의 주소·닉네임 묶음 조회는 007 `findDisplays`(007 T010)를 쓴다 — 새 `handlesOf`·`nicknamesOf`를 만들지 않는다(ANALYSIS-tier-bc)
 - [ ] T015 [P] 화면 공용: `F/features/moderation/reasonLabels.ts`(6개 코드 → 이름, 011 T047과 같은 파일 — 먼저 하는 쪽이 만듦)와 테스트, `F/api/types/moderation.ts`(contracts 스키마 타입)
 
 **Checkpoint**: 사건 저장·글 숨김·이벤트 준비됨 — User Story 시작 가능
@@ -105,7 +105,7 @@ description: "Task list for 014-report-hide (신고·관리자 숨김·회원 �
 
 > **NOTE: 테스트를 먼저 쓰고 실패를 확인한다**
 
-- [ ] T016 [P] [US1] 테스트 `T/moderation/integration/ReportApiIT.java`: US1 #1~#7 — quickstart §2 표 `ReportApiIT` 행 전부(스냅샷 내용, 중복 200·1건, 기타 칸 오류, 자기 것 400, 401·403, 볼 수 없는 대상 404 고정 본문, 1분 6번째·하루 51번째 429 + `Retry-After`, Redis 정지 중 통과, 처리 뒤 새 사건, 접수 이벤트 0), 판정 순서(인증 전 회원의 자기 글 → 403, 형식 오류인 남의 비공개 글 → 400, 숨김 글 + 기타 빈 설명 → 404), 기타가 아닌 사유의 설명은 저장 안 됨
+- [ ] T016 [P] [US1] 테스트 `T/moderation/integration/ReportApiIT.java`: US1 #1~#7 — quickstart §2 표 `ReportApiIT` 행 전부(스냅샷 내용, 중복 200·1건, 기타 칸 오류, 자기 것 400, 401·403, 볼 수 없는 대상 404 고정 본문, 1분 6번째·하루 51번째 429 + `Retry-After`, Redis 정지 중 통과, 처리 뒤 새 사건, 접수 이벤트 0, 신고가 10건 쌓여도 대상은 숨겨지지 않음 — FR-017), 판정 순서(인증 전 회원의 자기 글 → 403, 형식 오류인 남의 비공개 글 → 400, 숨김 글 + 기타 빈 설명 → 404), 기타가 아닌 사유의 설명은 저장 안 됨
 - [ ] T017 [P] [US1] 테스트 `T/moderation/integration/ReportConcurrencyIT.java`: 20명 동시 첫 신고 → 사건 1·신고 20, 같은 회원 동시 2번 → 1, 처리와 신고 동시 100번 → 신고가 닫힌 사건에 붙지 않거나(새 사건) 처리 전에 붙어 함께 닫힘, 교착 0
 - [ ] T018 [P] [US1] 화면 테스트 `F/features/moderation/__tests__/ReportDialog.test.tsx`·`ReportButton.test.tsx`: 사유 6개 라디오, 기타일 때만 설명 칸·200자 카운터·빈 설명이면 [신고하기] 비활성, 성공 → 창 닫힘 + "신고가 접수됐어요. 검토 후 처리할게요", 404 → "볼 수 없는 글이에요", 429 → "잠시 후 다시 시도해 주세요", 401·403 → `useAuthGate` 호출, Esc·[취소] → 요청 없음, 초점 가둠
 - [ ] T019 [P] [US1] 권한 매트릭스: `TR/permission/moderation.csv`에 `report.post` 행(research R13 표 — 7 행위자 × 9 대상 상태)과 하네스 행동 `T/moderation/permission/ReportPostAction.java`(거부 때 `report_case`·`report` 행 수 전후 같음), `T/moderation/integration/ModerationPermissionMatrixIT.java`
@@ -189,7 +189,7 @@ description: "Task list for 014-report-hide (신고·관리자 숨김·회원 �
 ### Implementation for User Story 4
 
 - [ ] T048 [US4] `DirectHideService.unhide(admin, type, id)`와 `AdminHideController`의 `DELETE …/posts/{postId}/hidden`·`…/comments/{commentId}/hidden`(research R7 — 사건 상태 그대로, `ContentUnhidden`)(T046 통과)
-- [ ] T049 [US4] 처리됨 탭 [숨김 해제] 버튼과 상세 화면 [숨김 해제] — `CaseList.tsx`·`AdminReportDetailPage.tsx`(T047 통과)
+- [ ] T049 [US4] 처리됨 탭 [숨김 해제] 버튼과 상세 화면 [숨김 해제] — `CaseList.tsx`·`AdminReportDetailPage.tsx`, 확인은 006 `ConfirmDialog`·결과 알림 줄은 006 `useToast`(006 머지 후)(T047 통과)
 
 **Checkpoint**: 숨김을 되돌릴 수 있다
 
@@ -210,7 +210,7 @@ description: "Task list for 014-report-hide (신고·관리자 숨김·회원 �
 
 - [ ] T052 [US5] `B/account/application/SuspensionService.java`의 `suspend`·`lift`·`history` 구현(contracts/moderation-sql.md §7 — 회원 행 잠금, 세션 삭제를 커밋 전 + 커밋 뒤 한 번 더, 실패 → `TEMPORARILY_UNAVAILABLE`)와 `SuspensionRecord.java`, 이유 코드 `CANNOT_SUSPEND_ADMIN`·`CANNOT_SUSPEND_WITHDRAWN`·`ALREADY_SUSPENDED`는 `B/account/application/AccountReasonCode.java`에 추가(001 소유 파일, 001 T106 TODO를 채움)
 - [ ] T053 [US5] `B/moderation/application/AdminMemberService.java`(조회 = `findAdminView` + 숨겨진 수 + 이력, 정지·해제는 `SuspensionService`)와 `B/moderation/web/AdminMemberController.java`(`GET /api/admin/members/{handle}`, `POST …/suspensions` 201, `DELETE …/suspensions/current`), dto `AdminMemberView`·`SuspendRequest`(T050 통과)
-- [ ] T054 [US5] 화면 `F/pages/admin/AdminMemberPage.tsx`, `F/features/admin/SuspendForm.tsx`·`SuspensionHistory.tsx`, 상세 화면 작성자 카드에 [회원 화면](T051 통과)
+- [ ] T054 [US5] 화면 `F/pages/admin/AdminMemberPage.tsx`, `F/features/admin/SuspendForm.tsx`·`SuspensionHistory.tsx`, 상세 화면 작성자 카드에 [회원 화면], 정지·해제 확인은 006 `ConfirmDialog`(006 머지 후)(T051 통과)
 
 **Checkpoint**: 모든 User Story 동작
 

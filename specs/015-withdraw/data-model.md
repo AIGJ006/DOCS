@@ -126,8 +126,8 @@
 
 | 이벤트 | 필드 | 발행 | 구독 |
 |---|---|---|---|
-| `MemberWithdrawn` | `long memberId, Instant withdrawnAt` | 신청 트랜잭션 안, 커밋 후 전달 | account 메일, 012 트렌딩·검색 색인 |
-| `MemberRestored` | `long memberId, Instant restoredAt` | 복구 트랜잭션 안 | account 메일, 012 |
+| `MemberWithdrawn` | `long memberId, Instant withdrawnAt` | 신청 트랜잭션 안, 커밋 후 전달 | account 메일 (012는 구독하지 않음 — 요청 때 공용 조건으로 거름, 012 research R14) |
+| `MemberRestored` | `long memberId, Instant restoredAt` | 복구 트랜잭션 안 | account 메일 |
 
 정리 작업·영구 정지 자동 정리는 이벤트를 내지 않는다. 글 완전 삭제의 `PostPurged`는 006 규칙.
 

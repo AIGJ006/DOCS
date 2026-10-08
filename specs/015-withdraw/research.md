@@ -167,7 +167,7 @@
   - 성공: 001 `logout.ts`에서 로그아웃 정리 ②만 꺼낸 `clearLocalAccountData(memberId)`(002 `clearMemberDrafts`)를 부르고 `SessionProvider`를 비로그인으로 새로 고친 뒤 `/withdrawn`으로 이동(`state.restoreDeadline`). 미전송 작업 전송(①)은 하지 않는다(어차피 가려지는 글)
   - `/withdrawn`(`WithdrawnPage`): "탈퇴 신청이 완료됐어요 / {기한}까지 로그인하면 복구할 수 있어요 / 그동안 블로그와 글은 다른 사람에게 보이지 않아요" + [홈으로]. `state`가 없으면(새로 고침) 기한 줄 없이 나머지만
   - `/account/restore`(`RestorePage`): `GET /api/me`의 `restoreExpired`로 두 상태 — 복구 가능: "탈퇴 신청한 계정이에요 / {기한}까지 복구할 수 있어요 ({N}일 남음) / 복구하면 블로그·글·댓글이 모두 원래대로 돌아와요" + [로그아웃]·[복구하기] / 기한 지남: "복구 기한이 지났어요" + [로그아웃]. [복구하기] 성공 → 세션 새로 고침 → `/`로 이동 + 토스트 "다시 오신 걸 환영해요". 409 `RESTORE_PERIOD_EXPIRED` → 기한 지남 상태로 바꿈
-  - `RestoreGate`: `SessionProvider` 값이 `status = WITHDRAWN`이면 허용 경로(`/account/restore`, `/terms`, `/privacy`, `/forgot-password`, `/reset-password`) 밖은 `/account/restore`로 `replace` 이동(FR-017). 004 `useAuthGate`의 `ACCOUNT_WITHDRAWN` 처리 경로를 `/account/restore`로 맞춘다(ANALYSIS-tier-a R13 — 004 T051은 `/restore`로 적혀 있음)
+  - `RestoreGate`: `SessionProvider` 값이 `status = WITHDRAWN`이면 허용 경로(`/account/restore`, `/terms`, `/privacy`, `/forgot-password`, `/reset-password`) 밖은 `/account/restore`로 `replace` 이동(FR-017). 004 `useAuthGate`의 `ACCOUNT_WITHDRAWN` 처리 경로를 `/account/restore`로 맞춘다(ANALYSIS-tier-a R13 — 004 T051·research 문서는 ANALYSIS-tier-bc에서 `/account/restore`로 고쳤다)
   - 로그인 화면: 001 로그인 응답 `accountStatus: "WITHDRAWN"`이면 `redirectTo` 대신 `/account/restore`로 이동(001 T108이 응답 값만 정함)
   - 가입 화면: 이메일 칸 오류 `EMAIL_WITHDRAWAL_PENDING`이면 "탈퇴 신청한 계정이 있어요. 로그인하면 복구할 수 있어요" + [로그인] 링크
 - **Rationale**: 44 §1~§3, W-1~W-9, 07 §7(임시 글 삭제).
@@ -184,7 +184,7 @@
 
 - **Decision**: `shared.event.MemberWithdrawn(long memberId, Instant withdrawnAt)`, `MemberRestored(long memberId, Instant restoredAt)` — 001 `DomainEvent` 규칙(불변 record, ID·시각만). 구독:
   - account `WithdrawalMailListener`(`@TransactionalEventListener(AFTER_COMMIT)` + `@Async("mailExecutor")`): `auth_identity.email`이 있으면 `R/mail/withdrawal-requested.txt`("탈퇴 신청이 접수됐어요. {기한}까지 로그인하면 복구할 수 있어요")·`R/mail/account-restored.txt`("계정이 복구됐어요"). 이메일이 없는 소셜 계정은 보내지 않는다. 실패는 WARN(주소 없이 회원 번호만)
-  - 012 트렌딩·검색 색인이 구독한다(20 §5 표) — 012 plan 몫
+  - 20 §5 표는 012 트렌딩·검색 색인을 구독자로 적었지만, 012 plan은 구독하지 않는다(요청 때 공용 조건으로 거름 — 012 research R14)
 - 30일 정리·영구 정지 자동 정리는 이벤트를 내지 않는다(`MemberPurged` 없음)
 - **Rationale**: 20 §3-6, 44 §2·§3, W-5.
 - **Alternatives considered**: 트랜잭션 안에서 메일 — 외부 호출 금지.

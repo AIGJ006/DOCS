@@ -48,7 +48,7 @@ spec Implementation Notes와 원문(34·51·02)에서 정한 것은 "확정", �
   6. 400 `VALIDATION_FAILED` — 제목 100자·본문 100,000자·`currentTags` 10개 초과(`blog.post.*` 공유), 형식 오류
   7. 422 `CONTENT_TOO_SHORT` — 정리 후 100 코드 포인트 미만(`min-input-chars`). AI를 부르지 않는다
   8. 재사용 저장소(R8) — 맞으면 200 `cached: true`, 횟수 그대로
-  9. 429 `TOO_MANY_REQUESTS` `details = {kind: "AI_DAILY_LIMIT", resetAt}` — 하루 20회
+  9. 429 `AI_DAILY_LIMIT` `details = {resetAt}` — 하루 20회(003 `DAILY_UPLOAD_LIMIT`과 같은 규칙)
   10. 공급자 호출(R6) — 실패 503 `AI_UNAVAILABLE`(`FAILED`·`BUSY`)
 - 하루 횟수 `ai:tag:usage:{memberId}:{yyyyMMdd}`(한국 시간 날짜, TTL 2일):
   - 9에서 `INCR` → 결과가 20 초과면 `DECR` 후 429. 이렇게 자리를 먼저 잡아 동시에 여러 요청이 와도 20을 넘지 않는다.

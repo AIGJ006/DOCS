@@ -159,7 +159,7 @@ result   = [t for t in accepted if t not in current][: min(max-suggestions, max-
 
 ```text
 reserve(m):  n = INCR ai:tag:usage:{m}:{kstDate} ; if n == 1: EXPIRE 2d
-             if n > 20: DECR ; throw 429 {kind: AI_DAILY_LIMIT, resetAt: 다음 KST 0시}
+             if n > 20: DECR ; throw 429 AI_DAILY_LIMIT {resetAt: 다음 KST 0시}
 release(m):  DECR (실패·혼잡·형식 깨짐 — AI가 답을 주지 않은 경우)
 remaining:   max(0, 20 − GET)
 ```

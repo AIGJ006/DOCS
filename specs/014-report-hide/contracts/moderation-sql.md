@@ -57,7 +57,7 @@ SELECT id, target_type, snapshot_title, snapshot_content, target_author_id, stat
  LIMIT :size + 1;
 ```
 
-- 작성자 주소·처리 관리자 닉네임은 001 `MemberQueryService.handlesOf(ids)`·`nicknamesOf(ids)` 한 번씩. 처리됨 항목의 "지금 숨김인가"는 §6 `PostModerationService.hiddenOf(postIds)`·007 `CommentModerationService.hiddenOf(commentIds)` 한 번씩.
+- 작성자 주소·처리 관리자 닉네임은 007이 더한 `MemberQueryService.findDisplays(ids)` 한 번(작성자·관리자 번호를 합쳐서, 익명 처리된 회원은 handle null). 처리됨 항목의 "지금 숨김인가"는 §6 `PostModerationService.hiddenOf(postIds)`·007 `CommentModerationService.hiddenOf(commentIds)` 한 번씩.
 - 한 페이지 SQL: 목록 1 + 사유별 1 + 회원 1~2 + (처리됨) 숨김 여부 1~2.
 
 ## §3. 처리 (한 트랜잭션)
@@ -127,8 +127,7 @@ List<SuspensionRecord> history(long memberId, int limit);
 Optional<SuspensionRecord> findOpen(long memberId);              // 001 T106 그대로
 
 // account.application.MemberQueryService (001 소유, 추가만)
-Map<Long, String> handlesOf(Collection<Long> memberIds);        // 익명 처리된 회원은 빠짐
-Map<Long, String> nicknamesOf(Collection<Long> memberIds);
+// 묶음 조회는 007 findDisplays(Collection<Long>) → Map<Long, MemberDisplay> 재사용
 Optional<AdminMemberInfo> findAdminView(String handle);         // 소문자 정규화, 익명 처리면 empty
 ```
 

@@ -207,7 +207,7 @@ spec Implementation Notes와 원문(32·33·51)에서 정한 것은 "확정", �
   | `PostWentPublic`·`PostEdited`·`PostVisibilityChanged` | 검색은 V1 trigram 인덱스를 DB가 갱신. 트렌딩은 10분마다 다시 계산 |
   | `PostTrashed`·`PostRestored`·`PostPurged`·`ContentHidden`·`ContentUnhidden` | 트렌딩 읽기·검색·sitemap이 요청 때 공용 조건으로 거른다 |
   | `MemberWithdrawn`·`MemberRestored` | 같은 이유(공용 조건의 `m.withdrawn_at IS NULL`) |
-- 015 data-model 이벤트 표의 "012" 구독자 표시는 Tier B/C analyze에서 고친다.
+- 015 data-model 이벤트 표의 "012" 구독자 표시는 Tier B/C analyze에서 고쳤다(ANALYSIS-tier-bc).
 - **Rationale**: Clarifications Q2 근거("sitemap을 캐시하지 않으면 012가 구독할 사건이 거의 없다"), 헌법 V(이벤트 유실이 결과를 틀리게 하지 않음).
 
 ## R15. 화면 (확정 + 제안)

@@ -20,7 +20,7 @@
 | `createdAt` | Instant | |
 
 - 발행: 새 댓글 INSERT 성공 시. 10초 중복으로 기존 댓글을 돌려줄 때는 발행하지 않는다.
-- 구독: 011 알림(누가 어떤 알림을 받는지는 011 소관), 012 트렌딩(있으면).
+- 구독: 011 알림(누가 어떤 알림을 받는지는 011 소관). 012 트렌딩은 구독하지 않고 10분마다 다시 계산한다(012 research R14).
 
 ### 1-2. `CommentDeleted`
 
@@ -34,8 +34,8 @@
 | `deletedAt` | Instant | |
 
 - 발행: 본인 삭제 성공 시(자리로 남겨도 발행). 빈 자리 정리로 최상위 행이 함께 지워지면 그 최상위에 대해서도 한 번 더 발행한다.
-- 발행하지 않음: 글 완전 삭제의 CASCADE(006 `PostPurged`가 대신), 탈퇴 정리(015 `MemberPurged`가 대신), 숨김(014 `ContentHidden`).
-- 구독: 011 알림(그 댓글로 생긴 알림 삭제 — 행 DELETE면 FK CASCADE가 이미 지우므로 자리로 남긴 경우를 위해 필요).
+- 발행하지 않음: 글 완전 삭제의 CASCADE(006 `PostPurged`가 대신), 탈퇴 정리(015 order 20 `CommentWithdrawalPurgeStep` — 이벤트 없이 정리하고, 알림은 order 70·대기 신고는 order 80 단계가 각자 지운다, 015 contracts/purge-steps.md §2), 숨김(014 `ContentHidden`).
+- 구독: 011 알림(그 댓글로 생긴 알림 삭제 — 행 DELETE면 FK CASCADE가 이미 지우므로 자리로 남긴 경우를 위해 필요), 014 신고(`OrphanCaseCloser` — 그 댓글의 대기 사건을 "대상 없음"으로 종료, 014 contracts/moderation-sql.md §5).
 
 수정은 이벤트가 없다(FR-040).
 

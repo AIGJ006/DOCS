@@ -7,7 +7,7 @@ info:
 
     공통 규칙
     - 현재 사용자는 세션에서만 꺼낸다. 상태를 바꾸는 요청은 `X-XSRF-TOKEN` 헤더(001), 없거나 틀리면 403 CSRF_REJECTED.
-    - 추천 판정 순서(research R4): 401 LOGIN_REQUIRED → 403 계정 상태(CONTENT_WRITE) → 404 내 글 아님 → 503 AI_UNAVAILABLE(DISABLED) → 409 AI_CONSENT_REQUIRED → 400 VALIDATION_FAILED → 422 CONTENT_TOO_SHORT → 재사용 저장소 → 429 TOO_MANY_REQUESTS(맨 끝) → 공급자.
+    - 추천 판정 순서(research R4): 401 LOGIN_REQUIRED → 403 계정 상태(CONTENT_WRITE) → 404 내 글 아님 → 503 AI_UNAVAILABLE(DISABLED) → 409 AI_CONSENT_REQUIRED → 400 VALIDATION_FAILED → 422 CONTENT_TOO_SHORT → 재사용 저장소 → 429 AI_DAILY_LIMIT(맨 끝) → 공급자.
     - 남의 글·없는 글·휴지통 글·숫자가 아닌 번호는 모두 같은 404 본문이다(34 §9의 403 대신 02 §5).
     - 서버는 태그를 저장하지 않는다. 추천 칩을 누르면 화면의 태그 입력에만 더해지고, 태그는 발행 때 002·008 규칙으로 확정된다.
     - 오류 본문은 공통 형식 {code, message, errors, details}. errors는 항상 배열, 메시지 끝에 마침표 없음.
@@ -87,13 +87,13 @@ paths:
               schema: { $ref: '#/components/schemas/ErrorResponse' }
               example: { code: CONTENT_TOO_SHORT, message: 글을 조금 더 쓴 뒤 추천받아 보세요, errors: [], details: { minChars: 100, length: 42 } }
         '429':
-          description: 하루 20회를 다 씀. 코드는 TOO_MANY_REQUESTS 하나이고 종류는 details.kind로 구분한다(팀 확인 T003)
+          description: 하루 20회를 다 씀. 003 DAILY_UPLOAD_LIMIT과 같은 방식으로 하루 한도는 별도 코드(1분·1시간 빈도 제한만 TOO_MANY_REQUESTS — ANALYSIS-tier-bc)
           headers:
             Retry-After: { $ref: '#/components/headers/RetryAfter' }
           content:
             application/json:
               schema: { $ref: '#/components/schemas/ErrorResponse' }
-              example: { code: TOO_MANY_REQUESTS, message: 오늘 추천을 모두 썼어요. 내일 다시 써 보세요, errors: [], details: { kind: AI_DAILY_LIMIT, resetAt: '2026-10-08T15:00:00Z' } }
+              example: { code: AI_DAILY_LIMIT, message: 오늘 추천을 모두 썼어요. 내일 다시 써 보세요, errors: [], details: { resetAt: '2026-10-08T15:00:00Z' } }
         '503': { $ref: '#/components/responses/AiUnavailable' }
 
   /api/posts/{postId}/tag-suggestions/status:
@@ -257,14 +257,6 @@ components:
         application/json:
           schema: { $ref: '#/components/schemas/ErrorResponse' }
           example: { code: NOT_FOUND, message: 볼 수 없는 페이지예요, errors: [], details: null }
-    TooManyRequests:
-      description: 요청 과다. 판정 순서의 맨 끝(007 Q2). 코드는 `TOO_MANY_REQUESTS` 하나(007 Q3).
-      headers:
-        Retry-After: { $ref: '#/components/headers/RetryAfter' }
-      content:
-        application/json:
-          schema: { $ref: '#/components/schemas/ErrorResponse' }
-          example: { code: TOO_MANY_REQUESTS, message: 잠시 후 다시 시도해 주세요, errors: [], details: null }
     AiUnavailable:
       description: |
         추천할 수 없음. details.reason = DISABLED(기능 꺼짐) · FAILED(공급자 시간 초과·서버 오류·형식 깨짐, 비공개 글인데 자체 AI 없음) · BUSY(자체 AI 동시 처리 초과) · STORE_UNAVAILABLE(Redis 장애).

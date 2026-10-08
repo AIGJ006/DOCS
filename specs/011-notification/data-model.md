@@ -149,7 +149,7 @@ public record NotificationSettings(boolean COMMENT, boolean REPLY, boolean LIKE,
 |---|---|---|
 | `retention` | `90d` | 정리 ① |
 | `max-per-member` | `1000` | 정리 ② |
-| `cleanup.cron` / `cleanup.zone` | `0 30 4 * * *` / `Asia/Seoul` | `NotificationCleanupJob` |
+| `cleanup.cron` | `0 30 4 * * *` (시간대는 공통 `blog.time-zone` — Tier A R11) | `NotificationCleanupJob` |
 | `cleanup.batch-size` | `1000` | 정리 ① 한 번에 지우는 수 |
 | `cleanup.recent-window` | `1d` | 정리 ② 대상 고르기 |
 | `follow-dedup-window` | `7d` | FOLLOW 중복 판정 |

@@ -232,7 +232,7 @@ description: "Task list for 011-notification (도메인 이벤트·인앱 알림
 
 ### Implementation for User Story 7
 
-- [ ] T054 [US7] `B/notification/application/NotificationCleanupJob.java`(`@Scheduled(cron, zone)` + `@SchedulerLock(name = "notificationCleanup", lockAtMostFor = "PT1H")`, ① 90일 묶음 반복 ② 1,000개 — contracts §10, 단계마다 `TransactionTemplate`)과 `NotificationRepository.deleteOlderThan`·`trimPerMember` (T052 통과)
+- [ ] T054 [US7] `B/notification/application/NotificationCleanupJob.java`(`@Scheduled(cron = "${blog.notification.cleanup.cron}", zone = "${blog.time-zone}")` + `@SchedulerLock(name = "notificationCleanup", lockAtMostFor = "PT1H")`, ① 90일 묶음 반복 ② 1,000개 — contracts §10, 단계마다 `TransactionTemplate`)과 `NotificationRepository.deleteOlderThan`·`trimPerMember` (T052 통과)
 - [ ] T055 [US7] (015가 아직 없으면) `B/shared/application/withdraw/WithdrawalPurgeStep.java`(`int order(); void purge(long memberId);`, 015 contracts/purge-steps.md §1 — 015 tasks T009와 같은 파일, 먼저 하는 쪽이 만듦)
 - [ ] T056 [US7] `B/notification/application/NotificationWithdrawalPurgeStep.java`(`order() = 70`, `@Transactional(propagation = MANDATORY)`, contracts §11 ①~④ — ②의 네 문장은 따로 실행)와 `NotificationRepository`의 탈퇴 정리 메서드 (T053 통과, T055 다음)
 - [ ] T057 [US7] 015 `required-orders` 기본값에 70이 있는지 확인하고(015 research R16), 없으면 015 담당에게 알린다. `NotificationWithdrawalPurgeStep`이 Bean으로 등록되는지 `WithdrawalPurgeStep` 목록 테스트(015 `WithdrawPurgeJob` 테스트가 있으면 거기에) 1개

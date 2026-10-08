@@ -91,7 +91,7 @@
 - 새로 확인한 점:
   1. spec Implementation Notes의 응답 `snippetHtml`은 화면이 HTML 문자열을 그대로 넣어야 해서 헌법 IV와 부딪힌다. `snippet {text, marks}`로 바꿨다(R9). 결과 표시와 FR-034 기준은 같다.
   2. 트렌딩 410의 코드 `SNAPSHOT_EXPIRED`와 검색어 부족 400 `SEARCH_QUERY_TOO_SHORT`는 원문에 없는 새 코드다(제안 — 팀 확인 T003).
-  3. 015 data-model §이벤트 표는 `MemberWithdrawn`·`MemberRestored`의 구독자로 012를 적었지만, 이 계획은 구독하지 않는다(요청 때 공용 조건으로 거름). Tier B/C analyze에서 015 문서를 고친다.
+  3. 015 data-model §이벤트 표는 `MemberWithdrawn`·`MemberRestored`의 구독자로 012를 적었지만, 이 계획은 구독하지 않는다(요청 때 공용 조건으로 거름). Tier B/C analyze에서 015 문서를 고쳤다.
   4. 009가 아직이면 `VisitorKeyResolver`가 없다. 검색 요청 제한은 009 머지 후 붙인다. 그 전에는 제한 없이 통과한다(Redis 장애 때와 같은 동작, R12).
   5. 트렌딩 탭은 005 `HomePage`를 고친다. 홈 목록 커서·복원 키(`home`)와 섞이지 않게 트렌딩은 `trending` 키를 쓴다.
 

@@ -120,11 +120,12 @@ public record AiConsentView(
 |---|---|---|---|---|
 | `AI_CONSENT_REQUIRED` | 409 | AI 태그 추천을 쓰려면 동의가 필요해요 | `{version}` 현재 버전 | 동의 행 없음·버전 다름 |
 | `CONTENT_TOO_SHORT` | 422 | 글을 조금 더 쓴 뒤 추천받아 보세요 | `{minChars, length}` | 정리 후 100 코드 포인트 미만 |
+| `AI_DAILY_LIMIT` | 429 | 오늘 추천을 모두 썼어요. 내일 다시 써 보세요 | `{resetAt}` 다음 KST 0시, `Retry-After` = 그때까지 초 | 오늘 20회를 다 씀 |
 | `AI_UNAVAILABLE` | 503 | 지금은 추천할 수 없어요 / 잠시 후 다시 시도해 주세요(`BUSY`) | `{reason}` = `DISABLED`·`FAILED`·`BUSY`·`STORE_UNAVAILABLE` | 기능 꺼짐·공급자 실패·자체 AI 혼잡·Redis 장애 |
 
-공통(재사용): 401 `LOGIN_REQUIRED`, 403 `EMAIL_NOT_VERIFIED`·`ACCOUNT_SUSPENDED`·`ACCOUNT_WITHDRAWN`·`CSRF_REJECTED`, 404 `NOT_FOUND`(고정 본문), 400 `VALIDATION_FAILED`(칸 오류 — 동의 버전 불일치는 001 `AGREEMENT_VERSION_MISMATCH`를 `errors[].code`로), 429 `TOO_MANY_REQUESTS` `details = {kind: "AI_DAILY_LIMIT", resetAt}`(하루 20회 — 메시지 "오늘 추천을 모두 썼어요. 내일 다시 써 보세요", `Retry-After` = `resetAt`까지 초).
+공통(재사용): 401 `LOGIN_REQUIRED`, 403 `EMAIL_NOT_VERIFIED`·`ACCOUNT_SUSPENDED`·`ACCOUNT_WITHDRAWN`·`CSRF_REJECTED`, 404 `NOT_FOUND`(고정 본문), 400 `VALIDATION_FAILED`(칸 오류 — 동의 버전 불일치는 001 `AGREEMENT_VERSION_MISMATCH`를 `errors[].code`로). 이 기능에는 1분·1시간 빈도 제한이 없어 `TOO_MANY_REQUESTS`를 쓰지 않는다.
 
-spec Implementation Notes의 429 `AI_DAILY_LIMIT` 코드는 쓰지 않는다(plan 설계 후 확인 1, 팀 확인 T003).
+하루 한도는 spec Implementation Notes대로 429 `AI_DAILY_LIMIT`이다. 003 `DAILY_UPLOAD_LIMIT`(민서 확정 2026-10-08)과 같은 규칙 — 빈도 제한은 `TOO_MANY_REQUESTS`, 하루 한도처럼 뜻이 다른 것은 별도 코드(ANALYSIS-tier-bc에서 맞춤).
 
 ## 6. 설정값
 

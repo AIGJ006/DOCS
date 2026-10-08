@@ -72,7 +72,7 @@
 | 원칙 | 판정 | 근거 |
 |---|---|---|
 | I. 공통 기반은 바꾸지 않고, 개인 확장은 추가만 | **PASS** | V1 알림 테이블 3개 그대로. 친구 알림은 적용자가 자기 마이그레이션으로 CHECK를 넓힌다(03 E-10) |
-| II. 모듈러 모놀리스, 모듈 경계 | **PASS (예외 2건 — Complexity Tracking)** | 알림 테이블은 notification만 쓴다. 처리 시점 확인은 공개 Service로만. 예외: 목록 SQL이 `member`·`image`·`post`·`comment`를, 새 글 일괄 저장이 `follow`·`member`를 읽기 전용으로 읽는다. 새 모듈 `notification`은 헌법 II 모듈 목록에 없다(006 `moderation`과 같은 상황 — 팀 확인 T003) |
+| II. 모듈러 모놀리스, 모듈 경계 | **PASS (예외 2건 — Complexity Tracking)** | 알림 테이블은 notification만 쓴다. 처리 시점 확인은 공개 Service로만. 예외: 목록 SQL이 `member`·`image`·`post`·`comment`를, 새 글 일괄 저장이 `follow`·`member`를 읽기 전용으로 읽는다. 새 모듈 `notification`은 헌법 II 모듈 목록에 없다(014 `moderation`과 같은 상황 — 006이 임시로 만든 패키지를 014가 넘겨받음, 팀 확인 T003) |
 | III. 권한 두 겹, 404 (NON-NEGOTIABLE) | **PASS** | 모든 SQL에 `receiver_id = :me`(세션 회원). 남의 번호·없는 번호·숫자가 아닌 번호는 같은 404. 관리자 예외 없음. 권한 매트릭스 `notification.csv`(R15) |
 | IV. 사용자 콘텐츠는 실행되지 않는다 | **PASS** | 닉네임·제목·댓글 미리보기는 텍스트 노드로만. 미리보기는 서버가 앞 50자를 잘라 주고 화면은 마크다운으로 해석하지 않는다 |
 | V. 부가 기능 실패가 쓰기·읽기를 막지 않는다 | **PASS** | 알림은 커밋 뒤 비동기·별도 트랜잭션·예외 삼킴. 대기열 초과는 버리고 WARN. 안 읽은 수 확인 실패는 화면이 조용히 넘어간다 |
@@ -89,7 +89,7 @@
   1. spec Implementation Notes의 `PATCH /api/notifications/{id}/read`는 clarify 011 "이미 정해진 것"대로 `PUT`으로 바꿨다(멱등 — 이미 읽음이어도 204).
   2. 리스너 메서드에 `@Transactional(REQUIRES_NEW)`를 직접 붙이면 예외를 잡는 위치가 트랜잭션 안이 되어 일부만 저장될 수 있다. 리스너(예외 잡기)와 `NotificationWriter`(트랜잭션)를 나눈다. 결과는 Implementation Notes와 같다(R3).
   3. 007 `CommentCreated`의 `replyToMemberId`는 "내 답글에 다시 단 답글"이면 NULL이라, 이 경우 최상위 작성자가 답글 알림을 받는다. spec US1 #2의 "답글에 답한 경우 최상위 작성자는 받지 않는다"와 이 한 경우만 다르다(R6, 팀 확인 T004).
-  4. 007 contracts/events.md의 "탈퇴 정리(015 `MemberPurged`가 대신)"는 015에 `MemberPurged`가 없어 틀린 문장이다. 탈퇴 정리 때 알림은 이 기능의 order 70 단계가 지운다(Tier B/C analyze에서 007 문서를 고친다).
+  4. 007 contracts/events.md의 "탈퇴 정리(015 `MemberPurged`가 대신)"는 015에 `MemberPurged`가 없어 틀린 문장이다. 탈퇴 정리 때 알림은 이 기능의 order 70 단계가 지운다(Tier B/C analyze에서 007 문서를 고쳤다 — ANALYSIS-tier-bc).
   5. 015가 아직 없으면 `WithdrawalPurgeStep` 인터페이스(015 tasks T009)를 이 기능이 먼저 만든다.
   6. 014가 없으면 US5(신고 결과·숨김 알림)는 이벤트가 오지 않아 테스트할 수 없다. 리스너와 표시는 만들고 통합 테스트는 이벤트를 직접 발행해 확인한다.
 

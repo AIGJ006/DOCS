@@ -15,7 +15,7 @@
 - **스키마 변경 없음.** 동의는 V1 `member_agreement (member_id, type='AI', version, agreed_at)`(PK `(member_id, type)`), 철회는 행 삭제. 재사용 저장·횟수·공급자 상태는 테이블 없이 Redis(R1).
 - **모듈.** 추천은 `tag` 모듈 `tag.application.suggest`(정규화·인기 태그와 같은 곳), 외부 연결은 `tag.infra.ai`. AI 동의 기록은 테이블 주인인 `account`에 공개 Service `AiConsentService`를 더한다. 글 주인·공개 범위는 post 공개 조회 `PostOwnershipQuery.findOwned(postId, me)`로만 읽는다(R2).
 - **API.** `POST /api/posts/{postId}/tag-suggestions` `{title, contentMd, currentTags, refresh}` → `{tags, provider, cached, truncated, remainingToday}`. 화면이 버튼 표시·남은 횟수·"자체 AI로 추천 중" 문구를 미리 정하도록 `GET /api/posts/{postId}/tag-suggestions/status` → `{available, consentRequired, consentVersion, provider, remainingToday}`를 더한다. 동의는 `GET`·`PUT`·`DELETE /api/me/agreements/ai`(`{agreed, version, currentVersion, agreedAt}`, R3·R10·R13). 설정 화면은 `GET`으로 동의 상태를 그린다.
-- **판정 순서.** 401 → 403(`AccountStatusGuard` `CONTENT_WRITE` — 인증 전 `EMAIL_NOT_VERIFIED`) → 404(내 글 아님·없음·휴지통) → 503 `AI_UNAVAILABLE`(기능 꺼짐) → 409 `AI_CONSENT_REQUIRED` → 400 `VALIDATION_FAILED`(본문 형식) → 422 `CONTENT_TOO_SHORT`(정리 후 100자 미만) → 재사용 저장소 조회(맞으면 200, 횟수 그대로) → 429 `TOO_MANY_REQUESTS`(`details.kind = AI_DAILY_LIMIT`, 하루 20회) → 공급자 호출(R4).
+- **판정 순서.** 401 → 403(`AccountStatusGuard` `CONTENT_WRITE` — 인증 전 `EMAIL_NOT_VERIFIED`) → 404(내 글 아님·없음·휴지통) → 503 `AI_UNAVAILABLE`(기능 꺼짐) → 409 `AI_CONSENT_REQUIRED` → 400 `VALIDATION_FAILED`(본문 형식) → 422 `CONTENT_TOO_SHORT`(정리 후 100자 미만) → 재사용 저장소 조회(맞으면 200, 횟수 그대로) → 429 `AI_DAILY_LIMIT`(하루 20회) → 공급자 호출(R4).
 - **입력 정리 = commonmark AST.** 002가 쓰는 commonmark 파서로 문서를 읽고, 제목·강조·목록·인용 기호는 버리고 글자만, 이미지 통째로 제거, 링크는 글자만, 코드 블록은 언어 이름 + 앞 5줄, 공백·줄바꿈 하나로, NFC. 대소문자는 그대로(R5).
 - **공급자 라우터.** `TagSuggesterRouter`가 글 공개 범위(PUBLIC이 아니면 자체 AI만)·Redis 상태(`ai:gemini:count:{날짜}`·`exhausted`·`cooldown`·`unknown-429`)로 Gemini/Ollama를 고른다. Gemini 429 → 같은 요청을 Ollama로, 시간 초과·5xx → 60초 중단 + 이번 요청 503. Ollama 동시 처리는 Redis 카운터(기본 1)로 막고 넘치면 503(`details.reason = BUSY`, "잠시 후 다시 시도해 주세요"). 두 클라이언트는 Spring `RestClient`, 출력은 JSON 스키마 `{tags: [string]}`(Gemini `responseSchema`, Ollama `format`)(R6·R7).
 - **재사용 저장소.** 같은 내용 `ai:tag:v{prompt-version}:{SHA-256(정리된 입력 전체)}` 30일(사용자 공유), 같은 글 비슷한 내용 `ai:tag:post:{postId}`(지난 입력 앞 8,000자 + 추천, 3-gram Jaccard ≥ 0.9) 7일. 이미 붙인 태그·인기 태그는 열쇠에 넣지 않고 응답 때마다 빼서 남은 자리만큼 자른다. 실패·빈 결과·모두 걸러진 결과는 저장하지 않는다. [다시 추천]은 비슷한 내용을 건너뛰고, 같은 내용 결과가 자체 AI 것이고 지금 외부 AI를 쓸 수 있으면 다시 만든다(R8).
@@ -87,7 +87,7 @@
 
 - data-model·contracts를 만든 뒤에도 새 위반은 없다.
 - 새로 확인한 점:
-  1. spec Implementation Notes의 429 `AI_DAILY_LIMIT`는 2026-10-08 확정 "429 코드는 `TOO_MANY_REQUESTS` 하나"(007 Q3)와 부딪힌다. 429 `TOO_MANY_REQUESTS` + `details.kind = "AI_DAILY_LIMIT"`·`resetAt`으로 바꾸고 메시지만 "오늘 추천을 모두 썼어요. 내일 다시 써 보세요"로 둔다(팀 확인 T003).
+  1. spec Implementation Notes의 429 `AI_DAILY_LIMIT`는 그대로 쓴다. 007 Q3 "429 코드는 `TOO_MANY_REQUESTS` 하나"는 빈도 제한 규칙이고, 하루 한도는 003 Q(민서 확정 2026-10-08)가 `DAILY_UPLOAD_LIMIT` 별도 코드로 정했다. 같은 규칙으로 `AI_DAILY_LIMIT` + `details {resetAt}`, 메시지 "오늘 추천을 모두 썼어요. 내일 다시 써 보세요"(처음 계획의 `TOO_MANY_REQUESTS` + `details.kind`는 ANALYSIS-tier-bc에서 바꿈).
   2. 503 `AI_UNAVAILABLE`은 원인이 넷(꺼짐·두 공급자 실패·자체 AI 혼잡·저장소 장애)이고 화면 문구가 둘로 갈린다. `details.reason`(`DISABLED`·`FAILED`·`BUSY`·`STORE_UNAVAILABLE`)으로 구분한다.
   3. 002 `RedisGuard`는 Redis 메모리 부족이면 503 `AUTOSAVE_UNAVAILABLE`을 던진다(Tier B 공통 문제 — ANALYSIS-tier-bc). 이 기능은 그 예외를 잡아 `AI_UNAVAILABLE`로 바꾼다.
   4. 화면이 "자체 AI로 추천 중" 문구와 버튼 숨김·남은 횟수를 미리 알아야 해서 원문에 없는 상태 API를 더했다(R3).
@@ -127,7 +127,7 @@ backend/src/main/java/com/team/blog/
 │   │   ├── ProviderState.java                    # ai:gemini:* · ai:ollama:inflight
 │   │   ├── TagSuggester.java                     # interface: SuggestOutcome suggest(TagSuggestInput)
 │   │   ├── TagSuggestInput.java / SuggestOutcome.java / Provider.java
-│   │   ├── TagSuggestReasonCode.java             # AI_CONSENT_REQUIRED·CONTENT_TOO_SHORT·AI_UNAVAILABLE
+│   │   ├── TagSuggestReasonCode.java             # AI_CONSENT_REQUIRED·CONTENT_TOO_SHORT·AI_DAILY_LIMIT·AI_UNAVAILABLE
 │   │   └── TagSuggestProperties.java             # blog.ai.tag-suggest.*
 │   └── infra/ai/
 │       ├── GeminiTagSuggester.java               # RestClient, responseSchema, 429 종류 해석

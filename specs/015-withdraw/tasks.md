@@ -35,13 +35,14 @@ description: "Task list for 015-withdraw (회원 탈퇴·복구)"
 **006 머지 후**
 
 - T050 `PostWithdrawalPurgeStep`(post 모듈, 006 `PostPurgeService` 호출)
+- `F/App.tsx`에 `/settings/withdraw`·`/withdrawn` 경로와 `RestoreGate`를 더하는 작업(T031·T039). 006이 같은 파일에 `/manage/posts` 경로를 더한다(ANALYSIS-tier-bc)
 - 006이 이미 만든 `ReportPostPurgeStep`(moderation)·`ImagePostPurgeStep`(media)과는 다른 확장점이라 파일이 겹치지 않는다
 
 **후속 (다른 스펙이 이 기능을 사용)**
 
 - 010-follow-feed: `FollowWithdrawalPurgeStep`(order 65), 유예 회원 팔로워·팔로잉 제외
 - 011-notification: `NotificationWithdrawalPurgeStep`(order 70), 유예 회원 관련 알림 생성 제외, `MemberWithdrawn`·`MemberRestored`는 구독하지 않음(20 §5)
-- 012-trending-search: `MemberWithdrawn`·`MemberRestored` 구독(캐시·색인 갱신)
+- 012-trending-search: 구독하지 않는다 — 트렌딩·검색·sitemap이 요청 때 공용 조건(`withdrawn_at IS NULL`)으로 유예 작성자를 거른다(012 research R14)
 - 014-report-hide: `ReportWithdrawalPurgeStep`(order 80), 유예 회원 정지 불가(FR-041)
 - 010·011·014가 015보다 먼저 구현되면 T009(`WithdrawalPurgeStep` 인터페이스)를 그 기능이 먼저 만든다 — 한 파일
 
@@ -126,7 +127,7 @@ description: "Task list for 015-withdraw (회원 탈퇴·복구)"
 - [ ] T028 [P] [US1] `F/features/auth/logout.ts`에 `clearLocalAccountData(memberId)`(등록된 `clearMemberDrafts`만 실행, ①전송·③로그아웃 요청 없음)를 더하고 `logout()`도 이것을 쓰게 한다 — 001 `logout.test.ts` 함께 실행
 - [ ] T029 [P] [US1] `F/features/withdraw/formatDeadline.ts`(KST 날짜·시각, 남은 날 올림 계산)·`F/features/withdraw/withdrawMessages.ts`(44 §2·§3 문구, 끝 마침표 없음) (T019 통과)
 - [ ] T030 [US1] `F/features/withdraw/WithdrawForm.tsx`와 `F/pages/WithdrawPage.tsx`(`/settings/withdraw`, 비로그인은 `/login?redirect=/settings/withdraw`): research R12 화면, 숫자·주소는 텍스트 노드로만, 빨간 [탈퇴하기] `autoFocus` 없음·폼 `onSubmit` 막음 (T019 통과)
-- [ ] T031 [US1] `F/pages/WithdrawnPage.tsx`(`/withdrawn`, `state` 없으면 기한 줄 생략) + `F/App.tsx`에 `/settings/withdraw`·`/withdrawn` 경로, 001 `F/pages/SettingsPage.tsx` 맨 아래 [회원 탈퇴] 링크(001 T122 자리 — 001 담당에게 알림)
+- [ ] T031 [US1] (**006 머지 후** — `App.tsx`) `F/pages/WithdrawnPage.tsx`(`/withdrawn`, `state` 없으면 기한 줄 생략) + `F/App.tsx`에 `/settings/withdraw`·`/withdrawn` 경로, 001 `F/pages/SettingsPage.tsx` 맨 아래 [회원 탈퇴] 링크(001 T122 자리 — 001 담당에게 알림)
 
 **Checkpoint**: 탈퇴 신청이 끝까지 동작한다(US1 단독 데모 가능)
 
@@ -150,7 +151,7 @@ description: "Task list for 015-withdraw (회원 탈퇴·복구)"
 - [ ] T036 [US2] `WithdrawalMailListener`에 `MemberRestored` → `R/mail/account-restored.txt`를 더하고 `WithdrawalMailIT`에 복구 메일 부분을 더한다
 - [ ] T037 [US2] 001 `B/account/application/SignupService.java`: `LOCAL` 로그인 수단이 있고 그 회원이 `status = WITHDRAWN AND deleted_at IS NULL`이면 email 칸 오류를 `EMAIL_WITHDRAWAL_PENDING`으로(research R13) — 001 가입 테스트 함께 실행
 - [ ] T038 [P] [US2] `F/pages/RestorePage.tsx`(`/account/restore`, `GET /api/me` 기반 두 상태, [복구하기] 뒤 `SessionProvider` 새로 고침·토스트)
-- [ ] T039 [US2] `F/features/withdraw/RestoreGate.tsx`와 `F/App.tsx` 연결(`SessionProvider` 아래, 허용 경로 목록은 research R12), 001 `F/pages/LoginPage.tsx`에서 `accountStatus === 'WITHDRAWN'`이면 `/account/restore`로 (T033 통과)
+- [ ] T039 [US2] (**006 머지 후** — `App.tsx`) `F/features/withdraw/RestoreGate.tsx`와 `F/App.tsx` 연결(`SessionProvider` 아래, 허용 경로 목록은 research R12), 001 `F/pages/LoginPage.tsx`에서 `accountStatus === 'WITHDRAWN'`이면 `/account/restore`로 (T033 통과)
 - [ ] T040 [P] [US2] `F/pages/SignupPage.tsx`: email 칸 `EMAIL_WITHDRAWAL_PENDING`이면 문구 + [로그인] 링크(001 `fieldErrors.ts` 매핑) — 001 `SignupPage.test.tsx`에 사례 추가
 - [ ] T041 [US2] 004 `useAuthGate`의 `ACCOUNT_WITHDRAWN` 이동 경로를 `/account/restore`로 맞춘다(ANALYSIS-tier-a R13). 004 화면 코드(T051)가 아직 없으면 004 tasks T051 설명의 `/restore`를 `/account/restore`로 고치는 문서 수정만 한다
 

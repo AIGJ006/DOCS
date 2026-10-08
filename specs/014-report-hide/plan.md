@@ -73,7 +73,7 @@
 | 원칙 | 판정 | 근거 |
 |---|---|---|
 | I. 공통 기반은 바꾸지 않고, 개인 확장은 추가만 | **PASS** | V1 표·제약 그대로. 회원 신고·이의 제기는 개인 확장(범위 밖) |
-| II. 모듈러 모놀리스, 모듈 경계 | **PASS (모듈 목록 확인 필요)** | 신고 표는 moderation만 쓴다. 글·댓글 숨김, 정지, 회원 정보는 각 모듈 공개 Service로만(R2). 목록의 작성자 주소는 001 `MemberQueryService.handlesOf`(새 메서드)로 묶어 읽는다. 새 모듈 `moderation`은 헌법 II 목록에 없다(011 `notification`과 같은 상황 — 팀 확인 T003) |
+| II. 모듈러 모놀리스, 모듈 경계 | **PASS (모듈 목록 확인 필요)** | 신고 표는 moderation만 쓴다. 글·댓글 숨김, 정지, 회원 정보는 각 모듈 공개 Service로만(R2). 목록의 작성자 주소·처리 관리자 닉네임은 007이 더한 `MemberQueryService.findDisplays`(ANALYSIS-tier-bc — 같은 일을 하는 새 메서드를 만들지 않음)로 묶어 읽는다. 새 모듈 `moderation`은 헌법 II 목록에 없다(011 `notification`과 같은 상황 — 팀 확인 T003) |
 | III. 권한 두 겹, 404 (NON-NEGOTIABLE) | **PASS** | 신고 대상 판정은 004 `PostReadService`·`PostAccessPolicy` 하나. 관리자 경로는 004 규칙(일반 회원 404). 관리자 API도 서비스에서 `role = ADMIN`을 다시 확인한다(두 번째 겹). 권한 매트릭스 `moderation.csv`(R13) |
 | IV. 사용자 콘텐츠는 실행되지 않는다 | **PASS** | 스냅샷은 원문(Markdown·댓글 글자)을 텍스트 노드로만 그린다 — 관리자 화면에서도 HTML로 렌더링하지 않는다. 신고 설명도 텍스트 |
 | V. 부가 기능 실패가 쓰기·읽기를 막지 않는다 | **PASS** | 신고 요청 제한은 Redis 장애 때 통과. 알림은 커밋 뒤 비동기(011). 정지의 세션 삭제 실패는 정지 자체를 되돌린다(정지 회원이 로그인 상태로 남지 않게 — R10) |
@@ -89,7 +89,7 @@
 - 새로 확인한 점:
   1. spec Implementation Notes는 `REPORT_DETAIL_REQUIRED`를 최상위 400 코드로 적었지만, 001·002가 칸 규칙을 `VALIDATION_FAILED`의 `errors[].code`로 내는 방식(`AGREEMENT_VERSION_MISMATCH`·`TOO_MANY_TAGS`)에 맞춰 칸 오류로 둔다. 자기 신고 `CANNOT_REPORT_OWN`은 업무 규칙이라 최상위 코드(팀 확인 T004).
   2. 새 이유 코드 7개(`CANNOT_REPORT_OWN`·`REPORT_ALREADY_HANDLED`·`CANNOT_MODERATE_OWN`·`CANNOT_HANDLE_OWN_REPORT`·`CANNOT_SUSPEND_ADMIN`·`CANNOT_SUSPEND_WITHDRAWN`·`ALREADY_SUSPENDED` — 원문은 앞 둘만)(팀 확인 T004).
-  3. 007이 댓글 행을 지우면(답글 없는 본인 삭제·빈 자리 정리) FK `ON DELETE SET NULL`로 대기 사건이 `post_id`·`comment_id` 모두 NULL인 채 `PENDING`으로 남는다. 007 `CommentDeleted` 구독과 매일 배치로 닫는다(R8). 007 contracts/events.md에 구독자 014를 더해야 한다(ANALYSIS-tier-bc).
+  3. 007이 댓글 행을 지우면(답글 없는 본인 삭제·빈 자리 정리) FK `ON DELETE SET NULL`로 대기 사건이 `post_id`·`comment_id` 모두 NULL인 채 `PENDING`으로 남는다. 007 `CommentDeleted` 구독과 매일 배치로 닫는다(R8). 007 contracts/events.md에 구독자 014를 더했다(ANALYSIS-tier-bc).
   4. 자리로 남긴 댓글(본인 삭제, `deleted_at` 있음)의 대기 사건도 "대상 없음"으로 닫는다고 정했다. 원문은 "완전히 지워지면"만 적었다(제안 — 내용이 이미 사라져 숨길 것이 없다).
   5. 정지 중 세션 삭제를 같은 트랜잭션에 넣어, Redis 장애면 정지를 하지 않고 503 `TEMPORARILY_UNAVAILABLE`을 준다. "Redis 장애는 통과"(헌법 V)와 반대 방향이지만, 정지는 보안 조치라 반쯤 된 상태를 남기지 않는다(R10).
   6. 005 `AuthorStatusBanner`의 `HIDDEN_NOTICE`는 사유 없는 문장이고 사유 자리(`hiddenReasonSlot`)가 문장 뒤에 붙는다. FR-022 문장("…숨겨진 글이에요 (사유: 스팸·광고). 다른 사람에게는…")을 만들려면 005 파일의 문장 조립을 고쳐야 한다(005 소유 파일 — T041).
@@ -139,7 +139,7 @@ backend/src/main/java/com/team/blog/
 ├── post/application/PostModerationService.java   # hide / unhide / snapshot / currentState (post 모듈 새 공개 Service)
 ├── interaction/application/CommentModerationService.java   # 007 소유 — snapshot 필드 맞춤만
 ├── account/application/SuspensionService.java    # 001 T106 시그니처 → suspend / lift 구현
-├── account/application/MemberQueryService.java   # + handlesOf(ids), findAdminView(handle) (001 소유, 추가만)
+├── account/application/MemberQueryService.java   # + findAdminView(handle) (001 소유, 추가만). 묶음 조회는 007 findDisplays 재사용
 └── shared/event/ReportResolved.java, ContentHidden.java, ContentUnhidden.java, MemberSuspended.java, ReportTargetType.java, ReportResult.java
 
 backend/src/main/resources/application.yml        # blog.moderation.*

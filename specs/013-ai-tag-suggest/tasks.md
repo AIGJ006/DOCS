@@ -38,7 +38,7 @@ description: "Task list for 013-ai-tag-suggest (AI 태그 추천)"
 
 **팀 결정 대기 (기본안으로 진행)**
 
-- 429 하루 한도를 `TOO_MANY_REQUESTS` + `details.kind = AI_DAILY_LIMIT`으로 바꾼 것, 503 `AI_UNAVAILABLE`의 `details.reason` 4종, 상태 API·동의 조회 API를 더한 것 — 확인 작업 T003
+- 503 `AI_UNAVAILABLE`의 `details.reason` 4종, 상태 API·동의 조회 API를 더한 것 — 확인 작업 T003
 - 개인정보 처리방침 문단(FR-011)을 넣고 처리방침 버전을 올리는 시점(올리면 모든 회원이 로그인 때 재동의) — 확인 작업 T004(009 처리방침 시점과 함께)
 - 배포 서버 메모리 2~4GB 추가와 Ollama 시간 다시 재기, Gemini 한도 초기화 시간대 — 확인 작업 T005
 
@@ -60,7 +60,7 @@ description: "Task list for 013-ai-tag-suggest (AI 태그 추천)"
 
 - [ ] T001 선행 확인: V1 `ck_member_agreement_type`에 `AI`, `B/account/infra/MemberAgreementRepository.java`의 `upsert`, `B/shared/infra/redis/RedisGuard.java`, `B/shared/web/SensitiveParamMasking.java`, `B/post/infra/PostEditRepository.java`, 008 `TagNormalizer`·`TagQueryService.top()`·`F/components/editor/TagInput.tsx`, commonmark GFM 확장(표·취소선)이 backend 의존성에 있는지 기록한다
 - [ ] T002 [P] 설정값: `B/tag/application/suggest/TagSuggestProperties.java`(`@ConfigurationProperties("blog.ai.tag-suggest")` + `@Validated`, 안쪽 `Cache`·`Popular`·`Gemini`·`Ollama`), `B/account/infra/AccountProperties.java`의 `Agreement`에 `ai(version, effectiveDate)` 추가(001 소유 파일, 추가만), `R/application.yml`에 research R15 기본값(`blog.ai` 블록은 끝에 추가), 테스트 `T/tag/unit/TagSuggestPropertiesBindingTest.java`(기본값, `api-key` 빈 값 허용, `num-thread` ≥ 1, `similarity-threshold` 0~1, `blog.agreement.ai.version` 기본값 `2026-10-08`)
-- [ ] T003 팀 확인 질문을 ANALYSIS-tier-bc "팀 결정" 항목으로 올린다: ① 429 하루 한도 = `TOO_MANY_REQUESTS` + `details {kind: AI_DAILY_LIMIT, resetAt}`(spec의 `AI_DAILY_LIMIT` 코드 대신) ② 503 `AI_UNAVAILABLE` `details.reason` 4종 ③ 원문에 없는 `GET …/tag-suggestions/status`·`GET /api/me/agreements/ai` 추가. 답이 오기 전에는 기본안으로 진행한다
+- [ ] T003 팀 확인 질문을 ANALYSIS-tier-bc "팀 결정" 항목으로 올린다: ① (해결됨 — 429 하루 한도는 003과 같은 규칙으로 `AI_DAILY_LIMIT` 별도 코드, ANALYSIS-tier-bc) ② 503 `AI_UNAVAILABLE` `details.reason` 4종 ③ 원문에 없는 `GET …/tag-suggestions/status`·`GET /api/me/agreements/ai` 추가. 답이 오기 전에는 기본안으로 진행한다
 - [ ] T004 팀 확인: 개인정보 처리방침에 "외부 AI 서비스(Google Gemini)로의 전송" 문단을 넣고 `BLOG_AGREEMENT_PRIVACY_VERSION`을 올리는 시점(009 처리방침 시점과 한 번에 올릴지). 답이 오기 전에는 문단 작업 T038을 하지 않는다
 - [ ] T005 배포 담당 확인: 배포 서버에 Ollama용 메모리 2~4GB 추가가 가능한지, 성능 코어 수(`num-thread`), Gemini 무료 등급 하루 한도 초기화 시간대(`quota-zone`)와 모델 이름. 결과를 `R/application.yml` 기본값 주석과 quickstart §0에 적는다
 
@@ -74,7 +74,7 @@ description: "Task list for 013-ai-tag-suggest (AI 태그 추천)"
 
 - [ ] T006 [P] 테스트 `T/post/integration/PostOwnershipQueryIT.java`: 내 공개·비공개·임시·관리자 숨김 글 → `OwnedPost(id, visibility)`, 남의 글·없는 글·휴지통 글 → 빈 값, SQL 1번
 - [ ] T007 `B/post/application/PostOwnershipQuery.java`(`findOwned(long postId, long memberId)` → `Optional<OwnedPost>`)와 `B/post/application/OwnedPost.java`, 조회는 `B/post/infra/PostEditRepository.java`에 `findOwnedVisibility` 추가(002 소유 파일, 추가만 — 조건은 `isOwned`와 같다)(T006 통과)
-- [ ] T008 [P] 값 객체·이유 코드(data-model §3·§5): `B/tag/application/suggest/`의 `Provider`, `TagSuggestRequest`, `CleanedInput`, `TagSuggestInput`, `SuggestOutcome`(`Success`·`QuotaExceeded`·`Failed`·`Busy`), `QuotaKind`, `FailureKind`, `CachedSuggestion`, `PostCachedSuggestion`, `TagSuggestReasonCode`(`AI_CONSENT_REQUIRED` 409·`CONTENT_TOO_SHORT` 422·`AI_UNAVAILABLE` 503), `AiUnavailableException(reason)`·`AiConsentRequiredException(version)`. 공통 오류 처리기가 `details`를 `{reason}`·`{version}`·`{minChars, length}`로 내보내는지 `T/tag/unit/TagSuggestErrorBodyTest.java`로 확인
+- [ ] T008 [P] 값 객체·이유 코드(data-model §3·§5): `B/tag/application/suggest/`의 `Provider`, `TagSuggestRequest`, `CleanedInput`, `TagSuggestInput`, `SuggestOutcome`(`Success`·`QuotaExceeded`·`Failed`·`Busy`), `QuotaKind`, `FailureKind`, `CachedSuggestion`, `PostCachedSuggestion`, `TagSuggestReasonCode`(`AI_CONSENT_REQUIRED` 409·`CONTENT_TOO_SHORT` 422·`AI_DAILY_LIMIT` 429·`AI_UNAVAILABLE` 503), `AiUnavailableException(reason)`·`AiConsentRequiredException(version)`. 공통 오류 처리기가 `details`를 `{reason}`·`{version}`·`{minChars, length}`로 내보내는지 `T/tag/unit/TagSuggestErrorBodyTest.java`로 확인
 - [ ] T009 [P] 테스트 `T/tag/unit/SuggestInputCleanerTest.java`: contracts/providers.md §1 표 전부, 코드 블록 6번째 줄부터 버림, NFC(조합형 한글), 연속 공백 하나, 대소문자 유지, 길이 = 코드 포인트(이모지 1)
 - [ ] T010 `B/tag/application/suggest/SuggestInputCleaner.java`(commonmark `Parser` + GFM 확장, `AbstractVisitor`)와 `CleanedInput.sha256()`·`truncate(maxChars)`(T009 통과)
 - [ ] T011 [P] 테스트 `T/tag/unit/TrigramSimilarityTest.java`: 같음 1.0, 오타 3개(2,000자) ≥ 0.9, 문단 하나 추가 < 0.9, 3자 미만 0, 서로게이트 쌍을 한 글자로
@@ -83,7 +83,7 @@ description: "Task list for 013-ai-tag-suggest (AI 태그 추천)"
 - [ ] T014 `B/tag/infra/ai/PromptBuilder.java`(contracts/providers.md §2)와 `B/tag/application/suggest/PopularTagProvider.java`(`ai:tag:popular:{오늘}` 1일, 없으면 `TagQueryService.top()` 앞 50개 이름, `RedisGuard.call`)(T013 통과)
 - [ ] T015 [P] `B/tag/application/suggest/TagSuggester.java`(interface: `provider()`, `suggest(TagSuggestInput)`)와 테스트 지원 `T/support/ai/FakeTagSuggester.java`(공급자별 Bean 대체, 응답 순서 지정, 받은 입력·호출 수 기록, 지연 흉내), `T/support/ai/FakeAiConfiguration.java`
 - [ ] T016 [P] 테스트 `T/tag/integration/DailyUsageIT.java`: 동시 25개 `reserve` → 20개 성공, `release` 뒤 다시 가능, 한국 시간 0시(`MutableClock`)에 새 키, TTL 2일, `remaining`
-- [ ] T017 `B/tag/application/suggest/DailyUsage.java`(contracts/providers.md §8, `INCR`/`DECR`, 초과면 `TOO_MANY_REQUESTS` `details {kind: AI_DAILY_LIMIT, resetAt}` + `Retry-After`)(T016 통과)
+- [ ] T017 `B/tag/application/suggest/DailyUsage.java`(contracts/providers.md §8, `INCR`/`DECR`, 초과면 429 `AI_DAILY_LIMIT` `details {resetAt}` + `Retry-After`)(T016 통과)
 - [ ] T018 [P] 테스트 `T/account/integration/AiConsentServiceIT.java`: 행 없음 → `consented = false`, 현재 버전 행 → true, 옛 버전 → false, `agree(현재)` → 행 1개(같은 PK 갱신), `agree(다른 버전)` → `VALIDATION_FAILED` `errors[0] {field: version, code: AGREEMENT_VERSION_MISMATCH}`, `revoke` 두 번 성공, TERMS·PRIVACY 행은 그대로
 - [ ] T019 `B/account/application/AiConsentService.java`(`currentVersion()`, `view(memberId)` → `AiConsentView`, `isConsented(memberId)`, `agree(memberId, version)`, `revoke(memberId)`)와 `B/account/infra/MemberAgreementRepository.java`에 `findByMemberIdAndType`·`deleteByMemberIdAndType` 추가(001 소유 파일, 추가만). 001 `AgreementService.REQUIRED`·`currentVersion(AI)`는 바꾸지 않는다(Clarifications Q2)(T018 통과)
 
@@ -102,7 +102,7 @@ description: "Task list for 013-ai-tag-suggest (AI 태그 추천)"
 > **NOTE: 테스트를 먼저 쓰고 실패를 확인한다**
 
 - [ ] T020 [P] [US1] 권한 매트릭스: `TR/permission/post-write.csv`에 owner `013` 행(research R14 표 — `tag-suggest.post`·`tag-suggest.status` × 7 행위자 × 내 공개·비공개·임시·휴지통·없는 글)과 하네스 행동 `T/tag/permission/TagSuggestAction.java`·`TagSuggestStatusAction.java`(동의 픽스처 + `FakeTagSuggester`), `T/tag/integration/TagSuggestPermissionMatrixIT.java` (006 머지 후)
-- [ ] T021 [P] [US1] 테스트 `T/tag/integration/TagSuggestApiIT.java`: US1 #1~#5 — 추천 5개 이하, 붙인 태그 8개면 2개, 10개면 AI 호출 0·`tags: []`·횟수 그대로, 이미 붙인 태그(대소문자·공백 차이 포함)·금칙어·형식 위반·중복 제거(SC-007), 응답 뒤 `post_tag` 변화 없음(SC-003), 422(정리 후 99자, AI 호출 0), 판정 순서(비회원 401 → 인증 전 403 `EMAIL_NOT_VERIFIED` → 남의 글·휴지통·`abc` 404 고정 본문 → 꺼짐 503 `DISABLED` → 동의 없음 409 → 제목 101자 400 → 422), 21번째 429 `TOO_MANY_REQUESTS` `details.kind = AI_DAILY_LIMIT` + `Retry-After`, 공급자 실패 요청은 횟수 그대로(Q4), 결과가 다 걸러진 요청은 횟수 1 차감, 비공개 글은 Gemini 가짜 호출 0(FR-030), 공급자에 넘긴 입력에 이메일·닉네임 없음(FR-012), 상태 API 세 모양(`available`·`consentRequired`·`provider`)
+- [ ] T021 [P] [US1] 테스트 `T/tag/integration/TagSuggestApiIT.java`: US1 #1~#5 — 추천 5개 이하, 붙인 태그 8개면 2개, 10개면 AI 호출 0·`tags: []`·횟수 그대로, 이미 붙인 태그(대소문자·공백 차이 포함)·금칙어·형식 위반·중복 제거(SC-007), 응답 뒤 `post_tag` 변화 없음(SC-003), 422(정리 후 99자, AI 호출 0), 판정 순서(비회원 401 → 인증 전 403 `EMAIL_NOT_VERIFIED` → 남의 글·휴지통·`abc` 404 고정 본문 → 꺼짐 503 `DISABLED` → 동의 없음 409 → 제목 101자 400 → 422), 21번째 429 `AI_DAILY_LIMIT` `details.resetAt` + `Retry-After`, 공급자 실패 요청은 횟수 그대로(Q4), 결과가 다 걸러진 요청은 횟수 1 차감, 비공개 글은 Gemini 가짜 호출 0(FR-030), 공급자에 넘긴 입력에 이메일·닉네임 없음(FR-012), 상태 API 세 모양(`available`·`consentRequired`·`provider`)
 - [ ] T022 [P] [US1] 테스트 `T/tag/infra/GeminiTagSuggesterTest.java`·`OllamaTagSuggesterTest.java`(`MockRestServiceServer`): contracts/providers.md §3·§4 요청 모양(`x-goog-api-key` 헤더, `responseSchema`·`format`, `num_thread`, `stream: false`, `maxOutputTokens`/`num_predict` 100), 성공 해석, 형식 깨짐(JSON 아님·문자열 아님·6개·candidates 없음) → `Failed(MALFORMED)`, 5xx·연결 실패 → `Failed`, 시간 초과(10초·30초 설정을 짧게) → `Failed(TIMEOUT)`
 - [ ] T023 [P] [US1] 화면 테스트 `F/features/ai-suggest/__tests__/AiTagSuggest.test.tsx`: `available = false`면 영역 없음, 칩 `(+ spring)` 클릭 → `onAdd('spring')` 호출·칩 사라짐·서버 요청 없음, "AI 제안이에요", `truncated` → "본문 앞부분을 보고 추천했어요 · AI 제안이에요", "오늘 남은 추천 N회", 요청 중 버튼 비활성 + "추천 중…", 예측 공급자 OLLAMA → "자체 AI로 추천 중이라 조금 걸려요", 태그 10개면 버튼 비활성 + "태그를 더 붙일 수 없어요", 문구 6종(422·빈 결과·503 `FAILED`/`DISABLED`/`STORE_UNAVAILABLE`·503 `BUSY`·429), 칩은 텍스트로만 렌더링
 

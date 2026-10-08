@@ -22,7 +22,7 @@ spec Implementation Notes·Clarifications와 원문(43·13·20·21·25·42·51)�
   - 글 숨김: post 모듈 새 공개 Service `post.application.PostModerationService` — `hide(postId, adminId, reason, now)`(이미 숨김이면 false, 멱등), `unhide(postId)`, `snapshot(postId)` → `PostSnapshot(id, authorId, title, contentHead)`, `currentState(postId)` → `TargetState`. 숨김은 글 행 `FOR UPDATE` 후 `hidden_*`만 바꾼다(카운터 변화 없음).
   - 댓글 숨김: 007 `CommentModerationService.hide/unhide/snapshot`(007 contracts/events.md §2-1). `snapshot`이 돌려줄 값을 이 기능이 정한다: `CommentSnapshot(commentId, postId, authorId, content, deleted, hidden, authorWithdrawn)` — 007과 맞추는 작업은 먼저 하는 쪽(T006).
   - 정지: 001 `SuspensionService`(001 T106이 `suspend`·`lift` 시그니처와 TODO를 둔다) — 이 기능이 구현을 채운다. 세션 삭제는 001 `SessionTerminator`.
-  - 회원 정보: 001 `MemberQueryService`에 `handlesOf(Collection<Long>)` → `Map<Long, String>`(목록의 작성자 주소)와 `findAdminView(handle)` → `AdminMemberInfo(id, handle, nickname, role, status, createdAt, withdrawnAt)`(익명 처리된 회원은 empty)를 더한다(001 소유 파일, 추가만).
+  - 회원 정보: 목록의 작성자 주소·관리자 닉네임은 007 T010이 더한 `MemberQueryService.findDisplays(Collection<Long>)` → `MemberDisplay(id, handle, nickname, withdrawn)`(익명 처리된 회원은 handle·nickname null)를 그대로 쓰고, 001 `MemberQueryService`에 `findAdminView(handle)` → `AdminMemberInfo(id, handle, nickname, role, status, createdAt, withdrawnAt)`(익명 처리된 회원은 empty)를 더한다(001 소유 파일, 추가만).
   - 대상 판정: 글은 004 `PostReadService.requireReadable(postId, viewer)`, 댓글은 그 댓글의 글을 같은 판정으로 + 댓글이 정상(삭제·숨김·작성자 탈퇴 유예 아님).
 - **Rationale**: 헌법 II, 006 research R11, 007 contracts/events.md §2, 001 tasks T106.
 - **Alternatives considered**: 숨김 SQL을 moderation이 직접 `UPDATE post` — 원칙 II 위반이고, 댓글 수 카운터(007)가 어긋난다.

@@ -187,7 +187,7 @@ description: "Task list for 003-image-upload (이미지 업로드)"
 ### Tests for User Story 4 ⚠️
 
 - [ ] T054 [P] [US4] `T/media/integration/ImagePresignIT.java`에 한도 경우를 더한다(T021 다음): `US4_1_용량초과_409` + `details`; `US4_2_동시10건_합계가_한도를_넘지_않음`(`ExecutorService` 10스레드, 성공 합계 ≤ 1GB, 500 없음, SC-004); `US4_3_하루_201번째_429_DAILY_UPLOAD_LIMIT` + `Retry-After`(다음 0시 KST까지), 날짜는 `Clock` 고정; 판정 순서 — 400 칸 오류가 409보다, 409가 429보다 먼저; 1분 제한(429 `TOO_MANY_REQUESTS`)에 걸리면 하루 장수가 늘지 않음; 실패한 complete 뒤에도 하루 장수 유지(FR-016); Redis 중지 중 하루 한도 통과
-- [ ] T055 [P] [US4] `T/media/integration/StorageUsageApiIT.java`: `GET /api/me/storage` → 내 TEMP·연결·연결 해제·PROFILE 합계, 남의 사진 제외(FR-014), `todayCount`, `limits`, `Cache-Control: private, no-store`, 비회원 401, 인증 전 회원 200(보기만), Redis 중지 시 `todayCount: null`
+- [ ] T055 [P] [US4] `T/media/integration/StorageUsageApiIT.java`: `GET /api/me/storage` → 내 TEMP·연결·연결 해제·PROFILE 합계, 남의 사진 제외(FR-014), 글을 휴지통·완전 삭제해도 정리 작업이 파일을 지우기 전까지 합계 그대로(FR-017), `todayCount`, `limits`, `Cache-Control: private, no-store`, 비회원 401, 인증 전 회원 200(보기만), Redis 중지 시 `todayCount: null`
 - [ ] T056 [P] [US4] `F/components/__tests__/StorageUsageBar.test.tsx`: "사진 저장 공간 312MB / 1GB" 글자·막대 비율·"지운 사진의 공간은 7일 뒤 돌아와요", 단위 표시(KB·MB·GB 한 자리), 불러오기 실패 시 막대 대신 "불러오지 못했어요"
 - [ ] T057 [P] [US4] `F/features/image-upload/__tests__/storageHint.test.ts`: 사용량 90% 초과면 "남은 공간 약 100MB", 이하면 안내 없음, 409·`DAILY_UPLOAD_LIMIT` 문구가 data-model §7과 같음
 

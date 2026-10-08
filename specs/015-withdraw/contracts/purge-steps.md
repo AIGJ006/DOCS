@@ -104,10 +104,10 @@ SELECT m.id FROM member m
 
 | 이벤트 | 발행 시점 | 필드 | 구독 |
 |---|---|---|---|
-| `MemberWithdrawn` | 신청 트랜잭션(세션 삭제 성공 뒤) | `memberId`, `withdrawnAt` | account `WithdrawalMailListener` → `mail/withdrawal-requested.txt`(이메일 있는 계정만), 012 |
-| `MemberRestored` | 복구 트랜잭션 | `memberId`, `restoredAt` | account `WithdrawalMailListener` → `mail/account-restored.txt`, 012 |
+| `MemberWithdrawn` | 신청 트랜잭션(세션 삭제 성공 뒤) | `memberId`, `withdrawnAt` | account `WithdrawalMailListener` → `mail/withdrawal-requested.txt`(이메일 있는 계정만) |
+| `MemberRestored` | 복구 트랜잭션 | `memberId`, `restoredAt` | account `WithdrawalMailListener` → `mail/account-restored.txt` |
 
-- 구독은 `@TransactionalEventListener(AFTER_COMMIT)` + `@Async`(메일은 `mailExecutor`, 012는 `eventExecutor`). 실패는 WARN만.
+- 구독은 `@TransactionalEventListener(AFTER_COMMIT)` + `@Async`(메일은 `mailExecutor`). 012는 구독하지 않는다(012 research R14 — 트렌딩·검색·sitemap이 요청 때 공용 조건으로 거름). 실패는 WARN만.
 - 메일 본문: 접수 "탈퇴 신청이 접수됐어요. {기한}까지 로그인하면 복구할 수 있어요. 본인이 신청하지 않았다면 로그인해서 복구하고 비밀번호를 바꿔 주세요" / 복구 "계정이 복구됐어요. 블로그와 글이 다시 보여요". 기한은 `blog.time-zone` 기준 "2026년 11월 7일 오후 3:20".
 - 정리 작업·영구 정지 자동 정리는 이벤트도 메일도 없다.
 

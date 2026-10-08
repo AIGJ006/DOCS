@@ -26,7 +26,7 @@ description: "Task list for 010-follow-feed (팔로우·팔로잉 피드)"
 
 **006 머지 후**
 
-- 없음. 006과 겹치는 파일이 없다(글 완전 삭제는 `follow`와 관계없음)
+- `F/App.tsx`에 `/feed`·팔로워·팔로잉 목록 경로를 더하는 작업(T029·T038). 006이 같은 파일에 `/manage/posts` 경로를 더한다(ANALYSIS-tier-bc). 그 밖에 겹치는 파일은 없다(글 완전 삭제는 `follow`와 관계없음)
 
 **후속 (다른 스펙이 이 기능을 사용)**
 
@@ -128,7 +128,7 @@ description: "Task list for 010-follow-feed (팔로우·팔로잉 피드)"
 
 - [ ] T027 [US2] `B/discovery/application/FeedQueryService.java`: `page(me, cursor)` → `PostListService.page(ListScope.feed(), CardFilter(followerId = me), cursor, Viewer.anonymous())` + 첫 페이지가 비었을 때만 `FollowQueryService.hasFollowing(me)`(interaction 공개 메서드를 더함) → `FeedPage`
 - [ ] T028 [US2] `B/discovery/web/FeedController.java`(`GET /api/feed`, `@LoginRequired`, `Cache-Control: private, no-cache` — 005 `CacheControlPolicy.NO_CACHE`) (T025 통과)
-- [ ] T029 [US2] `F/pages/FeedPage.tsx`(005 `PostCardGrid`·`LoadMoreButton`·`useCursorList({listKey: 'feed', restore: true})`)와 `F/App.tsx` `/feed` 경로, 001 `F/features/auth/SessionBar.tsx`에 로그인했을 때만 [피드] 링크(001 담당에게 알림) (T026 통과)
+- [ ] T029 [US2] (**006 머지 후** — `App.tsx`) `F/pages/FeedPage.tsx`(005 `PostCardGrid`·`LoadMoreButton`·`useCursorList({listKey: 'feed', restore: true})`)와 `F/App.tsx` `/feed` 경로, 001 `F/features/auth/SessionBar.tsx`에 로그인했을 때만 [피드] 링크(001 담당에게 알림) (T026 통과)
 
 **Checkpoint**: 팔로우와 피드가 모두 동작한다(US1 + US2 = 권장 MVP)
 
@@ -153,7 +153,7 @@ description: "Task list for 010-follow-feed (팔로우·팔로잉 피드)"
 - [ ] T035 [US3] `B/interaction/web/FollowListController.java`(`GET /api/members/{handle}/followers|following`, 로그인 불필요, `Cache-Control: private, no-cache`)
 - [ ] T036 [US3] 005 `B/discovery/web/PageShellController.java`에 `/@{handle}/followers`·`/@{handle}/following` 매핑을 블로그 셸과 같은 규칙으로 더한다(005 소유 파일 — 005 셸 테스트 함께 실행) (T032 통과)
 - [ ] T037 [P] [US3] `F/features/follow/FollowCounts.tsx`와 005 `F/pages/BlogPage.tsx` 머리말의 "공개 글 N" 줄 교체(팔로우 버튼 변화가 팔로워 수에 반영)
-- [ ] T038 [US3] `F/features/follow/FollowListItem.tsx`와 `F/pages/FollowListPage.tsx`(`mode: 'followers' | 'following'`, 005 `useCursorList`·`LoadMoreButton`, 복원 없음) + `F/App.tsx`에 `/:handle/followers`·`/:handle/following` 경로(`/:handle`보다 먼저) (T033 통과)
+- [ ] T038 [US3] (**006 머지 후** — `App.tsx`) `F/features/follow/FollowListItem.tsx`와 `F/pages/FollowListPage.tsx`(`mode: 'followers' | 'following'`, 005 `useCursorList`·`LoadMoreButton`, 복원 없음) + `F/App.tsx`에 `/:handle/followers`·`/:handle/following` 경로(`/:handle`보다 먼저) (T033 통과)
 
 **Checkpoint**: 수·목록까지 동작한다
 

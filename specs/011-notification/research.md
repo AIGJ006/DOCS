@@ -185,7 +185,7 @@ spec Implementation Notes와 원문(20·25·51)에서 정한 것은 "확정", �
 
 ## R13. 정리 작업 (확정 + 제안)
 
-- **Decision**: `NotificationCleanupJob` — `@Scheduled(cron = "${blog.notification.cleanup.cron}", zone = "${blog.notification.cleanup.zone}")`, 기본 `0 30 4 * * *` Asia/Seoul, `@SchedulerLock(name = "notificationCleanup", lockAtMostFor = "PT1H")`.
+- **Decision**: `NotificationCleanupJob` — `@Scheduled(cron = "${blog.notification.cleanup.cron}", zone = "${blog.time-zone}")`(Tier A R11 — 기능마다 시간대 키를 두지 않음), 기본 `0 30 4 * * *`, `@SchedulerLock(name = "notificationCleanup", lockAtMostFor = "PT1H")`.
   1. 90일: `DELETE FROM notification WHERE id IN (SELECT id FROM notification WHERE updated_at < :cutoff ORDER BY updated_at LIMIT :batch)` 를 0행이 될 때까지 반복(묶음마다 트랜잭션, `ix_notification_cleanup`).
   2. 1,000개: 최근 하루 알림을 받은 사람만 고른다.
      ```sql
@@ -272,8 +272,7 @@ blog:
     retention: 90d               # FR-037
     max-per-member: 1000
     cleanup:
-      cron: "0 30 4 * * *"
-      zone: Asia/Seoul
+      cron: "0 30 4 * * *"      # 시간대는 blog.time-zone
       batch-size: 1000
       recent-window: 1d          # 1,000개 정리 대상 고르기
     follow-dedup-window: 7d      # FR-014
