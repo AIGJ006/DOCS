@@ -21,6 +21,7 @@ import ResetPasswordPage from './pages/ResetPasswordPage';
 import SettingsPage from './pages/SettingsPage';
 import SignupPage from './pages/SignupPage';
 import SocialSignupPage from './pages/SocialSignupPage';
+import TagPage from './pages/TagPage';
 import TermsPage from './pages/TermsPage';
 import VerifyEmailPage from './pages/VerifyEmailPage';
 
@@ -114,6 +115,8 @@ export default function App() {
                 </AdminRouteGate>
               }
             />
+            {/* 008 태그 — `/:handle`보다 앞에 둔다. `:name`은 react-router가 디코드해 준다(`c%23` → `c#`) */}
+            <Route path="/tags/:name" element={<TagPage />} />
             {/* 005 글 상세 — react-router는 `/@:handle`처럼 구간 일부만 파라미터로 받지 못해 `@`는 화면이 떼어 낸다 */}
             <Route
               path="/:handle/posts/:postId"

@@ -15,8 +15,10 @@ import com.team.blog.shared.web.CacheControlPolicy;
 import com.team.blog.shared.web.NotFoundPageRenderer;
 import com.team.blog.shared.web.shell.LinkPreviewMeta;
 import com.team.blog.shared.web.shell.SpaShellRenderer;
+import com.team.blog.tag.application.TagQueryService;
 import jakarta.servlet.http.HttpServletRequest;
 import java.nio.charset.StandardCharsets;
+import java.util.Optional;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -24,6 +26,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.util.UriUtils;
 
 /**
  * 화면 주소의 첫 응답 (005 T038·T050, FR-026·FR-043, research R-25).
@@ -56,18 +59,53 @@ public class PageShellController {
     private final LinkPreviewMetaFactory metaFactory;
     private final SpaShellRenderer shell;
     private final NotFoundPageRenderer notFoundPage;
+    private final TagQueryService tagQueryService;
 
     public PageShellController(
             PostQueryService postQueryService,
             BlogQueryService blogQueryService,
             LinkPreviewMetaFactory metaFactory,
             SpaShellRenderer shell,
-            NotFoundPageRenderer notFoundPage) {
+            NotFoundPageRenderer notFoundPage,
+            TagQueryService tagQueryService) {
         this.postQueryService = postQueryService;
         this.blogQueryService = blogQueryService;
         this.metaFactory = metaFactory;
         this.shell = shell;
         this.notFoundPage = notFoundPage;
+        this.tagQueryService = tagQueryService;
+    }
+
+    /**
+     * 태그 페이지 주소의 첫 응답 (008 T035, contracts/normalization.md §4, research R13): ① 주소 값 정규화가 실패하면(형식
+     * 틀림·빈 값) 공통 404 화면 → ② 결과가 주소 값과 다르면 {@code 301 /tags/{encodePathSegment(결과)}}(쿼리 유지) → ③ 그
+     * 밖에는 글이 없어도 200 셸. 메타에 공개 글 수를 넣지 않는다 — 빈 태그와 비공개 전용 태그의 응답이 같아야 한다(SC-005).
+     */
+    @GetMapping("/tags/{name}")
+    public ResponseEntity<byte[]> tagShell(@PathVariable String name, HttpServletRequest request) {
+        Optional<String> normalized = tagQueryService.normalizeQuery(name);
+        if (normalized.isEmpty()) {
+            return notFoundPage.render();
+        }
+        String canonical = normalized.get();
+        if (!canonical.equals(name)) {
+            return movedPermanently("/tags/" + tagPathSegment(canonical), request);
+        }
+        return html(shell.render(metaFactory.forTag(canonical)), CacheControlPolicy.NO_CACHE);
+    }
+
+    /** 전체 태그 목록 주소 (008 T051). */
+    @GetMapping("/tags")
+    public ResponseEntity<byte[]> tagIndexShell() {
+        return html(shell.render(metaFactory.forTagIndex()), CacheControlPolicy.NO_CACHE);
+    }
+
+    /**
+     * 태그 이름 → 주소 경로 한 칸. 화면 {@code tagPath.ts}와 같은 모양({@code c#} → {@code c%23}, {@code c++}는 그대로,
+     * 한글은 UTF-8 퍼센트 인코딩)이 되도록 {@link UriUtils#encodePathSegment}를 쓴다.
+     */
+    static String tagPathSegment(String name) {
+        return UriUtils.encodePathSegment(name, StandardCharsets.UTF_8);
     }
 
     /**

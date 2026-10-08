@@ -191,6 +191,33 @@
   margin: 1rem 0 0;
 }
 
-.tag-page__header h1 {
+/* 태그 페이지·전체 태그 목록 화면 */
+.tag-page {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: var(--page-max-width, 72rem);
+  margin: 0 auto;
+  padding: 1.5rem 1rem;
+}
+
+.tag-page__header {
+  margin: 0 0 1.5rem;
+  min-width: 0;
+}
+
+.tag-page__title {
+  font-size: 1.25rem;
+  margin: 0;
   overflow-wrap: anywhere;
+}
+
+.tag-page__count {
+  margin: 0.25rem 0 0;
+  color: var(--color-text-muted, #555);
+}
+
+.tag-page__empty {
+  text-align: center;
+  padding: 3rem 1rem;
+  margin: 0;
 }
