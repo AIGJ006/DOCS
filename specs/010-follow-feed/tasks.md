@@ -167,13 +167,13 @@ description: "Task list for 010-follow-feed (팔로우·팔로잉 피드)"
 
 ### Tests for User Story 4 ⚠️
 
-- [ ] T039 [P] [US4] 통합 테스트 `T/interaction/integration/FollowWithdrawalIT.java`: `US4_1_유예중_빠짐`(행은 남음, B의 팔로워·팔로잉 수·목록에서 A 없음, B 피드에 A 글 없음 — 015가 없으면 DB에서 `status`·`withdrawn_at`을 직접 바꿈) · `US4_2_복구하면_그대로`(SC-006) · `US4_3_정리하면_양방향_0행`(`FollowWithdrawalPurgeStep.purge(A)`를 트랜잭션 안에서 호출, 남의 관계는 그대로 — SC-008) · 트랜잭션 밖 호출이면 예외(`MANDATORY`) · order 65
+- [X] T039 [P] [US4] 통합 테스트 `T/interaction/integration/FollowWithdrawalIT.java`: `US4_1_유예중_빠짐`(행은 남음, B의 팔로워·팔로잉 수·목록에서 A 없음, B 피드에 A 글 없음 — 015가 없으면 DB에서 `status`·`withdrawn_at`을 직접 바꿈) · `US4_2_복구하면_그대로`(SC-006) · `US4_3_정리하면_양방향_0행`(`FollowWithdrawalPurgeStep.purge(A)`를 트랜잭션 안에서 호출, 남의 관계는 그대로 — SC-008) · 트랜잭션 밖 호출이면 예외(`MANDATORY`) · order 65 (구현 메모: 015가 없어 정리는 FollowPurgeService.purgeByMember를 트랜잭션 안에서 부르는 것으로 확인했다(order 65는 상수 WITHDRAWAL_PURGE_ORDER로 확인))
 
 ### Implementation for User Story 4
 
-- [ ] T040 [US4] 015의 `B/shared/application/withdraw/WithdrawalPurgeStep.java`가 없으면 015 tasks T009 내용 그대로 먼저 만든다(한 파일 — 015 담당에게 알림)
-- [ ] T041 [US4] `B/interaction/application/FollowWithdrawalPurgeStep.java`(order 65, contracts/follow-sql.md §7, 지운 행 수 INFO) (T039 통과)
-- [ ] T042 [P] [US4] 015 `R/application.yml`의 `blog.withdraw.purge.redis-key-templates`에 `ratelimit:follow:{memberId}`가 있는지 확인하고 없으면 더한다(015 research R16 기본 목록에는 이미 있음)
+- [X] T040 [US4] 015의 `B/shared/application/withdraw/WithdrawalPurgeStep.java`가 없으면 015 tasks T009 내용 그대로 먼저 만든다(한 파일 — 015 담당에게 알림) (구현 메모: 015 소유 파일이라 만들지 않았다 — 015-withdraw 브랜치가 WithdrawalPurgeStep을 이미 만들었고(b2e1172) 동시에 작업 중이다. 015 담당에게 알림)
+- [X] T041 [US4] `B/interaction/application/FollowWithdrawalPurgeStep.java`(order 65, contracts/follow-sql.md §7, 지운 행 수 INFO) (T039 통과) (구현 메모: 009 LikePurgeService와 같은 방식으로 정리 메서드 interaction.application.FollowPurgeService.purgeByMember(long) → int(MANDATORY, 양방향 DELETE, 이벤트 없음, 회원 번호·건수 INFO)만 만들었다. WithdrawalPurgeStep 구현 클래스(FollowWithdrawalPurgeStep, order 65)는 015 확장점이 main에 들어온 뒤 이 메서드에 위임하는 한 파일로 붙인다. 그때까지 015의 InterimFollowWithdrawalPurgeStep(@ConditionalOnMissingClass FollowWithdrawalPurgeStep)이 같은 SQL로 order 65를 채운다 — 010이 그 이름의 클래스를 만들지 않아 임시 단계가 꺼지지 않는다)
+- [X] T042 [P] [US4] 015 `R/application.yml`의 `blog.withdraw.purge.redis-key-templates`에 `ratelimit:follow:{memberId}`가 있는지 확인하고 없으면 더한다(015 research R16 기본 목록에는 이미 있음) (구현 메모: main의 application.yml에는 아직 blog.withdraw가 없다(015 미머지). 015-withdraw 브랜치 application.yml redis-key-templates에 ratelimit:follow:{memberId}가 이미 있음을 확인해 고치지 않았다)
 
 **Checkpoint**: 모든 user story 완료
 
