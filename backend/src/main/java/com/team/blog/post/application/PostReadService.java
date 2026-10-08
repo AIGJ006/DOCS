@@ -48,6 +48,13 @@ public class PostReadService {
         return post;
     }
 
+    /**
+     * 읽기 판정 없이 그 글의 작성자 번호 (007 댓글 삭제 이벤트용 — 내 댓글은 글을 볼 수 없어도 지울 수 있다, 007 research R9). 없는 글은 빈 값.
+     */
+    public java.util.Optional<Long> findAuthorId(long postId) {
+        return posts.findPostView(postId).map(PostView::authorId);
+    }
+
     private static String reason(PostView post) {
         if (post.isDeleted()) {
             return "휴지통";
