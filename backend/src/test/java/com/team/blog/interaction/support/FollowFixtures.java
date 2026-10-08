@@ -4,7 +4,7 @@ import java.sql.Timestamp;
 import java.time.Instant;
 import org.springframework.jdbc.core.JdbcTemplate;
 
-/** 010 팔로우 시험 데이터 (테스트 전용). 서버 흐름 없이 {@code follow}·회원 상태를 SQL로 바로 바꾼다. */
+/** 팔로우(010) 시험 데이터 (테스트 전용). 서버 흐름 없이 {@code follow}·회원 상태를 SQL로 바로 바꾼다. */
 public final class FollowFixtures {
 
     private final JdbcTemplate jdbc;

@@ -11,7 +11,7 @@ import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
 
 /**
- * 010 팔로우 이벤트 수집기 (T013·T014). 커밋 후({@code AFTER_COMMIT}) 받은 {@link MemberFollowed}·{@link
+ * 팔로우(010) 이벤트 수집기 (T013·T014). 커밋 후({@code AFTER_COMMIT}) 받은 {@link MemberFollowed}·{@link
  * MemberUnfollowed}를 모은다 — 롤백된 이벤트는 들어오지 않는다. 테스트 소스의 {@code @Profile("test") @Component}라 새 컨텍스트를
  * 만들지 않는다(009 {@code LikeEventProbe}와 같은 방식). {@link #arm()} 전에는 아무것도 모으지 않는다.
  */

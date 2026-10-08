@@ -30,7 +30,7 @@ import org.springframework.stereotype.Repository;
  *
  * <p>member·image JOIN은 plan Complexity Tracking의 원칙 II 예외이므로 discovery 모듈에서 그 테이블을 읽는 곳은 이 클래스뿐이다.
  * 008 태그별 목록·블로그 태그 필터의 {@code post_tag} 조건({@code EXISTS}, {@link CardFilter#tagId()})도 같은 예외다(008
- * plan Complexity Tracking) — 카드 SQL 한 번에 커서·정렬을 그대로 쓰려고 같은 문장 안에 둔다. 010 팔로우 피드의 {@code follow}
+ * plan Complexity Tracking) — 카드 SQL 한 번에 커서·정렬을 그대로 쓰려고 같은 문장 안에 둔다. 팔로우 피드(010)의 {@code follow}
  * 조건({@code EXISTS}, {@link CardFilter#followerId()} — PK {@code (follower_id, followee_id)})도 같은
  * 예외다(010 plan Complexity Tracking).
  */
