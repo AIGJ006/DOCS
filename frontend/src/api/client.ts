@@ -74,9 +74,11 @@ export interface RequestOptions {
 type Method = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
 type UnauthorizedHandler = (error: ApiError) => void;
 type NotFoundHandler = (error: ApiError) => void;
+type ReagreementHandler = (error: ApiError) => void;
 
 const unauthorizedHandlers = new Set<UnauthorizedHandler>();
 const notFoundHandlers = new Set<NotFoundHandler>();
+const reagreementHandlers = new Set<ReagreementHandler>();
 let csrfPromise: Promise<void> | null = null;
 
 /** 401 응답 때 부를 콜백을 등록한다. 돌려받은 함수로 해제한다. */
@@ -95,6 +97,16 @@ export function onNotFound(handler: NotFoundHandler): () => void {
   notFoundHandlers.add(handler);
   return () => {
     notFoundHandlers.delete(handler);
+  };
+}
+
+/**
+ * 403 `REAGREEMENT_REQUIRED` 응답 때 부를 콜백을 등록한다(001 FR-012 — 재동의 화면으로 이동). 돌려받은 함수로 해제한다.
+ */
+export function onReagreementRequired(handler: ReagreementHandler): () => void {
+  reagreementHandlers.add(handler);
+  return () => {
+    reagreementHandlers.delete(handler);
   };
 }
 
@@ -122,6 +134,7 @@ export function resetClientForTests(): void {
   csrfPromise = null;
   unauthorizedHandlers.clear();
   notFoundHandlers.clear();
+  reagreementHandlers.clear();
 }
 
 export function apiGet<T>(path: string, options?: RequestOptions): Promise<T> {
@@ -234,6 +247,11 @@ async function request<T>(
     }
     if (error.status === 404 && error.code === 'NOT_FOUND' && options.notFoundScreen !== false) {
       for (const handler of [...notFoundHandlers]) {
+        handler(error);
+      }
+    }
+    if (error.status === 403 && error.code === 'REAGREEMENT_REQUIRED') {
+      for (const handler of [...reagreementHandlers]) {
         handler(error);
       }
     }

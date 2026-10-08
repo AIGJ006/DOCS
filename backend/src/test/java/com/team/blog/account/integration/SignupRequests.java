@@ -67,6 +67,17 @@ final class SignupRequests {
         }
     }
 
+    /** 현재 버전 약관·처리방침 동의 행 (픽스처는 동의 행을 만들지 않는다 — 없으면 재동의 대상). */
+    static void agreeCurrent(org.springframework.jdbc.core.JdbcTemplate jdbc, long memberId) {
+        for (String type : new String[] {"TERMS", "PRIVACY"}) {
+            jdbc.update(
+                    "INSERT INTO member_agreement (member_id, type, version) VALUES (?, ?, ?)",
+                    memberId,
+                    type,
+                    CURRENT_VERSION);
+        }
+    }
+
     /** 커밋 후 비동기로 보내는 메일이 {@code count}통이 될 때까지 기다린다(최대 5초). */
     static void awaitMailCount(CapturingMailSender mail, String email, int count) {
         Instant deadline = Instant.now().plus(Duration.ofSeconds(5));

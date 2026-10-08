@@ -61,7 +61,25 @@ public record AccountProperties(
     public record PasswordChange(@Min(1) int maxFailures, @NotNull Duration lockDuration) {}
 
     /** 07 §5, 11 §4-2: 소셜 가입 대기 보관 시간, 가입 마무리 화면에 허용하는 사진 호스트. */
-    public record Social(@NotNull Duration pendingTtl, @NotEmpty List<String> photoHosts) {}
+    public record Social(
+            @NotNull Duration pendingTtl,
+            @NotEmpty List<String> photoHosts,
+            ClientCredentials google,
+            ClientCredentials github) {}
+
+    /**
+     * 소셜 로그인 앱 키 (환경 변수 {@code GOOGLE_CLIENT_ID}·{@code GOOGLE_CLIENT_SECRET}·{@code
+     * GITHUB_CLIENT_*}, constitution IV). 비어 있으면 그 제공자는 등록하지 않고 로그인 화면 버튼도 숨긴다.
+     */
+    public record ClientCredentials(String clientId, String clientSecret) {
+
+        public boolean configured() {
+            return clientId != null
+                    && !clientId.isBlank()
+                    && clientSecret != null
+                    && !clientSecret.isBlank();
+        }
+    }
 
     /** 회원 프로필 규칙. */
     public record MemberRules(

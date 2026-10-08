@@ -56,6 +56,10 @@ public enum AccountReasonCode implements ReasonCode {
     INVALID_CREDENTIALS(HttpStatus.UNAUTHORIZED, "이메일 또는 비밀번호가 올바르지 않아요"),
     LOGIN_TEMPORARILY_LOCKED(HttpStatus.TOO_MANY_REQUESTS, "잠시 후 다시 시도해 주세요(약 15분)"),
     SOCIAL_SIGNUP_EXPIRED(HttpStatus.GONE, "소셜 로그인 정보가 만료됐어요. 다시 소셜 로그인해 주세요"),
+    /** 소셜 콜백 실패: state 불일치·제공자 오류 (제안). {@code GET /api/auth/social-login-error} 본문으로만 나간다. */
+    SOCIAL_LOGIN_FAILED(HttpStatus.UNAUTHORIZED, "소셜 로그인을 마치지 못했어요. 다시 시도해 주세요"),
+    /** Google 이메일 미확인({@code email_verified = false}) — Google은 확인된 이메일만 받는다 (FR-008, 제안). */
+    SOCIAL_EMAIL_NOT_VERIFIED(HttpStatus.FORBIDDEN, "이메일 확인을 마친 Google 계정으로만 가입할 수 있어요"),
 
     // ---- 프로필 (11 §3·§4)
     BIO_TOO_LONG(HttpStatus.BAD_REQUEST, "소개는 200자까지 쓸 수 있어요"),

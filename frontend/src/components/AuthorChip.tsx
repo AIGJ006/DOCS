@@ -36,7 +36,7 @@ export default function AuthorChip({ author, withHandle = false, size = 24 }: Au
           }}
         />
       ) : (
-        <DefaultAvatar size={size} />
+        <DefaultAvatar nickname={author.nickname} handle={author.handle} size={size} />
       )}
       <Link
         to={`/@${author.handle}`}

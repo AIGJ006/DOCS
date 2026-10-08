@@ -1,9 +1,11 @@
 import { lazy, Suspense, useEffect, useState } from 'react';
 import { Route, Routes, useLocation } from 'react-router-dom';
 import { onNotFound } from './api/client';
+import { ReagreementGate } from './features/auth/ReagreementGate';
 import { SessionProvider } from './features/auth/SessionProvider';
 import DetailDeleteButton from './features/manage-posts/DetailDeleteButton';
 import SessionBar from './features/auth/SessionBar';
+import ForgotPasswordPage from './pages/ForgotPasswordPage';
 import HomePage from './pages/HomePage';
 import LoginPage from './pages/LoginPage';
 import ManagePostsPage from './pages/ManagePostsPage';
@@ -14,7 +16,11 @@ import VisibilitySelect from './features/visibility/VisibilitySelect';
 import AdminRouteGate from './features/auth-gate/AdminRouteGate';
 import type { AuthorActionContext } from './features/post-detail/AuthorActions';
 import PrivacyPage from './pages/PrivacyPage';
+import ReagreementPage from './pages/ReagreementPage';
+import ResetPasswordPage from './pages/ResetPasswordPage';
+import SettingsPage from './pages/SettingsPage';
 import SignupPage from './pages/SignupPage';
+import SocialSignupPage from './pages/SocialSignupPage';
 import TermsPage from './pages/TermsPage';
 import VerifyEmailPage from './pages/VerifyEmailPage';
 
@@ -37,7 +43,7 @@ function EditorLoading() {
   );
 }
 
-/** 화면 자리. 각 기능이 자기 화면 컴포넌트로 바꾼다 (001: 가입·로그인·설정 등). */
+/** 화면 자리. 아직 화면이 없는 기능이 쓴다 (014 관리자 화면). */
 function Placeholder({ name }: { name: string }) {
   return <main data-route={name}>{name}</main>;
 }
@@ -65,62 +71,64 @@ export default function App() {
   return (
     <SessionProvider>
       <SessionBar />
-      {notFoundAt !== null && notFoundAt === location.key ? (
-        <NotFoundPage />
-      ) : (
-        <Routes>
-          <Route path="/" element={<HomePage />} />
-          <Route path="/signup" element={<SignupPage />} />
-          <Route path="/signup/social" element={<Placeholder name="signup-social" />} />
-          <Route path="/login" element={<LoginPage />} />
-          <Route path="/verify-email" element={<VerifyEmailPage />} />
-          <Route path="/forgot-password" element={<Placeholder name="forgot-password" />} />
-          <Route path="/reset-password" element={<Placeholder name="reset-password" />} />
-          <Route path="/reagree" element={<Placeholder name="reagree" />} />
-          <Route path="/settings" element={<Placeholder name="settings" />} />
-          <Route path="/terms" element={<TermsPage />} />
-          <Route path="/privacy" element={<PrivacyPage />} />
-          <Route
-            path="/write/new"
-            element={
-              <Suspense fallback={<EditorLoading />}>
-                <NewPostPage />
-              </Suspense>
-            }
-          />
-          <Route
-            path="/write/:postId"
-            element={
-              <Suspense fallback={<EditorLoading />}>
-                <EditorPage />
-              </Suspense>
-            }
-          />
-          {/* 006 내 글 관리 — 사용자를 가리키는 값 없이 본인 글만 (FR-002) */}
-          <Route path="/manage/posts" element={<ManagePostsPage />} />
-          {/* 004 관리자 화면 가드 — 비로그인은 로그인으로, 일반 회원은 공통 404. 하위 화면은 014가 채운다 */}
-          <Route
-            path="/admin/*"
-            element={
-              <AdminRouteGate>
-                <Placeholder name="admin" />
-              </AdminRouteGate>
-            }
-          />
-          {/* 005 글 상세 — react-router는 `/@:handle`처럼 구간 일부만 파라미터로 받지 못해 `@`는 화면이 떼어 낸다 */}
-          <Route
-            path="/:handle/posts/:postId"
-            element={
-              <PostDetailPage
-                visibilityControl={renderDetailVisibility}
-                deleteControl={renderDetailDelete}
-              />
-            }
-          />
-          <Route path="/:handle" element={<BlogPage />} />
-          <Route path="*" element={<NotFoundPage />} />
-        </Routes>
-      )}
+      <ReagreementGate>
+        {notFoundAt !== null && notFoundAt === location.key ? (
+          <NotFoundPage />
+        ) : (
+          <Routes>
+            <Route path="/" element={<HomePage />} />
+            <Route path="/signup" element={<SignupPage />} />
+            <Route path="/signup/social" element={<SocialSignupPage />} />
+            <Route path="/login" element={<LoginPage />} />
+            <Route path="/verify-email" element={<VerifyEmailPage />} />
+            <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+            <Route path="/reset-password" element={<ResetPasswordPage />} />
+            <Route path="/reagree" element={<ReagreementPage />} />
+            <Route path="/settings" element={<SettingsPage />} />
+            <Route path="/terms" element={<TermsPage />} />
+            <Route path="/privacy" element={<PrivacyPage />} />
+            <Route
+              path="/write/new"
+              element={
+                <Suspense fallback={<EditorLoading />}>
+                  <NewPostPage />
+                </Suspense>
+              }
+            />
+            <Route
+              path="/write/:postId"
+              element={
+                <Suspense fallback={<EditorLoading />}>
+                  <EditorPage />
+                </Suspense>
+              }
+            />
+            {/* 006 내 글 관리 — 사용자를 가리키는 값 없이 본인 글만 (FR-002) */}
+            <Route path="/manage/posts" element={<ManagePostsPage />} />
+            {/* 004 관리자 화면 가드 — 비로그인은 로그인으로, 일반 회원은 공통 404. 하위 화면은 014가 채운다 */}
+            <Route
+              path="/admin/*"
+              element={
+                <AdminRouteGate>
+                  <Placeholder name="admin" />
+                </AdminRouteGate>
+              }
+            />
+            {/* 005 글 상세 — react-router는 `/@:handle`처럼 구간 일부만 파라미터로 받지 못해 `@`는 화면이 떼어 낸다 */}
+            <Route
+              path="/:handle/posts/:postId"
+              element={
+                <PostDetailPage
+                  visibilityControl={renderDetailVisibility}
+                  deleteControl={renderDetailDelete}
+                />
+              }
+            />
+            <Route path="/:handle" element={<BlogPage />} />
+            <Route path="*" element={<NotFoundPage />} />
+          </Routes>
+        )}
+      </ReagreementGate>
     </SessionProvider>
   );
 }
