@@ -2,9 +2,11 @@ import { lazy, Suspense, useEffect, useState } from 'react';
 import { Route, Routes, useLocation } from 'react-router-dom';
 import { onNotFound } from './api/client';
 import { SessionProvider } from './features/auth/SessionProvider';
+import DetailDeleteButton from './features/manage-posts/DetailDeleteButton';
 import SessionBar from './features/auth/SessionBar';
 import HomePage from './pages/HomePage';
 import LoginPage from './pages/LoginPage';
+import ManagePostsPage from './pages/ManagePostsPage';
 import BlogPage from './pages/BlogPage';
 import NotFoundPage from './pages/NotFoundPage';
 import PostDetailPage from './pages/PostDetailPage';
@@ -35,6 +37,11 @@ function EditorLoading() {
 /** 화면 자리. 각 기능이 자기 화면 컴포넌트로 바꾼다 (001: 가입·로그인·설정 등). */
 function Placeholder({ name }: { name: string }) {
   return <main data-route={name}>{name}</main>;
+}
+
+/** 006: 글 상세 작성자 버튼 줄의 [삭제] 자리 (005 `deleteControl`) */
+function renderDetailDelete({ postId, reload }: { postId: number; reload: () => void }) {
+  return <DetailDeleteButton postId={postId} reload={reload} />;
 }
 
 export default function App() {
@@ -78,8 +85,13 @@ export default function App() {
               </Suspense>
             }
           />
+          {/* 006 내 글 관리 — 사용자를 가리키는 값 없이 본인 글만 (FR-002) */}
+          <Route path="/manage/posts" element={<ManagePostsPage />} />
           {/* 005 글 상세 — react-router는 `/@:handle`처럼 구간 일부만 파라미터로 받지 못해 `@`는 화면이 떼어 낸다 */}
-          <Route path="/:handle/posts/:postId" element={<PostDetailPage />} />
+          <Route
+            path="/:handle/posts/:postId"
+            element={<PostDetailPage deleteControl={renderDetailDelete} />}
+          />
           <Route path="/:handle" element={<BlogPage />} />
           <Route path="*" element={<NotFoundPage />} />
         </Routes>
