@@ -114,16 +114,16 @@ description: "Task list for 012-trending-search (트렌딩·검색)"
 
 ### Tests for User Story 2 ⚠️
 
-- [ ] T022 [P] [US2] `T/discovery/unit/TrendingScoreTest.java` — 점수식(설정값 가중치), 1시간 된 글 > 하루 된 글, 동점 정렬
-- [ ] T023 [P] [US2] `T/discovery/integration/TrendingSnapshotIT.java` — US2 #1~#4·#7, FR-005~FR-008, SC-003: 점수 순, 자기 댓글 20개만 → 제외, 조회만 많은 글 제외, 작성자 5개 → 3개, 8일 전 글 제외(7일 경계는 `MutableClock`), 숨긴 댓글·삭제된 자리의 작성자 미포함·같은 사람 여러 댓글 1명, 반응 없음 → `count 0`·`current` 갱신, 비공개·휴지통·숨김·유예 작성자 글 0, 키 TTL 1,800, 잠금 이름 `trendingSnapshot`, 계산 시간 기록(1초 넘으면 T046)
-- [ ] T024 [P] [US2] `T/discovery/integration/TrendingApiIT.java` — US2 #5·#6, SC-002·SC-004·SC-007: 첫 페이지 9개 → 새 스냅샷 생성 → 이전 커서로 끝까지 중복·누락 0, 안 본 글 2개 비공개·휴지통 → 건너뛰고 9개, 100개 끝 `nextCursor null`, 31분 뒤 커서 → 410 `SNAPSHOT_EXPIRED`(본문 고정), 다른 목록 커서 400, Redis 정지 → 첫 9개·`nextCursor null`, `current` 없음 → 즉시 계산, 비회원 200, 탈퇴 유예 회원 403, p95 200ms·카드 SQL 1번
+- [X] T022 [P] [US2] `T/discovery/unit/TrendingScoreTest.java` — 점수식(설정값 가중치), 1시간 된 글 > 하루 된 글, 동점 정렬 (구현 메모: 점수식은 TrendingProperties.score(SQL과 같은 식)로 확인)
+- [X] T023 [P] [US2] `T/discovery/integration/TrendingSnapshotIT.java` — US2 #1~#4·#7, FR-005~FR-008, SC-003: 점수 순, 자기 댓글 20개만 → 제외, 조회만 많은 글 제외, 작성자 5개 → 3개, 8일 전 글 제외(7일 경계는 `MutableClock`), 숨긴 댓글·삭제된 자리의 작성자 미포함·같은 사람 여러 댓글 1명, 반응 없음 → `count 0`·`current` 갱신, 비공개·휴지통·숨김·유예 작성자 글 0, 키 TTL 1,800, 잠금 이름 `trendingSnapshot`, 계산 시간 기록(1초 넘으면 T046) (구현 메모: MutableClock 대신 compute(now)·refresh(now)에 시각을 넘겨 7일 경계 확인. 친구 공개는 V1에 없어 해당 없음. 계산 시간은 몇 건 규모에서 수 ms(1초 미만))
+- [X] T024 [P] [US2] `T/discovery/integration/TrendingApiIT.java` — US2 #5·#6, SC-002·SC-004·SC-007: 첫 페이지 9개 → 새 스냅샷 생성 → 이전 커서로 끝까지 중복·누락 0, 안 본 글 2개 비공개·휴지통 → 건너뛰고 9개, 100개 끝 `nextCursor null`, 31분 뒤 커서 → 410 `SNAPSHOT_EXPIRED`(본문 고정), 다른 목록 커서 400, Redis 정지 → 첫 9개·`nextCursor null`, `current` 없음 → 즉시 계산, 비회원 200, 탈퇴 유예 회원 403, p95 200ms·카드 SQL 1번 (구현 메모: 31분 뒤는 스냅샷 키를 지워(TTL 만료와 같은 상태) 확인. 측정 p95 10ms(MockMvc, 글 100개 스냅샷). SQL 수는 서비스 직접 호출로 셈(카드 1번))
 - [ ] T025 [P] [US2] 화면 테스트 `F/features/trending/__tests__/TrendingList.test.tsx`(안내 문구, 순위 숫자 없음, 빈 상태 + [최신 글 보기], 410이면 "순위가 새로 바뀌었어요" 후 처음부터, `nextCursor null`이면 버튼 숨김)와 `F/pages/__tests__/HomePage.test.tsx`에 탭(기본 최신, `/?tab=trending` 직접 열기, 탭마다 복원 키 분리)
 
 ### Implementation for User Story 2
 
-- [ ] T026 [US2] `B/discovery/infra/TrendingRepository.java`(research R3 SQL, 공용 조건은 `VisibilityFilter` 조각, 클래스 주석에 Complexity Tracking 1행)와 `TrendingSnapshotStore.java`(research R4 Redis 명령 — 파이프라인, `RedisConnectionFailureException` 등은 `Optional.empty`로) (T022·T023 실패 확인)
-- [ ] T027 [US2] `B/discovery/application/trending/TrendingSnapshotJob.java`(`@Scheduled(cron)` + `@SchedulerLock(name = "trendingSnapshot", lockAtMostFor = "PT9M")` + `ApplicationReadyEvent` 1번, Redis 장애면 WARN)와 `TrendingCursor.java`·`TrendingQueryService.java`(contracts §3 표 — 18개씩 읽어 10개 채우기, 410, 대체 경로) (T023 통과)
-- [ ] T028 [US2] `B/discovery/web/TrendingController.java` `GET /api/posts/trending`(응답 005 `CursorPage<PostCardView>`) (T024 통과)
+- [X] T026 [US2] `B/discovery/infra/TrendingRepository.java`(research R3 SQL, 공용 조건은 `VisibilityFilter` 조각, 클래스 주석에 Complexity Tracking 1행)와 `TrendingSnapshotStore.java`(research R4 Redis 명령 — 파이프라인, `RedisConnectionFailureException` 등은 `Optional.empty`로) (T022·T023 실패 확인) (구현 메모: Redis 장애는 RedisGuard 대체 경로에서 StoreUnavailableException을 던져 서비스가 즉시 계산으로 바꾼다(Optional.empty 대신 — 없음과 장애를 구분))
+- [X] T027 [US2] `B/discovery/application/trending/TrendingSnapshotJob.java`(`@Scheduled(cron)` + `@SchedulerLock(name = "trendingSnapshot", lockAtMostFor = "PT9M")` + `ApplicationReadyEvent` 1번, Redis 장애면 WARN)와 `TrendingCursor.java`·`TrendingQueryService.java`(contracts §3 표 — 18개씩 읽어 10개 채우기, 410, 대체 경로) (T023 통과) (구현 메모: 기동 직후 실행은 같은 이름의 ShedLock을 DefaultLockingTaskExecutor로 직접 잡는다(자기 호출은 프록시를 거치지 않음). 새 설정 blog.trending.refresh-on-startup)
+- [X] T028 [US2] `B/discovery/web/TrendingController.java` `GET /api/posts/trending`(응답 005 `CursorPage<PostCardView>`) (T024 통과) (구현 메모: Cache-Control private, no-cache)
 - [ ] T029 [US2] (**006 머지 후** — `App.tsx`) `F/api/discovery.ts`에 `getTrending(cursor)`, `F/features/trending/TrendingList.tsx`·`trendingMessages.ts`, 005 `F/pages/HomePage.tsx`에 `[최신] [트렌딩]` 탭(`role="tablist"`, `?tab=trending`, `useCursorList({listKey: 'trending'})`), `F/App.tsx`에 `/search` 경로(US1 화면 연결) (T025 통과)
 
 **Checkpoint**: 트렌딩 완료
