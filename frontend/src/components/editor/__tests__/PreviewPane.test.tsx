@@ -73,7 +73,9 @@ describe('PreviewPane', () => {
 
     stubFetch({
       'POST /api/markdown/preview': () =>
-        json(429, errorBody('TOO_MANY_REQUESTS', '잠시 후 다시 시도해 주세요'), { 'Retry-After': '3' }),
+        json(429, errorBody('TOO_MANY_REQUESTS', '잠시 후 다시 시도해 주세요'), {
+          'Retry-After': '3',
+        }),
     });
     rerender(<PreviewPane contentMd="ab" />);
     await tick(500);

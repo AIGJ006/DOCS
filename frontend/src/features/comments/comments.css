@@ -1,0 +1,243 @@
+/* 댓글 영역 (007 T023·T053·T056). 색은 공통 tokens.css 변수만 쓴다. */
+.comment-section {
+  margin-top: 2rem;
+  min-width: 0;
+}
+
+.comment-heading {
+  font-size: 1rem;
+  margin: 0 0 0.75rem;
+}
+
+.comment-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.comment-list > li + li {
+  border-top: 1px solid var(--color-border);
+}
+
+.comment-item {
+  min-width: 0;
+  padding: 0.75rem 0;
+  border-radius: 6px;
+}
+
+.comment-main {
+  display: flex;
+  gap: 0.625rem;
+  min-width: 0;
+}
+
+.comment-avatar {
+  flex: 0 0 32px;
+}
+
+.comment-avatar-image {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.comment-body {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.comment-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.375rem;
+  font-size: 0.875rem;
+  color: var(--color-text-muted);
+  min-width: 0;
+}
+
+.comment-author {
+  color: var(--color-text);
+  font-weight: 600;
+  text-decoration: none;
+  min-width: 0;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
+
+.comment-author-gone {
+  color: var(--color-text-muted);
+  font-weight: 400;
+}
+
+.comment-handle {
+  font-weight: 400;
+  color: var(--color-text-muted);
+}
+
+.comment-badge {
+  border: 1px solid var(--color-brand);
+  color: var(--color-brand);
+  border-radius: 999px;
+  padding: 0 0.4rem;
+  font-size: 0.75rem;
+}
+
+.comment-reply-to {
+  margin: 0.25rem 0 0;
+  font-size: 0.875rem;
+  color: var(--color-brand);
+  overflow-wrap: anywhere;
+}
+
+.comment-content {
+  margin: 0.25rem 0 0;
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.comment-placeholder,
+.comment-hidden-note {
+  margin: 0.25rem 0 0;
+  color: var(--color-text-muted);
+  font-size: 0.9375rem;
+}
+
+.comment-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  margin-top: 0.25rem;
+}
+
+.comment-action {
+  background: none;
+  border: none;
+  padding: 0.375rem 0.5rem;
+  min-height: 2rem;
+  color: var(--color-text-muted);
+  font-size: 0.8125rem;
+  cursor: pointer;
+}
+
+.comment-action:hover:not(:disabled) {
+  color: var(--color-text);
+}
+
+.comment-error {
+  margin: 0.375rem 0 0;
+  color: var(--color-danger);
+  font-size: 0.875rem;
+}
+
+/* 답글 들여쓰기 — 좁은 화면에서는 줄인다(가로 스크롤 없음) */
+.comment-replies {
+  margin-left: 1.25rem;
+  padding-left: 0.75rem;
+  border-left: 2px solid var(--color-border);
+}
+
+@media (min-width: 640px) {
+  .comment-replies {
+    margin-left: 2.625rem;
+  }
+}
+
+.comment-reply-form {
+  margin: 0.5rem 0 0 2.625rem;
+}
+
+.comment-load {
+  display: block;
+  width: 100%;
+  margin: 0.5rem 0;
+  padding: 0.5rem;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  color: var(--color-text);
+  cursor: pointer;
+}
+
+.comment-load:disabled {
+  cursor: default;
+  opacity: 0.7;
+}
+
+.comment-load-failed,
+.comment-status {
+  margin: 0.75rem 0;
+  color: var(--color-text-muted);
+}
+
+.comment-new {
+  margin-top: 1rem;
+}
+
+.comment-form textarea {
+  box-sizing: border-box;
+  display: block;
+  width: 100%;
+  min-height: 4.5rem;
+  padding: 0.5rem;
+  font: inherit;
+  color: var(--color-text);
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  resize: vertical;
+}
+
+.comment-form-footer {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.375rem;
+}
+
+.comment-counter {
+  margin-right: auto;
+  font-size: 0.8125rem;
+  color: var(--color-text-muted);
+}
+
+.comment-counter[data-over='true'] {
+  color: var(--color-danger);
+  font-weight: 600;
+}
+
+.comment-input-gate {
+  padding: 0.75rem;
+  border: 1px dashed var(--color-border);
+  border-radius: 6px;
+  color: var(--color-text-muted);
+}
+
+.comment-input-gate p {
+  margin: 0 0 0.375rem;
+}
+
+/* around 대상 강조 — 색만이 아니라 테두리로도 보인다 (T056) */
+.comment-focus {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
+  animation: comment-focus-flash 2s ease-out;
+}
+
+@keyframes comment-focus-flash {
+  from {
+    background: var(--color-code-bg);
+  }
+  to {
+    background: transparent;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .comment-focus {
+    animation: none;
+  }
+}

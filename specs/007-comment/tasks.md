@@ -88,7 +88,7 @@ description: "Task list for 007-comment (댓글·답글)"
 - [X] T012 [P] 커서 `B/interaction/application/CommentCursor.java`(001 `CursorCodec` + `ListScope.of("comments:" + postId)`·`"replies:" + rootId`, 키 `[µs, id]`, 방향 확장 필드)를 만든다(T005 통과)
 - [X] T013 [P] 이벤트 `B/shared/event/CommentCreated.java`·`CommentDeleted.java`(record, `DomainEvent`, 필드는 contracts/events.md §1)를 만든다
 - [X] T014 저장소 뼈대 `B/interaction/infra/CommentRepository.java`(`JdbcClient`: `insert`, `findForUpdate(id)`, `findOwnedForUpdate(id, me)`, `lockRootShared(rootId, postId)`, `lockRootForUpdate(rootId)`, `countReplies(rootId)`, `markDeletedPlaceholder(id)`, `delete(id)`, `updateContent(id, content, now)`, `advisoryLock(long key)`, `findRecentDuplicate(...)`)와 `B/interaction/infra/CommentQueryRepository.java`(`findRoots`, `findReplyPreviews`(LATERAL), `findReplies`, `findForAround`)를 만든다. 각 메서드의 SQL은 research R6~R8·R11 그대로 (구현 메모: findOwned(미리 확인용 잠금 없는 조회)·lockShared(대상 답글)·hide/unhide·탈퇴 정리 SQL 2-a~2-d도 같은 저장소에 둠. 배열 인자는 문자열 '{1,2}' + CAST(... AS bigint[])로 넘긴다)
-- [ ] T015 [P] 화면 API `F/api/comments.ts`(`listComments(postId, {cursor, around})`, `listReplies(rootId, cursor)`, `createComment(postId, body)`, `editComment(id, content)`, `deleteComment(id)` — CSRF 헤더는 001 공용 `client.ts`), 타입 `F/api/types/comments.ts`(contracts/openapi.yaml 스키마), 문구 `F/features/comments/commentMessages.ts`(data-model §4-3 + 공통 코드, 503은 code와 상관없이 "잠시 후 다시 시도해 주세요")를 만든다
+- [X] T015 [P] 화면 API `F/api/comments.ts`(`listComments(postId, {cursor, around})`, `listReplies(rootId, cursor)`, `createComment(postId, body)`, `editComment(id, content)`, `deleteComment(id)` — CSRF 헤더는 001 공용 `client.ts`), 타입 `F/api/types/comments.ts`(contracts/openapi.yaml 스키마), 문구 `F/features/comments/commentMessages.ts`(data-model §4-3 + 공통 코드, 503은 code와 상관없이 "잠시 후 다시 시도해 주세요")를 만든다 (구현 메모: API 함수는 모두 notFoundScreen:false(댓글 404가 글 화면을 공통 404로 바꾸지 않음). 문구는 commentMessages.ts의 COMMENT_TEXT·COMMENT_ERROR_MESSAGES, 5xx는 모두 "잠시 후 다시 시도해 주세요")
 
 **Checkpoint**: 정리·상태·커서 규칙이 단위 테스트를 통과하고, 댓글 수·회원 표시 공개 API가 있다
 
@@ -104,16 +104,16 @@ description: "Task list for 007-comment (댓글·답글)"
 
 - [X] T016 [P] [US1] 통합 테스트 `T/interaction/integration/CommentReadIT.java`(댓글은 SQL 시드): `최상위_오래된_순_20개씩_중복_누락_없음`(US1 #1, 45개 → 20·20·5, 페이지 경계에 같은 `created_at` 5개 — SC-004), `답글은_3개_뒤로_20개씩`(US1 #2, `replyCount` 8, `repliesNextCursor`로 5개), `답글의_답글은_대상_닉네임`·`대상이_탈퇴하면_탈퇴한_사용자에게`(US1 #3), `지운_최상위는_자리로_답글은_그대로`(US1 #4, `author`·`content` null), `임시_비공개_휴지통_없는_글은_같은_404`(US1 #5, 본문 바이트 비교, 작성자 본인의 임시글도 404), `댓글이_없으면_빈_목록`(US1 #6), `글_작성자_댓글은_isPostAuthor`(US1 #7), `공개가_아닌_글의_댓글은_no_store`(FR-015, 작성자가 보는 비공개 글), `페이지_SQL은_4번`(`SqlCounter`, 답글 수 1개·100개에서 같음 — SC-008) (구현 메모: SQL 수는 MockMvc 요청 전체로 세어 '글 판정 1 + 댓글 4 = 5'로 단언한다(답글 1개·100개 같음))
 - [X] T017 [P] [US1] 권한 매트릭스 `TR/permission/comment.csv`(research R13의 4개 행동 × 행위자 × 대상 상태, owner `007`)와 `T/interaction/integration/CommentPermissionMatrixIT.java`(`AbstractPermissionMatrixIT` 상속), 실행기 `T/interaction/integration/permission/ListCommentsAction.java`(`comment.list`, `isWrite=false`)를 만든다. 나머지 실행기는 각 스토리에서 더한다(그 전까지 `pending: 007`)
-- [ ] T018 [P] [US1] 화면 테스트 `F/features/comments/__tests__/CommentSection.test.tsx`: 머리말 "댓글 N", 20개 + [댓글 더 보기](불러오는 중 "불러오는 중…" 비활성, 실패 "불러오지 못했어요 [다시 시도]" + 같은 커서 재요청 + 보이는 댓글 유지 — FR-024), 답글 3개 + [답글 5개 더 보기], "@닉네임에게", 상태별 문구 4가지, [작성자] 배지, "첫 댓글을 남겨 보세요", 내용이 HTML로 해석되지 않음(`<b>`가 글자로), `white-space: pre-line`
-- [ ] T019 [P] [US1] `F/pages/__tests__/PostDetailPage.test.tsx` 추가: 상세와 댓글 요청이 **동시에** 나간다(상세 응답을 늦춰도 댓글 요청이 먼저 시작), 댓글 요청 실패여도 본문이 보인다(Clarifications Q1)
+- [X] T018 [P] [US1] 화면 테스트 `F/features/comments/__tests__/CommentSection.test.tsx`: 머리말 "댓글 N", 20개 + [댓글 더 보기](불러오는 중 "불러오는 중…" 비활성, 실패 "불러오지 못했어요 [다시 시도]" + 같은 커서 재요청 + 보이는 댓글 유지 — FR-024), 답글 3개 + [답글 5개 더 보기], "@닉네임에게", 상태별 문구 4가지, [작성자] 배지, "첫 댓글을 남겨 보세요", 내용이 HTML로 해석되지 않음(`<b>`가 글자로), `white-space: pre-line`
+- [X] T019 [P] [US1] `F/pages/__tests__/PostDetailPage.test.tsx` 추가: 상세와 댓글 요청이 **동시에** 나간다(상세 응답을 늦춰도 댓글 요청이 먼저 시작), 댓글 요청 실패여도 본문이 보인다(Clarifications Q1)
 
 ### Implementation for User Story 1
 
 - [X] T020 [US1] `B/interaction/application/CommentViewAssembler.java`: 행 → `CommentView`(상태 판정·감추기·`replyTo`·`isPostAuthor`·`mine`), 회원 표시는 `MemberQueryService.findDisplays`, 사진은 `ProfileImageQuery.currentKeysOf` + `ImageUrlResolver`로 한 번씩(research R8)
 - [X] T021 [US1] 목록 Service(**006 머지 후** `CommentQueryService`에 더함 — T032에서 합침, 그 전에는 `CommentReadService`로 만들고 T032에서 옮김): `page(postId, cursor, viewer)` — `PostReadService.requireReadable` + `PUBLISHED` 확인 → `findRoots`(pageSize+1) → `findReplyPreviews` → 조립 → `nextCursor`·`repliesNextCursor`. `replies(rootId, cursor, viewer)` — 최상위 확인 → 그 글 확인 → `findReplies` (구현 메모: 006 머지 뒤라 처음부터 CommentQueryService에 넣었다)
 - [X] T022 [US1] `B/interaction/web/CommentController.java`의 `GET /api/posts/{postId}/comments`·`GET /api/comments/{rootId}/replies`(`postId` 숫자 아니면 404, `Cache-Control`은 `CacheControlPolicy.forPost`(그 글의 상태)로)를 구현한다(T016 통과)
-- [ ] T023 [US1] 화면 `F/features/comments/useCommentThread.ts`(research R14 상태 모양, id로 한 번만 그리기), `CommentSection.tsx`, `CommentItem.tsx`(상태별 표시, `id="comment-{id}"`, 긴 단어 `overflow-wrap: anywhere`), `ReplyList.tsx`, `comments.css`를 만든다(T018 통과)
-- [ ] T024 [US1] `F/features/post-detail/CommentSectionSlot.tsx`가 `CommentSection`을 그리게 바꾸고(구현 메모 제거), `F/pages/PostDetailPage.tsx`가 주소의 글 번호로 상세 요청과 `listComments`를 동시에 시작해 결과를 `CommentSection`에 넘기게 한다(T019 통과, 005 소유 파일 — 005 회귀 `PostDetailPage.test.tsx` 함께 실행)
+- [X] T023 [US1] 화면 `F/features/comments/useCommentThread.ts`(research R14 상태 모양, id로 한 번만 그리기), `CommentSection.tsx`, `CommentItem.tsx`(상태별 표시, `id="comment-{id}"`, 긴 단어 `overflow-wrap: anywhere`), `ReplyList.tsx`, `comments.css`를 만든다(T018 통과) (구현 메모: 로드 버튼 공용 LoadButton.tsx(실패 "불러오지 못했어요 [다시 시도]")를 더 만듦. 삭제 204에 결과 모양이 없어 자리/사라짐/빈 자리 정리를 화면 리듀서가 서버 규칙대로 정함)
+- [X] T024 [US1] `F/features/post-detail/CommentSectionSlot.tsx`가 `CommentSection`을 그리게 바꾸고(구현 메모 제거), `F/pages/PostDetailPage.tsx`가 주소의 글 번호로 상세 요청과 `listComments`를 동시에 시작해 결과를 `CommentSection`에 넘기게 한다(T019 통과, 005 소유 파일 — 005 회귀 `PostDetailPage.test.tsx` 함께 실행) (구현 메모: PostDetailPage가 상세·listComments를 같은 effect에서 동시에 시작하고 댓글 Promise를 상세 상태에 담아 넘김(실패는 미리 catch로 처리됨 표시). 다시 불러오기(reload) 때는 key로 댓글 영역을 새로 그림. data-testid=comment-section·data-around-comment는 유지)
 - [X] T025 [US1] T017의 `comment.list` 행 전부 통과 확인(SC-001 일부)
 
 **Checkpoint**: 댓글 읽기가 독립적으로 동작한다
@@ -132,14 +132,14 @@ description: "Task list for 007-comment (댓글·답글)"
 - [X] T027 [P] [US2] XSS 통합 테스트 `T/interaction/integration/CommentXssIT.java`: 12 §9-1 공격 문자열 목록(002 `ContentRendererXssTest`의 자원 재사용)을 댓글로 등록 → 응답 `content`가 입력(정리 후)과 같고 HTML로 바뀐 흔적 없음, 응답 `Content-Type: application/json`(SC-005, US2 #8)
 - [X] T028 [P] [US2] 동시성 통합 테스트 `T/interaction/integration/CommentConcurrencyIT.java`(1부): `같은_요청_5건_동시면_댓글은_1개`(SC-003, `CountDownLatch`, 응답 201 1개 + 200 4개, `comment_count` +1)
 - [X] T029 [P] [US2] 권한 실행기 `T/interaction/integration/permission/CreateCommentAction.java`(`comment.create`, 거부 때 `CommentSnapshot` — 그 글의 댓글 행 수 — 전후 같음)
-- [ ] T030 [P] [US2] 화면 테스트 `F/features/comments/__tests__/CommentForm.test.tsx`: 비회원·인증 전 안내 문구와 버튼(FR-023), 글자 수 `[...text].length` 표시(이모지 1자), 등록 중 버튼 "등록 중…" 비활성, 실패 때 입력 유지 + 문구, 429 문구, 성공하면 입력 비움. `CommentSection.test.tsx` 추가: 아직 안 불러온 댓글이 있어도 내 댓글이 끝에 바로 보이고, [댓글 더 보기]로 같은 id가 와도 한 번만(Clarifications Q5), 답글은 그 최상위 아래 끝에, 머리말 수 +1
+- [X] T030 [P] [US2] 화면 테스트 `F/features/comments/__tests__/CommentForm.test.tsx`: 비회원·인증 전 안내 문구와 버튼(FR-023), 글자 수 `[...text].length` 표시(이모지 1자), 등록 중 버튼 "등록 중…" 비활성, 실패 때 입력 유지 + 문구, 429 문구, 성공하면 입력 비움. `CommentSection.test.tsx` 추가: 아직 안 불러온 댓글이 있어도 내 댓글이 끝에 바로 보이고, [댓글 더 보기]로 같은 id가 와도 한 번만(Clarifications Q5), 답글은 그 최상위 아래 끝에, 머리말 수 +1
 
 ### Implementation for User Story 2
 
 - [X] T031 [US2] `B/interaction/application/CommentService.java`의 `create(postId, me, content, replyToCommentId)`: research R2 순서 — 계정 상태 → 글(`requireReadable` + `PUBLISHED` + 숨김 아님) → `CommentText` → 대상 미리 확인(R4) → `RateLimiter.acquireOrThrow("ratelimit:comment:" + me, …)` → 트랜잭션(`advisoryLock` → `findRecentDuplicate` → 있으면 기존 댓글 / 없으면 최상위 `FOR SHARE`·대상 재확인 → `insert` → `PostCounterService.adjustCommentCount(+1)` → `CommentCreated` 발행) → 조립. 결과에 "새로 만듦" 여부를 담아 컨트롤러가 201/200을 고른다(T026·T028 통과) (구현 메모: 결과 CreateResult(comment, created)로 201/200을 고른다. 트랜잭션은 TransactionTemplate(요청 제한을 트랜잭션 밖에서 세려고))
 - [X] T032 [US2] (**006 머지 후**) `B/interaction/application/CommentQueryService.java`(006이 만든 파일)에 T021의 `page`·`replies`를 옮겨 합치고 `commentIdsOfPost`는 그대로 둔다. 006 `PostPurgeIT`를 함께 돌린다 (구현 메모: 006이 이미 main에 있어 처음부터 이 파일에 page·replies·around를 넣었고 commentIdsOfPost는 그대로 둠(CommentIdsOfPostIT 통과))
 - [X] T033 [US2] `CommentController`에 `@LoginRequired POST /api/posts/{postId}/comments`(요청 본문 `content`·`replyToCommentId`)를 더한다 (구현 메모: 작성 응답 Cache-Control: no-store. 번호 경로 변수는 String으로 받아 숫자가 아니면 404)
-- [ ] T034 [US2] 화면 `F/features/comments/CommentForm.tsx`와 `useCommentThread`의 `addMine(view)`(최상위 끝 / 그 최상위 답글 끝, id 중복 무시), [답글] 누르면 그 댓글 아래 입력칸(대상 = 그 댓글)을 구현한다(T030 통과). 인증 메일 재발송 버튼은 001 API를 부른다
+- [X] T034 [US2] 화면 `F/features/comments/CommentForm.tsx`와 `useCommentThread`의 `addMine(view)`(최상위 끝 / 그 최상위 답글 끝, id 중복 무시), [답글] 누르면 그 댓글 아래 입력칸(대상 = 그 댓글)을 구현한다(T030 통과). 인증 메일 재발송 버튼은 001 API를 부른다 (구현 메모: 입력칸은 최상위 목록 아래. [답글]은 비회원에게도 보이고 누르면 004 CommentInputGate 안내가 나옴(FR-045). CommentInputGate의 비회원 문구를 FR-023 "로그인하고 댓글을 남겨 보세요 [로그인]"으로 바꾸고 004 시험 갱신. 1000자 초과는 글자 수만 강조하고 판정은 서버)
 - [X] T035 [US2] T029 행 통과 확인
 
 **Checkpoint**: US1 + US2로 댓글을 읽고 쓴다(MVP)
@@ -157,13 +157,13 @@ description: "Task list for 007-comment (댓글·답글)"
 - [X] T036 [P] [US3] 통합 테스트 `T/interaction/integration/CommentEditDeleteIT.java`: `고치면_내용과_수정됨`(US3 #1), `같은_내용이면_아무것도_안_바뀐다`(US3 #2, `updated_at` 그대로), `글_작성자와_관리자도_남의_댓글은_404`(US3 #3·SC-006, 수정·삭제 모두, DB 행 전후 같음), `답글_있는_최상위는_자리로`(US3 #4, `content = ''`·`deleted_at`, 수 −1), `답글_없는_최상위와_답글은_행_삭제`(US3 #5), `마지막_답글을_지우면_자리도_사라진다`(US3 #6, 수 −1만), `숨긴_댓글은_409_삭제는_가능`(US3 #7, 숨김 댓글 삭제는 수 변화 0), `지운_자리는_다시_지우면_404`(US3 #8), `인증_전_회원도_자기_댓글은_지운다`, `비공개로_바뀐_글의_내_댓글도_지운다`(research R9 제안), `수정_1분_21번째는_429`, `삭제하면_CommentDeleted_자리여도`(이벤트 캡처)
 - [X] T037 [P] [US3] `CommentConcurrencyIT`(2부): `삭제와_답글이_동시면_하나씩`(FR-014 — 100번 반복, 결과가 "자리 + 답글 1" 또는 "행 없음 + 400" 둘 중 하나, 교착 0)
 - [X] T038 [P] [US3] 권한 실행기 `T/interaction/integration/permission/EditCommentAction.java`(`comment.update`)·`DeleteCommentAction.java`(`comment.delete`) — 대상 댓글은 MEMBER 행위자 계정으로 SQL 삽입(research R13)
-- [ ] T039 [P] [US3] 화면 테스트 `F/features/comments/__tests__/CommentItem.test.tsx`: 본인 정상 댓글에만 [수정]·[삭제], 숨긴 본인 댓글은 [삭제]만, 남의 댓글에 [신고] 없음(Q4), 수정 칸(취소·저장, 저장 중 비활성, 실패 때 입력 유지), 삭제 확인 후 자리/사라짐 반영, 머리말 수 −1
+- [X] T039 [P] [US3] 화면 테스트 `F/features/comments/__tests__/CommentItem.test.tsx`: 본인 정상 댓글에만 [수정]·[삭제], 숨긴 본인 댓글은 [삭제]만, 남의 댓글에 [신고] 없음(Q4), 수정 칸(취소·저장, 저장 중 비활성, 실패 때 입력 유지), 삭제 확인 후 자리/사라짐 반영, 머리말 수 −1
 
 ### Implementation for User Story 3
 
 - [X] T040 [US3] `CommentService.edit(commentId, me, content)`·`delete(commentId, me)`(research R6·R9: 미리 확인 → 요청 제한(수정만) → 트랜잭션 잠금 순서 최상위 → 답글, 카운터, 빈 자리 정리, `CommentDeleted` 발행)를 구현한다(T036·T037 통과) (구현 메모: 삭제 이벤트의 postAuthorId를 읽으려고 004 PostReadService에 findAuthorId(읽기 판정 없음)를 하나 더함)
 - [X] T041 [US3] `B/interaction/web/CommentCommandController.java`의 `@LoginRequired PATCH /api/comments/{commentId}`(200)·`DELETE`(204)를 구현한다
-- [ ] T042 [US3] 화면 `CommentItem.tsx`의 수정 칸·삭제 확인과 `useCommentThread`의 `applyEdited`·`applyDeleted`(자리로 바꾸기 / 지우기 / 빈 자리 정리 반영)를 구현한다(T039 통과)
+- [X] T042 [US3] 화면 `CommentItem.tsx`의 수정 칸·삭제 확인과 `useCommentThread`의 `applyEdited`·`applyDeleted`(자리로 바꾸기 / 지우기 / 빈 자리 정리 반영)를 구현한다(T039 통과) (구현 메모: 삭제 확인은 006 공통 useConfirm("댓글을 삭제할까요? 삭제한 댓글은 되돌릴 수 없어요"). 숨긴 내 댓글 삭제는 머리말 수를 줄이지 않음)
 - [X] T043 [US3] T038 행 통과 확인 — 이로써 `comment.csv` 전 행이 `pending` 없이 통과한다(SC-001·SC-006)
 
 **Checkpoint**: C-CMT-1 #1~#9가 모두 동작한다
@@ -201,12 +201,12 @@ description: "Task list for 007-comment (댓글·답글)"
 ### Tests for User Story 5 ⚠️
 
 - [X] T050 [P] [US5] 통합 테스트 `T/interaction/integration/CommentAroundIT.java`: `대상_최상위부터_20개와_prevCursor`(US5 #1), `prevCursor로_앞_20개`, `4번째_이후_답글이면_대상까지_펼친다`(US5 #2, `focusCommentId`), `상한을_넘는_답글은_처음_3개만`, `다른_글_삭제_숨김_없는_댓글이면_첫_페이지와_같다`(US5 #3 — `around` 없는 응답과 바이트 비교), `숫자가_아닌_around는_무시`
-- [ ] T051 [P] [US5] 화면 테스트 `F/features/comments/__tests__/CommentAround.test.tsx`: `aroundCommentId`가 있으면 `listComments({around})`, `focusCommentId` 요소로 `scrollIntoView` + 강조 클래스 2초, [이전 댓글 보기]로 앞에 붙임, `focusCommentId = null`이면 스크롤 없음
+- [X] T051 [P] [US5] 화면 테스트 `F/features/comments/__tests__/CommentAround.test.tsx`: `aroundCommentId`가 있으면 `listComments({around})`, `focusCommentId` 요소로 `scrollIntoView` + 강조 클래스 2초, [이전 댓글 보기]로 앞에 붙임, `focusCommentId = null`이면 스크롤 없음
 
 ### Implementation for User Story 5
 
 - [X] T052 [US5] `CommentQueryService.page`에 `around` 처리(research R11)와 `CommentQueryRepository.findForAround`를 더하고 `CommentController`가 `around`를 넘기게 한다(T050 통과) (구현 메모: around 대상이 상한(100) 밖 답글이면 처음 3개만 주고 focusCommentId = 최상위 번호(화면이 최상위로 스크롤). 대상 작성자 탈퇴도 무시 대상)
-- [ ] T053 [US5] `useCommentThread`의 around·`loadPrevious`와 `CommentSection`의 [이전 댓글 보기]·스크롤·강조(`prefers-reduced-motion`이면 애니메이션 없이 테두리만)를 구현한다(T051 통과)
+- [X] T053 [US5] `useCommentThread`의 around·`loadPrevious`와 `CommentSection`의 [이전 댓글 보기]·스크롤·강조(`prefers-reduced-motion`이면 애니메이션 없이 테두리만)를 구현한다(T051 통과) (구현 메모: 강조 2초는 comment-focus 클래스(테두리 outline + 배경 애니메이션, prefers-reduced-motion이면 애니메이션 없음))
 
 **Checkpoint**: 모든 스토리가 독립적으로 동작한다
 
@@ -223,7 +223,7 @@ description: "Task list for 007-comment (댓글·답글)"
 - [X] T058 (002 담당 확인 후) 요청 과다 코드 통일(Clarifications Q3, research R16): `B/post/domain/PostReasonCode.java`의 `RATE_LIMITED`를 지우고 `MarkdownPreviewService`·`AutosaveService`가 `RateLimiter.acquireOrThrow`(공통 `TOO_MANY_REQUESTS`)를 쓰게 바꾼다. 화면 `F/api/client.ts`·에디터의 `RATE_LIMITED` 분기를 `TOO_MANY_REQUESTS`로 바꾸고 002 테스트(`AutosaveRateLimitIT`·`MarkdownPreviewIT` 등 해당 이름)를 갱신한다. 002 소유 파일이므로 002 담당과 같이 한다 (구현 메모: 002 담당 확인 없이 진행(사용자 지시: 묻지 않음). PostReasonCode.RATE_LIMITED와 RateLimitedException을 지우고 두 Service가 RateLimiter.acquireOrThrow(TOO_MANY_REQUESTS)를 씀. client.ts에는 RATE_LIMITED 분기가 없었고 화면은 시험 데이터만 바꿈. 002 openapi.yaml·docs/21의 RATE_LIMITED 표기는 남의 문서라 보고에 올림)
 - [X] T059 [P] 004 문구 정리: `specs/004-visibility-permission/spec.md`의 비회원 댓글 문구("로그인하고 댓글 쓰기")를 이 spec FR-023 문구로 맞추는 변경을 004 담당에게 제안한다(문서 변경, ANALYSIS-tier-bc) (구현 메모: 004 spec.md 120행·FR-045의 "로그인하고 댓글 쓰기"를 FR-023 문구로 바꾸자고 보고에 제안(문서는 고치지 않음). 화면 CommentInputGate는 FR-023 문구로 바꿈)
 - [X] T060 [P] 015 인계: `specs/015-withdraw/tasks.md`의 `CommentWithdrawalPurgeStep` 작업이 `CommentPurgeService.purgeByAuthor` 서명(contracts/events.md §2-2)과 order 20을 쓰는지 확인한다 (구현 메모: 015 tasks.md T051이 CommentWithdrawalPurgeStep(order 20) → CommentPurgeService.purgeByAuthor(long) : PurgeResult를 쓰고 events.md §2-2 서명과 같음. MANDATORY라 015 단계 트랜잭션 안에서 불러야 함)
-- [ ] T061 `grep -rn "007 댓글 기능이\|007-comments가 확장\|TODO(007)" backend/src frontend/src`가 0건인지 확인하고 남은 표시를 정리한다(005 T041·006 T058 구현 메모)
+- [X] T061 `grep -rn "007 댓글 기능이\|007-comments가 확장\|TODO(007)" backend/src frontend/src`가 0건인지 확인하고 남은 표시를 정리한다(005 T041·006 T058 구현 메모) (구현 메모: CommentSectionSlot 구현 메모를 지워 grep 0건)
 - [ ] T062 quickstart.md §1~§5를 처음부터 끝까지 실행하고 결과를 기록한다
 - [ ] T063 전체 회귀: `./mvnw -pl backend verify`(001·004·005·006 테스트 포함)와 `npm test`·`npm run build`·`npm run lint`
 
