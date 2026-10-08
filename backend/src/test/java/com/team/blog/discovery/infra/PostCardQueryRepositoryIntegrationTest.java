@@ -130,7 +130,8 @@ class PostCardQueryRepositoryIntegrationTest extends IntegrationTestBase {
         PostCardRow thumb =
                 rows.stream().filter(r -> r.title().equals("사진이 있는 글")).findFirst().orElseThrow();
         assertThat(thumb.thumbnailUrl())
-                .isEqualTo("http://localhost:9000/blog/images/2026/09/3f2a9c1e_thumb.webp");
+                .isEqualTo(
+                        "http://localhost:9000/blog/images/2026/09/3f2a9c1e-5b7d-4e2a-9c1f-0a1b2c3d4e5f_thumb.webp");
         PostCardRow a12 = rows.get(19);
         assertThat(a12.excerpt()).isNull();
     }
