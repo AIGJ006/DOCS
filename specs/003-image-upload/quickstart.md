@@ -96,6 +96,6 @@ psql … -c "UPDATE image SET detached_at = now() - interval '8 days' WHERE id =
 1. 새 주소가 같은 파일을 내주는지 확인(`curl -I {새 주소}/images/…`). 옛 주소도 계속 열려 있어야 한다.
 2. `BLOG_IMAGE_PUBLIC_BASE_URL`을 새 주소로, 옛 주소를 `blog.image.legacy-base-urls`에 추가하고 재기동(CSP·정화 허용 목록은 같은 설정을 읽음).
 3. 발행 글 전체 다시 렌더링(002 `RerenderJob` 운영 실행).
-4. `UPDATE post SET thumbnail_url = :new || substr(thumbnail_url, length(:old) + 1) WHERE thumbnail_url LIKE :old || '/%';`
+4. 글 썸네일 주소 바꾸기: `psql "$DATABASE_URL" -v old={옛 주소} -v new={새 주소} -f scripts/sql/rebase-image-urls.sql` (한 트랜잭션, 바뀐 행 수 출력, `ThumbnailUrlRebaseIT`가 확인). 조건은 `LIKE` 대신 "옛 주소 + `/`로 시작"을 그대로 비교한다(주소의 `_`가 LIKE 와일드카드로 읽히지 않게)
 5. 다시 렌더링이 끝나면 CSP에서 옛 출처를 뺀다. 옛 주소 목록에서는 지우지 않는다.
 6. 확인: 옛 주소로 쓴 글이 이미지로 보이고(링크 아님), 원문 Markdown은 그대로다(US8).

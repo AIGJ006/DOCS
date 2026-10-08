@@ -279,13 +279,13 @@ description: "Task list for 003-image-upload (이미지 업로드)"
 
 ### Tests for User Story 8 ⚠️
 
-- [ ] T083 [P] [US8] `T/media/integration/PublicBaseUrlChangeIT.java`(`@TestPropertySource`로 `public-base-url`=새 주소, `legacy-base-urls`=[옛 주소]): `US8_1_옛주소_사진은_새주소_img`(원문 Markdown은 그대로, US8 #3), `US8_2_목록에_없는_주소는_링크`, 썸네일·GIF 링크도 새 주소, CSP `img-src`에 새 출처
-- [ ] T084 [P] [US8] 운영 SQL 테스트 `T/media/integration/ThumbnailUrlRebaseIT.java`: quickstart §6 4단계 SQL이 옛 주소로 시작하는 `post.thumbnail_url`만 바꾸고 다른 값은 그대로
+- [X] T083 [P] [US8] `T/media/integration/PublicBaseUrlChangeIT.java`(`@TestPropertySource`로 `public-base-url`=새 주소, `legacy-base-urls`=[옛 주소]): `US8_1_옛주소_사진은_새주소_img`(원문 Markdown은 그대로, US8 #3), `US8_2_목록에_없는_주소는_링크`, 썸네일·GIF 링크도 새 주소, CSP `img-src`에 새 출처 (구현 메모: @TestPropertySource는 새 컨텍스트를 만들어 쓰지 않았다. 새·옛 주소 CoreProperties로 ImageUrls·media 어댑터·렌더러·정화·CSP 필터를 직접 조립하고 사진 행은 실제 DB에 둔다)
+- [X] T084 [P] [US8] 운영 SQL 테스트 `T/media/integration/ThumbnailUrlRebaseIT.java`: quickstart §6 4단계 SQL이 옛 주소로 시작하는 `post.thumbnail_url`만 바꾸고 다른 값은 그대로
 
 ### Implementation for User Story 8
 
-- [ ] T085 [US8] T083이 실패하는 부분(예: `ImageUrls`의 옛 주소 처리, 렌더러의 출력 주소)을 고친다. 출력 주소는 항상 `ImageUrlResolver.publicUrl(key)`(지금 주소)로 만든다
-- [ ] T086 [US8] 운영 SQL을 `scripts/sql/rebase-image-urls.sql`(변수 `:old`·`:new`, 트랜잭션, 바뀐 행 수 출력)로 두고 quickstart §6 절차와 연결한다(T084 통과, research R17)
+- [X] T085 [US8] T083이 실패하는 부분(예: `ImageUrls`의 옛 주소 처리, 렌더러의 출력 주소)을 고친다. 출력 주소는 항상 `ImageUrlResolver.publicUrl(key)`(지금 주소)로 만든다 (구현 메모: T083이 처음부터 통과해 코드 변경 없음(출력 주소는 이미 ImageUrlResolver.publicUrl))
+- [X] T086 [US8] 운영 SQL을 `scripts/sql/rebase-image-urls.sql`(변수 `:old`·`:new`, 트랜잭션, 바뀐 행 수 출력)로 두고 quickstart §6 절차와 연결한다(T084 통과, research R17) (구현 메모: LIKE 대신 left(thumbnail_url, length(old)+1) = old || '/' 로 비교한다(주소의 _가 와일드카드가 되지 않게). quickstart §6 4단계를 이 스크립트로 바꿨다)
 
 **Checkpoint**: 공개 주소 변경 절차가 테스트와 스크립트로 준비된다
 
