@@ -31,7 +31,7 @@ class PostDetailCategoryIT extends IntegrationTestBase {
     @MockitoBean PostLikeStatusQuery likeStatus;
     @MockitoBean AuthorFollowStatusQuery followStatus;
     @MockitoSpyBean PostDraftQueryService draftQuery;
-    @MockitoSpyBean PostCategoryPathQuery paths;
+    @MockitoSpyBean PostCategoryPathQuery categoryPaths;
 
     private MvcResult detail(long postId) throws Exception {
         return new CategoryApi(mockMvc).getRaw(null, "/api/posts/" + postId);
@@ -70,7 +70,7 @@ class PostDetailCategoryIT extends IntegrationTestBase {
         long post = new PostFixtures(jdbc).create(owner, PostFixtures.State.PUBLISHED_PUBLIC);
         CategoryFixtures categories = new CategoryFixtures(jdbc);
         categories.assign(post, categories.create(owner, null, "개발"));
-        when(paths.pathOf(anyLong())).thenThrow(new IllegalStateException("db down"));
+        when(categoryPaths.pathOf(anyLong())).thenThrow(new IllegalStateException("db down"));
 
         MvcResult result = detail(post);
 
