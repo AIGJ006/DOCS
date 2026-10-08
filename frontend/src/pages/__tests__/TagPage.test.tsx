@@ -113,8 +113,7 @@ describe('TagPage', () => {
     stubFetch({
       'GET /api/tags/%EC%9D%B4%EC%A7%81%EC%A4%80%EB%B9%84/summary': () =>
         json(200, { name: '이직준비', postCount: 0 }),
-      'GET /api/tags/%EC%9D%B4%EC%A7%81%EC%A4%80%EB%B9%84/posts': () =>
-        json(200, page([], null)),
+      'GET /api/tags/%EC%9D%B4%EC%A7%81%EC%A4%80%EB%B9%84/posts': () => json(200, page([], null)),
     });
     renderTag('/tags/%EC%9D%B4%EC%A7%81%EC%A4%80%EB%B9%84');
     expect(await screen.findByText('아직 이 태그로 공개된 글이 없어요')).toBeInTheDocument();
