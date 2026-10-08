@@ -15,6 +15,7 @@ import PostDetailPage from './pages/PostDetailPage';
 import PrivacyPage from './pages/PrivacyPage';
 import ReagreementPage from './pages/ReagreementPage';
 import ResetPasswordPage from './pages/ResetPasswordPage';
+import SettingsPage from './pages/SettingsPage';
 import SignupPage from './pages/SignupPage';
 import SocialSignupPage from './pages/SocialSignupPage';
 import TermsPage from './pages/TermsPage';
@@ -37,11 +38,6 @@ function EditorLoading() {
       불러오는 중…
     </main>
   );
-}
-
-/** 화면 자리. 각 기능이 자기 화면 컴포넌트로 바꾼다 (001: 가입·로그인·설정 등). */
-function Placeholder({ name }: { name: string }) {
-  return <main data-route={name}>{name}</main>;
 }
 
 /** 006: 글 상세 작성자 버튼 줄의 [삭제] 자리 (005 `deleteControl`) */
@@ -72,7 +68,7 @@ export default function App() {
             <Route path="/forgot-password" element={<ForgotPasswordPage />} />
             <Route path="/reset-password" element={<ResetPasswordPage />} />
             <Route path="/reagree" element={<ReagreementPage />} />
-            <Route path="/settings" element={<Placeholder name="settings" />} />
+            <Route path="/settings" element={<SettingsPage />} />
             <Route path="/terms" element={<TermsPage />} />
             <Route path="/privacy" element={<PrivacyPage />} />
             <Route

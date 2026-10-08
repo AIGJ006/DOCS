@@ -1,4 +1,5 @@
-import { apiPatch, apiPost } from '../../api/client';
+import { apiPatch } from '../../api/client';
+import { uploadProfileImage } from './uploadProfileImage';
 
 /**
  * 소셜 사진 복사 (FR-031, R-20, 11 §4-2). 가입을 마친 뒤 브라우저가 한 번만 한다 — 서버는 외부 사진 주소를 요청·저장하지 않는다.
@@ -9,7 +10,7 @@ import { apiPatch, apiPost } from '../../api/client';
  * 4. `PATCH /api/me/profile {profileImageId}`로 프로필 사진에 연결한다(US6).
  *
  * 어느 단계든 실패하면 예외를 던지지 않고 안내 문구만 돌려준다 — 가입은 그대로 성공이다.
- * presign 응답 모양(`imageId`·`uploadUrl`·`uploadHeaders`)은 003 계약이 아직 없어 이 파일이 가정한 것이다(003 구현 때 맞춘다).
+ * 업로드는 `uploadProfileImage`(설정 화면과 같은 흐름).
  */
 
 export const SOCIAL_PHOTO_TIMEOUT_MS = 5000;
@@ -24,12 +25,6 @@ export interface PhotoImportDeps {
   toSquareWebp: (image: HTMLImageElement) => Promise<Blob>;
 }
 
-interface PresignResponse {
-  imageId: number;
-  uploadUrl: string;
-  uploadHeaders?: Record<string, string>;
-}
-
 export async function importSocialPhoto(
   url: string,
   deps: PhotoImportDeps = { loadImage, toSquareWebp },
@@ -37,25 +32,9 @@ export async function importSocialPhoto(
   try {
     const image = await withTimeout(deps.loadImage(url), SOCIAL_PHOTO_TIMEOUT_MS);
     const blob = await deps.toSquareWebp(image);
-    // WebP로 인코딩하지 못하는 브라우저는 PNG를 돌려준다 — 실제 형식으로 신고한다.
-    const contentType = blob.type || 'image/webp';
-    const presign = await apiPost<PresignResponse>('/api/images/presign', {
-      purpose: 'PROFILE',
-      contentType,
-      size: blob.size,
-    });
-    const put = await fetch(presign.uploadUrl, {
-      method: 'PUT',
-      body: blob,
-      credentials: 'omit',
-      headers: { 'Content-Type': contentType, ...(presign.uploadHeaders ?? {}) },
-    });
-    if (!put.ok) {
-      throw new Error(`upload ${put.status}`);
-    }
-    await apiPost(`/api/images/${presign.imageId}/complete`);
-    await apiPatch('/api/me/profile', { profileImageId: presign.imageId });
-    return { ok: true, imageId: presign.imageId };
+    const imageId = await uploadProfileImage(blob);
+    await apiPatch('/api/me/profile', { profileImageId: imageId });
+    return { ok: true, imageId };
   } catch {
     return { ok: false, message: SOCIAL_PHOTO_FAILED_MESSAGE };
   }
