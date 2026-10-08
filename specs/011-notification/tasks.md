@@ -186,13 +186,13 @@ description: "Task list for 011-notification (도메인 이벤트·인앱 알림
 
 ### Tests for User Story 5 ⚠️
 
-- [ ] T043 [P] [US5] `T/notification/integration/ModerationNotificationIT.java` — US5 #1~#6, SC-010 (`EventPublisherHelper`로 `ReportResolved`·`ContentHidden` 직접 발행): 신고 결과 두 가지(`report.result`, `actor`·`post`·`url` null), 글 숨김 → 작성자 `CONTENT_HIDDEN`·제목·`hidden {POST, stillHidden true, reason SPAM}`, 댓글 숨김 → `post null`·댓글 위치 `url`·그 댓글의 `COMMENT`·`REPLY` 삭제, 해제 뒤 `stillHidden false`·`reason null`, 응답 JSON 어디에도 신고자·관리자 번호 없음, 5종 모두 끈 회원도 받음, 받는 사람 유예면 0, 신고 행 삭제 → `report_id` NULL·알림 남음
+- [X] T043 [P] [US5] `T/notification/integration/ModerationNotificationIT.java` — US5 #1~#6, SC-010 (`EventPublisherHelper`로 `ReportResolved`·`ContentHidden` 직접 발행): 신고 결과 두 가지(`report.result`, `actor`·`post`·`url` null), 글 숨김 → 작성자 `CONTENT_HIDDEN`·제목·`hidden {POST, stillHidden true, reason SPAM}`, 댓글 숨김 → `post null`·댓글 위치 `url`·그 댓글의 `COMMENT`·`REPLY` 삭제, 해제 뒤 `stillHidden false`·`reason null`, 응답 JSON 어디에도 신고자·관리자 번호 없음, 5종 모두 끈 회원도 받음, 받는 사람 유예면 0, 신고 행 삭제 → `report_id` NULL·알림 남음 (구현 메모: 014가 없어 이벤트 직접 발행, 숨김 상태·신고 행은 SQL로 직접 넣음)
 - [ ] T044 [P] [US5] 화면 테스트 `notificationText.test.ts`에 신고 결과 두 문장, 글 숨김 "회원님의 글「제목」이(가) 운영 정책에 따라 숨겨졌어요 (사유: 스팸·광고)", 해제 "…숨겨졌었어요 (지금은 다시 보여요)", 댓글 숨김(제목 없음)
 
 ### Implementation for User Story 5
 
-- [ ] T045 [US5] 이벤트 record `B/shared/event/ReportResolved.java`(`reportId, reporterId, targetType, targetId, result, resolvedAt`)·`ContentHidden.java`(`targetType, targetId, ownerId, postId, hiddenAt`)와 enum(`ReportTargetType` POST·COMMENT, `ReportResult` ACTION_TAKEN·NO_VIOLATION) — 014가 먼저 만들었으면 그대로 쓴다(먼저 하는 쪽이 만듦, 014 spec Implementation Notes 필드). `DomainEventShapeTest` 통과 확인
-- [ ] T046 [US5] `NotificationWriter.addReportResolved`·`addContentHidden`(받는 사람 유예만 확인, 댓글이면 §7-1 먼저)과 `B/notification/application/listener/ModerationNotificationListener.java`, `NotificationItemAssembler`의 `report`·`hidden`(대상의 지금 `hidden_at`·`hidden_reason`) (T043 실패 확인, T045 다음)
+- [X] T045 [US5] 이벤트 record `B/shared/event/ReportResolved.java`(`reportId, reporterId, targetType, targetId, result, resolvedAt`)·`ContentHidden.java`(`targetType, targetId, ownerId, postId, hiddenAt`)와 enum(`ReportTargetType` POST·COMMENT, `ReportResult` ACTION_TAKEN·NO_VIOLATION) — 014가 먼저 만들었으면 그대로 쓴다(먼저 하는 쪽이 만듦, 014 spec Implementation Notes 필드). `DomainEventShapeTest` 통과 확인 (구현 메모: 014보다 먼저 만듦: shared.event에 ReportResolved·ContentHidden record와 enum ReportTargetType·ReportResult(014 data-model §6 필드 그대로). ContentUnhidden·MemberSuspended는 알림이 구독하지 않아 만들지 않음(014 몫))
+- [X] T046 [US5] `NotificationWriter.addReportResolved`·`addContentHidden`(받는 사람 유예만 확인, 댓글이면 §7-1 먼저)과 `B/notification/application/listener/ModerationNotificationListener.java`, `NotificationItemAssembler`의 `report`·`hidden`(대상의 지금 `hidden_at`·`hidden_reason`) (T043 실패 확인, T045 다음) (구현 메모: 숨김 표시(hidden.stillHidden·reason)는 T029 NotificationItemAssembler에 이미 있음)
 - [ ] T047 [US5] `F/features/moderation/reasonLabels.ts`(014 Clarifications 6개 코드 → 이름, 014와 공유 — 먼저 하는 쪽이 만듦)와 `notificationText.ts` 운영 알림 문장 (T043·T044 통과)
 
 **Checkpoint**: 운영 알림 2종 동작(014 연결은 014 머지 후 quickstart §4로 확인)

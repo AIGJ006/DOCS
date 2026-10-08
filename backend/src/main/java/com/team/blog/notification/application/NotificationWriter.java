@@ -8,6 +8,9 @@ import com.team.blog.notification.domain.NotificationType;
 import com.team.blog.notification.infra.NotificationRepository;
 import com.team.blog.post.application.PostReadService;
 import com.team.blog.shared.event.CommentCreated;
+import com.team.blog.shared.event.ContentHidden;
+import com.team.blog.shared.event.ReportResolved;
+import com.team.blog.shared.event.ReportTargetType;
 import com.team.blog.shared.security.Viewer;
 import java.time.Clock;
 import java.time.Instant;
@@ -161,6 +164,48 @@ public class NotificationWriter {
             return 0;
         }
         return notifications.insertNewPostForFollowers(postId, authorId, clock.instant());
+    }
+
+    /** 신고자에게 처리 결과 (contracts §3). 받는 사람 탈퇴 유예만 본다(운영 알림은 끌 수 없음). */
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public boolean addReportResolved(ReportResolved e) {
+        if (!eligibility.allows(NotificationType.REPORT_RESOLVED, e.reporterId(), null, null)) {
+            return false;
+        }
+        notifications.insertSingle(
+                e.reporterId(),
+                NotificationType.REPORT_RESOLVED,
+                null,
+                null,
+                e.reportId(),
+                e.result().name(),
+                null,
+                0,
+                clock.instant());
+        return true;
+    }
+
+    /** 작성자에게 숨김 알림 (contracts §3). 댓글이면 그 댓글의 댓글·답글 알림을 먼저 지운다(§7-1). */
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public boolean addContentHidden(ContentHidden e) {
+        boolean comment = e.targetType() == ReportTargetType.COMMENT;
+        if (comment) {
+            notifications.deleteCommentNotifications(e.targetId());
+        }
+        if (!eligibility.allows(NotificationType.CONTENT_HIDDEN, e.ownerId(), null, e.postId())) {
+            return false;
+        }
+        notifications.insertSingle(
+                e.ownerId(),
+                NotificationType.CONTENT_HIDDEN,
+                e.postId(),
+                comment ? e.targetId() : null,
+                null,
+                null,
+                null,
+                0,
+                clock.instant());
+        return true;
     }
 
     /** 그 댓글의 댓글·답글 알림 삭제 (contracts §7-1). */
