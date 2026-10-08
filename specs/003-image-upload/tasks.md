@@ -164,15 +164,15 @@ description: "Task list for 003-image-upload (이미지 업로드)"
 
 ### Tests for User Story 3 ⚠️
 
-- [ ] T048 [P] [US3] `F/features/image-upload/pendingUploads.test.ts`(fake-indexeddb): `pending` 결과면 `draft:{member}:{post}.pendingImages`에 `{localId, blob}` 저장 + 본문 `![](local:{localId})` + `blob:` 미리보기 주소; `online` 이벤트·에디터 열기 때 차례로 다시 처리 → 성공하면 본문 교체·대기열 제거·변경 표시(dirty); 다시 시도 중 409·429·400이면 대기열에서 빼고 안내(본문 표시는 남김, R12); 로그아웃 `clearMemberDrafts` 뒤 대기 사진 없음(002 FR-014)
-- [ ] T049 [P] [US3] `F/features/image-upload/uploadImage.test.ts`에 실패 분류 경우를 더한다: `navigator.onLine=false`·`TypeError`·30초 시간 초과·5xx → `pending`, 409·429·400·401·403 → `rejected`(보관 안 함)
-- [ ] T050 [P] [US3] `E/image-upload.spec.ts`에 오프라인 시나리오를 더한다: `context.setOffline(true)` → 붙여넣기 → 이미지 표시·자동 저장 성공 → [발행] "업로드가 끝나지 않은 사진이 있어요"(002 `PENDING_IMAGES`) → 온라인 → 본문 주소로 교체 → 발행 성공(US3 #1~#4, SC-008)
+- [X] T048 [P] [US3] `F/features/image-upload/pendingUploads.test.ts`(fake-indexeddb): `pending` 결과면 `draft:{member}:{post}.pendingImages`에 `{localId, blob}` 저장 + 본문 `![](local:{localId})` + `blob:` 미리보기 주소; `online` 이벤트·에디터 열기 때 차례로 다시 처리 → 성공하면 본문 교체·대기열 제거·변경 표시(dirty); 다시 시도 중 409·429·400이면 대기열에서 빼고 안내(본문 표시는 남김, R12); 로그아웃 `clearMemberDrafts` 뒤 대기 사진 없음(002 FR-014) (구현 메모: IndexedDB 구현(브라우저·fake-indexeddb)마다 Blob이 그대로 되살아나지 않아 대기 사진은 {localId, type, data: ArrayBuffer, heldAt}로 보관한다(002 PendingImage 타입을 이 모양으로 바꿈). 자동 저장(saveLocal)이 pendingImages를 []로 덮던 것을 '주지 않으면 그대로 둠'으로 바꾸고 같은 키 쓰기를 차례로 돌린다)
+- [X] T049 [P] [US3] `F/features/image-upload/uploadImage.test.ts`에 실패 분류 경우를 더한다: `navigator.onLine=false`·`TypeError`·30초 시간 초과·5xx → `pending`, 409·429·400·401·403 → `rejected`(보관 안 함)
+- [X] T050 [P] [US3] `E/image-upload.spec.ts`에 오프라인 시나리오를 더한다: `context.setOffline(true)` → 붙여넣기 → 이미지 표시·자동 저장 성공 → [발행] "업로드가 끝나지 않은 사진이 있어요"(002 `PENDING_IMAGES`) → 온라인 → 본문 주소로 교체 → 발행 성공(US3 #1~#4, SC-008) (구현 메모: context.setOffline 대신 저장소 요청만 page.route로 끊어(앱 API는 살림) 보관 → 발행 막힘(PENDING_IMAGES) → 다시 연결 → 교체 → 발행을 확인했다. 웹킷 없음(T027 메모))
 
 ### Implementation for User Story 3
 
-- [ ] T051 [US3] `F/features/image-upload/pendingUploads.ts`: `holdPending(memberId, postId, file)`(localforage 저장 + 표시 문자열), `retryPending(memberId, postId, replace)`(한 번에 하나씩, 실패하면 지수 대기 최대 5분), `window.addEventListener('online')` 등록·해제, 대기 사진 수 반환(T048 통과)
-- [ ] T052 [US3] `useImageInsert`·`F/features/editor/openEditor.ts` 연결: `uploadImage` 결과가 `pending`이면 `holdPending`, 에디터를 열 때와 `online` 때 `retryPending`. 저장 상태 옆에 "업로드 대기 사진 N장"을 보인다(T049·T050 통과)
-- [ ] T053 [US3] 화면이 `local:` 이미지를 `blob:` 주소로 보이게 하는 미리보기 변환을 `F/components/editor/PreviewPane.tsx`에 더한다(서버 미리보기 결과의 링크 대신 기기 사본 표시. CSP `img-src blob:`은 001이 이미 허용). 서버로 보내는 본문은 `local:` 그대로다
+- [X] T051 [US3] `F/features/image-upload/pendingUploads.ts`: `holdPending(memberId, postId, file)`(localforage 저장 + 표시 문자열), `retryPending(memberId, postId, replace)`(한 번에 하나씩, 실패하면 지수 대기 최대 5분), `window.addEventListener('online')` 등록·해제, 대기 사진 수 반환(T048 통과)
+- [X] T052 [US3] `useImageInsert`·`F/features/editor/openEditor.ts` 연결: `uploadImage` 결과가 `pending`이면 `holdPending`, 에디터를 열 때와 `online` 때 `retryPending`. 저장 상태 옆에 "업로드 대기 사진 N장"을 보인다(T049·T050 통과)
+- [X] T053 [US3] 화면이 `local:` 이미지를 `blob:` 주소로 보이게 하는 미리보기 변환을 `F/components/editor/PreviewPane.tsx`에 더한다(서버 미리보기 결과의 링크 대신 기기 사본 표시. CSP `img-src blob:`은 001이 이미 허용). 서버로 보내는 본문은 `local:` 그대로다 (구현 메모: 서버 미리보기 요청에서만 (local:{id})를 자리표시 주소(https://local-image.invalid/{id})로 바꿔 보내고, 돌아온 링크를 이 기기에서 만든 blob: img로 바꾼다. 저장·발행 본문은 local: 그대로)
 
 **Checkpoint**: 오프라인에서도 사진이 사라지지 않고, 발행은 업로드가 끝난 뒤에만 된다
 

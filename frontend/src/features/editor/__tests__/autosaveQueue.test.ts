@@ -9,7 +9,7 @@ type Deferred = { resolve: (r: SaveResponse) => void; reject: (e: unknown) => vo
 function setup(options: { baseVersion?: number; online?: boolean } = {}) {
   const sent: SaveRequest[] = [];
   const pending: Deferred[] = [];
-  const local: LocalDraft[] = [];
+  const local: Omit<LocalDraft, 'pendingImages'>[] = [];
   const statuses: AutosaveStatus[] = [];
   let online = options.online ?? true;
   const onConflict = vi.fn();

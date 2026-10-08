@@ -9,10 +9,16 @@
 import localforage from 'localforage';
 import { EDITOR_CONFIG } from './editorConfig';
 
-/** 업로드가 끝나지 않은 사진 (003 규칙: 본문의 `local:{localId}` 주소 ↔ 원본 Blob). */
+/**
+ * 업로드가 끝나지 않은 사진 (003 US3 규칙: 본문의 `local:{localId}` 주소 ↔ 원래 파일). 원래 파일은 `ArrayBuffer`와 형식으로
+ * 보관한다 — 어느 IndexedDB 구현에서도 그대로 되살아난다. 파일 이름은 넣지 않는다.
+ */
 export interface PendingImage {
   localId: string;
-  blob: Blob;
+  type: string;
+  data: ArrayBuffer;
+  /** 보관한 시각(ms) */
+  heldAt: number;
 }
 
 export interface LocalDraft {
@@ -56,24 +62,80 @@ export async function loadDraft(memberId: number, postId: number): Promise<Local
   return (await draftStorage().getItem<LocalDraft>(draftKey(memberId, postId))) ?? null;
 }
 
+/** 같은 임시 글 키에 대한 쓰기를 차례로 돌린다 (자동 저장과 사진 보관이 서로 덮어쓰지 않게). */
+const writeChains = new Map<string, Promise<unknown>>();
+
+function serialized<T>(key: string, write: () => Promise<T>): Promise<T> {
+  const previous = writeChains.get(key) ?? Promise.resolve();
+  const next = previous.catch(() => undefined).then(write);
+  writeChains.set(key, next);
+  void next
+    .finally(() => {
+      if (writeChains.get(key) === next) {
+        writeChains.delete(key);
+      }
+    })
+    .catch(() => undefined);
+  return next;
+}
+
+/**
+ * 임시 글을 저장한다. `pendingImages`를 주지 않으면(자동 저장) 이미 보관된 대기 사진을 그대로 둔다(003 US3).
+ */
 export async function saveDraft(
   memberId: number,
   postId: number,
-  draft: LocalDraft,
+  draft: Omit<LocalDraft, 'pendingImages'> & { pendingImages?: PendingImage[] },
 ): Promise<void> {
-  const value: LocalDraft = {
-    title: draft.title,
-    contentMd: draft.contentMd,
-    baseVersion: draft.baseVersion,
-    dirty: draft.dirty,
-    pendingImages: draft.pendingImages ?? [],
-    updatedAt: draft.updatedAt,
-  };
-  await draftStorage().setItem(draftKey(memberId, postId), value);
+  const key = draftKey(memberId, postId);
+  await serialized(key, async () => {
+    const pendingImages =
+      draft.pendingImages ?? (await draftStorage().getItem<LocalDraft>(key))?.pendingImages ?? [];
+    const value: LocalDraft = {
+      title: draft.title,
+      contentMd: draft.contentMd,
+      baseVersion: draft.baseVersion,
+      dirty: draft.dirty,
+      pendingImages,
+      updatedAt: draft.updatedAt,
+    };
+    await draftStorage().setItem(key, value);
+  });
+}
+
+/** 대기 사진 목록을 고친다 (003 US3). 임시 글이 아직 없으면 빈 임시 글(dirty 아님)에 붙인다. */
+export async function updatePendingImages(
+  memberId: number,
+  postId: number,
+  change: (images: PendingImage[]) => PendingImage[],
+): Promise<PendingImage[]> {
+  const key = draftKey(memberId, postId);
+  return serialized(key, async () => {
+    const current = await draftStorage().getItem<LocalDraft>(key);
+    const next = change(current?.pendingImages ?? []);
+    const value: LocalDraft = current
+      ? { ...current, pendingImages: next }
+      : {
+          title: '',
+          contentMd: '',
+          baseVersion: 0,
+          dirty: false,
+          pendingImages: next,
+          updatedAt: Date.now(),
+        };
+    await draftStorage().setItem(key, value);
+    return next;
+  });
+}
+
+/** 대기 사진 목록. */
+export async function loadPendingImages(memberId: number, postId: number): Promise<PendingImage[]> {
+  return (await loadDraft(memberId, postId))?.pendingImages ?? [];
 }
 
 export async function removeDraft(memberId: number, postId: number): Promise<void> {
-  await draftStorage().removeItem(draftKey(memberId, postId));
+  const key = draftKey(memberId, postId);
+  await serialized(key, () => draftStorage().removeItem(key));
 }
 
 export async function loadBackup(memberId: number, postId: number): Promise<DraftBackup | null> {

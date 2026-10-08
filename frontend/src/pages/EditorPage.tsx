@@ -22,6 +22,12 @@ import SaveStatus from '../components/editor/SaveStatus';
 import { useSession } from '../features/auth/useSession';
 import { AutosaveQueue, type AutosaveStatus } from '../features/editor/autosaveQueue';
 import { useImageInsert } from '../features/image-upload/useImageInsert';
+import {
+  createPendingRetrier,
+  holdPending,
+  localImageUrls,
+} from '../features/image-upload/pendingUploads';
+import { loadPendingImages } from '../features/editor/localDraftStore';
 import { ConflictController, serverCopyOf, type ConflictState } from '../features/editor/conflict';
 import { EDITOR_CONFIG } from '../features/editor/editorConfig';
 import { registerLifecycle } from '../features/editor/lifecycle';
@@ -107,6 +113,29 @@ export default function EditorPage() {
   const latest = useRef({ title: '', contentMd: '' });
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [imageNotice, setImageNotice] = useState<string | null>(null);
+  /** 업로드 대기 사진 (003 US3): 수와 미리보기용 blob: 주소. */
+  const [pendingCount, setPendingCount] = useState(0);
+  const [localImages, setLocalImages] = useState<ReadonlyMap<string, string>>(new Map());
+  const retrierRef = useRef<ReturnType<typeof createPendingRetrier> | null>(null);
+  const onContentRef = useRef<(value: string) => void>(() => undefined);
+
+  /** 대기 사진 수가 바뀌면 미리보기 주소를 다시 만든다(이전 주소는 놓는다). */
+  const refreshLocalImages = useCallback(
+    (count: number) => {
+      setPendingCount(count);
+      if (memberId === null) return;
+      void loadPendingImages(memberId, postId)
+        .then((images) => {
+          const urls = localImageUrls(images);
+          setLocalImages((previous) => {
+            previous.forEach((url) => URL.revokeObjectURL(url));
+            return urls;
+          });
+        })
+        .catch(() => undefined);
+    },
+    [memberId, postId],
+  );
 
   useEffect(() => {
     if (loading || !validId) {
@@ -176,7 +205,16 @@ export default function EditorPage() {
         const goOffline = () => queue.setOnline(false);
         window.addEventListener('online', goOnline);
         window.addEventListener('offline', goOffline);
+        const retrier = createPendingRetrier(memberId, postId, {
+          getContent: () => latest.current.contentMd,
+          setContent: (value) => onContentRef.current(value),
+          onFailed: setImageNotice,
+          onCount: refreshLocalImages,
+        });
+        retrierRef.current = retrier;
+        retrier.start();
         cleanups.push(
+          () => retrier.stop(),
           () => window.removeEventListener('online', goOnline),
           () => window.removeEventListener('offline', goOffline),
           registerLifecycle({
@@ -204,8 +242,19 @@ export default function EditorPage() {
       cleanups.forEach((cleanup) => cleanup());
       queueRef.current = null;
       conflictRef.current = null;
+      retrierRef.current = null;
     };
-  }, [loading, memberId, postId, validId, navigate, reloadKey]);
+  }, [loading, memberId, postId, validId, navigate, reloadKey, refreshLocalImages]);
+
+  useEffect(
+    () => () => {
+      setLocalImages((previous) => {
+        previous.forEach((url) => URL.revokeObjectURL(url));
+        return new Map();
+      });
+    },
+    [],
+  );
 
   const onTitle = (value: string) => {
     setTitle(value);
@@ -220,6 +269,9 @@ export default function EditorPage() {
     setFieldErrors((errors) => errors.filter((e) => e.field !== 'contentMd'));
     queueRef.current?.update(latest.current.title, value);
   };
+  useEffect(() => {
+    onContentRef.current = onContent;
+  });
 
   /** 사진 넣기 (003 US1): 붙여넣기·끌어놓기·[사진] 버튼 → 대기 표시 → 업로드 → `![](주소)`. 자동 저장은 막지 않는다. */
   const images = useImageInsert({
@@ -227,6 +279,18 @@ export default function EditorPage() {
     getContent: () => latest.current.contentMd,
     setContent: onContent,
     onRejected: setImageNotice,
+    onPending: async (file) => {
+      if (memberId === null) return null;
+      try {
+        const held = await holdPending(memberId, postId, file);
+        const count = (await loadPendingImages(memberId, postId)).length;
+        refreshLocalImages(count);
+        retrierRef.current?.held(count);
+        return held.markdown;
+      } catch {
+        return null;
+      }
+    },
   });
 
   /** [저장] — 즉시 DB에 반영한다 (FR-009, D-3). */
@@ -407,6 +471,11 @@ export default function EditorPage() {
               사진 올리는 중…
             </span>
           ) : null}
+          {pendingCount > 0 ? (
+            <span className="image-pending" aria-live="polite">
+              업로드 대기 사진 {pendingCount}장
+            </span>
+          ) : null}
         </div>
         <div className="editor-actions">
           {opened.server.status === 'PUBLISHED' && editing ? (
@@ -478,7 +547,7 @@ export default function EditorPage() {
             </p>
           ) : null}
         </div>
-        <PreviewPane contentMd={contentMd} />
+        <PreviewPane contentMd={contentMd} localImages={localImages} />
       </div>
 
       {comparing && conflict ? (

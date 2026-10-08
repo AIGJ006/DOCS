@@ -97,4 +97,29 @@ describe('PreviewPane', () => {
     expect(screen.getByRole('link', { name: '[이미지] 남의 사진' })).toHaveAttribute('href', url);
     expect(document.querySelector('img')).toBeNull();
   });
+
+  it('업로드 대기(local:) 사진은 기기 사본(blob:)으로 보이고, 서버에는 자리표시 주소로 보낸다 (003 US3)', async () => {
+    const fetchMock = stubFetch({
+      'POST /api/markdown/preview': (init) => {
+        const sent = JSON.parse(String(init?.body)) as { contentMd: string };
+        const href = /\((https:\/\/local-image\.invalid\/[a-z0-9-]+)\)/.exec(sent.contentMd)![1];
+        return json(200, {
+          html: `<p><a href="${href}" rel="nofollow noopener noreferrer">[이미지] ${href}</a></p>`,
+        });
+      },
+    });
+    const localImages = new Map([['a1b2', 'blob:http://localhost/a1b2']]);
+    render(<PreviewPane contentMd="![](local:a1b2)" localImages={localImages} />);
+    await tick(500);
+    await tick(0);
+
+    const body = JSON.parse(
+      String(requestsTo(fetchMock, 'POST', '/api/markdown/preview')[0][1]?.body),
+    );
+    expect(body.contentMd).toBe('![](https://local-image.invalid/a1b2)');
+    const img = screen.getByTestId('preview-html').querySelector('img');
+    expect(img?.getAttribute('src')).toBe('blob:http://localhost/a1b2');
+    expect(img?.getAttribute('alt')).toBe('');
+    expect(screen.queryByRole('link')).toBeNull();
+  });
 });

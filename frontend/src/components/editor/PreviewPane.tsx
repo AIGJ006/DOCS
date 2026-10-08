@@ -11,6 +11,40 @@ import { highlightCode } from '../../features/markdown/highlightCode';
  */
 interface Props {
   contentMd: string;
+  /** 업로드 대기 사진 `localId` → `blob:` 주소 (003 US3). 본문의 `local:` 사진을 기기 사본으로 보인다 */
+  localImages?: ReadonlyMap<string, string>;
+}
+
+/** 미리보기 요청에서만 `local:` 사진을 이 자리표시 주소로 바꿔 보낸다 — 서버는 외부 사진처럼 링크로 돌려준다. */
+const LOCAL_PREVIEW_PREFIX = 'https://local-image.invalid/';
+
+function toPreviewSource(contentMd: string): string {
+  return contentMd.replace(/\(local:([A-Za-z0-9-]+)\)/g, `(${LOCAL_PREVIEW_PREFIX}$1)`);
+}
+
+/** 서버가 돌려준 자리표시 링크를 기기 사본 이미지로 바꾼다 (주소는 이 기기에서 만든 `blob:`만). */
+function showLocalImages(root: HTMLElement | null, localImages?: ReadonlyMap<string, string>) {
+  if (!root) return;
+  for (const link of Array.from(
+    root.querySelectorAll<HTMLAnchorElement>(`a[href^="${LOCAL_PREVIEW_PREFIX}"]`),
+  )) {
+    const localId = link.getAttribute('href')!.slice(LOCAL_PREVIEW_PREFIX.length);
+    const url = localImages?.get(localId);
+    const img = document.createElement('img');
+    img.alt = '';
+    img.className = 'local-image';
+    img.dataset.localId = localId;
+    if (url && url.startsWith('blob:')) {
+      img.src = url;
+    }
+    link.replaceWith(img);
+  }
+  for (const img of Array.from(root.querySelectorAll<HTMLImageElement>('img[data-local-id]'))) {
+    const url = localImages?.get(img.dataset.localId ?? '');
+    if (url && url.startsWith('blob:') && img.src !== url) {
+      img.src = url;
+    }
+  }
 }
 
 function messageOf(error: unknown): string {
@@ -28,7 +62,7 @@ function messageOf(error: unknown): string {
   return '미리보기를 불러오지 못했어요';
 }
 
-export default function PreviewPane({ contentMd }: Props) {
+export default function PreviewPane({ contentMd, localImages }: Props) {
   const [html, setHtml] = useState('');
   const [error, setError] = useState<string | null>(null);
   const container = useRef<HTMLDivElement>(null);
@@ -36,7 +70,7 @@ export default function PreviewPane({ contentMd }: Props) {
   useEffect(() => {
     const controller = new AbortController();
     const timer = setTimeout(() => {
-      previewMarkdown(contentMd, controller.signal)
+      previewMarkdown(toPreviewSource(contentMd), controller.signal)
         .then((response) => {
           if (!controller.signal.aborted) {
             setHtml(response.html);
@@ -61,6 +95,10 @@ export default function PreviewPane({ contentMd }: Props) {
   useEffect(() => {
     highlightCode(container.current);
   }, [html]);
+
+  useEffect(() => {
+    showLocalImages(container.current, localImages);
+  }, [html, localImages]);
 
   return (
     <section className="preview-pane" aria-label="미리보기">

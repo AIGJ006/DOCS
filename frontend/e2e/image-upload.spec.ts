@@ -97,4 +97,45 @@ test.describe('사진 붙여넣기 업로드', () => {
     console.log(`SC-001: 원래 ${source.length}B → 원본 ${stored.length}B, 썸네일 ${thumb.length}B`);
     expect(stored.length).toBeLessThan(source.length);
   });
+
+  // 003 T050 (US3 #1~#4, SC-008): 저장소에 닿지 못하면 기기에 보관 → 발행 막힘 → 연결되면 본문 주소로 교체 → 발행
+  test('저장소에 닿지 못하면 기기에 보관하고, 연결되면 올려서 발행할 수 있다', async ({ page }) => {
+    test.setTimeout(120_000);
+    await login(page);
+    const postId = await createPost(page);
+    await page.goto(`/write/${postId}`);
+    await page.getByLabel('제목').fill('오프라인 사진 E2E');
+
+    // 저장소 요청만 끊는다(앱 API는 그대로) — 브라우저에는 네트워크 오류로 보인다
+    const storageBlocked = (url: URL) => url.pathname.startsWith('/blog/images/');
+    await page.route(storageBlocked, (route) => route.abort('internetdisconnected'));
+
+    await pasteImage(page, FIXTURE, 'IMG_0002.jpg');
+    const textarea = page.getByLabel('본문');
+    await expect(textarea).toHaveValue(/^!\[\]\(local:[0-9a-f-]+\)\n$/, { timeout: 30_000 });
+    await expect(page.getByText('업로드 대기 사진 1장')).toBeVisible();
+    const preview = page.getByTestId('preview-html').locator('img');
+    await expect(preview).toHaveAttribute('src', /^blob:/, { timeout: 10_000 });
+    await expect(page.getByRole('status')).toHaveText(/^✓ 저장됨 \d{2}:\d{2}$/, {
+      timeout: 10_000,
+    });
+
+    await page.getByRole('button', { name: '발행하기' }).click();
+    await page.getByRole('dialog').getByRole('button', { name: '발행' }).click();
+    await expect(page.getByText('업로드가 끝나지 않은 사진이 있어요').first()).toBeVisible();
+    await page.getByRole('dialog').getByRole('button', { name: '닫기' }).click();
+
+    await page.unroute(storageBlocked);
+    await page.evaluate(() => window.dispatchEvent(new Event('online')));
+    await expect(textarea).toHaveValue(IMAGE_MD, { timeout: 30_000 });
+    await expect(page.getByText('업로드 대기 사진 1장')).toHaveCount(0);
+    await expect(page.getByRole('status')).toHaveText(/^✓ 저장됨 \d{2}:\d{2}$/, {
+      timeout: 15_000,
+    });
+
+    await page.getByRole('button', { name: '발행하기' }).click();
+    await page.getByRole('dialog').getByRole('button', { name: '발행' }).click();
+    await expect(page).not.toHaveURL(/\/write\//, { timeout: 15_000 });
+    await expect(page.locator('article img').first()).toBeVisible();
+  });
 });

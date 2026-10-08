@@ -122,6 +122,7 @@ describe('uploadImage', () => {
     [429, 'DAILY_UPLOAD_LIMIT', '오늘은 사진을 200장까지 올릴 수 있어요. 내일 다시 시도해 주세요'],
     [429, 'TOO_MANY_REQUESTS', '잠시 후 다시 시도해 주세요'],
     [403, 'EMAIL_NOT_VERIFIED', '이메일 인증 후 이용할 수 있어요'],
+    [401, 'LOGIN_REQUIRED', '로그인이 필요해요'],
   ])('presign %i %s → 즉시 안내(보관 안 함)', async (status, code, message) => {
     const errors =
       code === 'VALIDATION_FAILED'
