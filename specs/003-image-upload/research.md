@@ -123,6 +123,7 @@
   - 화면: presign·complete의 503은 code와 상관없이 "잠시 후 다시 시도해 주세요"로 보이고, 실패 분류(R12)상 "서버 장애"로 기기에 보관해 다시 올린다.
   - 팀 결정 요청: `RedisGuard`의 OOM 처리를 "자동 저장 경로만 `AUTOSAVE_UNAVAILABLE`, 나머지는 공통 503 `TEMPORARILY_UNAVAILABLE`"로 바꿀지. 같은 문제가 007·008·009·010·012에도 있다(ANALYSIS-tier-bc 팀 결정 항목).
 - **Rationale**: 002 T032 구현 메모(팀 확인 필요). 공용 코드를 한 기능이 바꾸면 002의 자동 저장 테스트가 흔들린다.
+- **확인 (T095, 2026-10-08)**: `ImageRedisOomIT` — Redis `maxmemory` 1바이트 + `noeviction`에서 presign은 `AutosaveUnavailableException`(503 `AUTOSAVE_UNAVAILABLE`)이고 TEMP 행은 보상 삭제된다. 화면은 503을 code와 상관없이 "잠시 후 다시 시도해 주세요"로 보이고 기기에 보관한다(`uploadImage.test.ts` 5xx 분류). 같은 조건에서 HTTP 요청은 세션 쓰기(Spring Session·Redis)가 먼저 흔들릴 수 있다. 공용 처리 변경은 팀 결정으로 남긴다.
 - **Alternatives considered**: 이 기능에서 예외를 잡아 `TEMPORARILY_UNAVAILABLE`로 바꾸기(가능하지만 기능마다 같은 코드가 퍼짐).
 
 ## R10. 사진 판별·연결 — 002 임시 구현을 최종으로 (확정)

@@ -295,18 +295,18 @@ description: "Task list for 003-image-upload (이미지 업로드)"
 
 **Purpose**: 여러 스토리에 걸친 보안·성능·검증·다른 기능과의 연결
 
-- [ ] T087 [P] 로그·응답 점검: `B/media/` 전체에서 로그에 서명 쿼리·원래 파일 이름·이메일이 없고 키·크기·회원 번호만 있는지, 응답에 파일 이름 칸이 없는지 확인한다(FR-009, SC-005, 헌법 III)
-- [ ] T088 [P] 프런트 보안·접근성 점검: `F/features/image-upload/`·`AltTextPanel`·`StorageUsageBar`·`gifPlayer`에 `dangerouslySetInnerHTML`이 없고, 파일 이름을 화면에 쓰지 않으며, 업로드 중 상태가 `aria-live="polite"`로 읽히는지 확인한다(헌법 IV)
-- [ ] T089 [P] 성능 측정 `T/media/integration/ImageUploadPerformanceIT.java`: presign p95 200ms, complete p95 1초(로컬 컨테이너 기준, 100회), 결과를 quickstart §2에 적는다(plan Performance Goals)
-- [ ] T090 [P] 화면 문구 점검: 모든 오류·안내 문구가 data-model §7·spec과 글자까지 같고 끝 마침표가 없는지 `F/features/image-upload/uploadMessages.ts`와 서버 `MediaReasonCode`를 대조한다
-- [ ] T091 **수동 확인 작업(사파리)**: 실제 아이폰·맥 사파리에서 quickstart §3-2를 실행해 WebP 대체(JPEG)·EXIF 방향·카드 썸네일을 확인하고 결과를 research R22에 적는다(Clarifications Q4 "plan 때 실제 기기로 확인")
+- [X] T087 [P] 로그·응답 점검: `B/media/` 전체에서 로그에 서명 쿼리·원래 파일 이름·이메일이 없고 키·크기·회원 번호만 있는지, 응답에 파일 이름 칸이 없는지 확인한다(FR-009, SC-005, 헌법 III) (구현 메모: media 로그는 imageId·회원 번호·키·크기·사유·개수만 쓴다(서명 쿼리·파일 이름·이메일 없음). 응답 DTO에 파일 이름 칸 없음. 코드 변경 없음)
+- [X] T088 [P] 프런트 보안·접근성 점검: `F/features/image-upload/`·`AltTextPanel`·`StorageUsageBar`·`gifPlayer`에 `dangerouslySetInnerHTML`이 없고, 파일 이름을 화면에 쓰지 않으며, 업로드 중 상태가 `aria-live="polite"`로 읽히는지 확인한다(헌법 IV) (구현 메모: dangerouslySetInnerHTML·innerHTML 없음, 파일 이름을 화면에 쓰지 않음, 업로드 중·대기 표시는 aria-live=polite, 안내는 role=alert. 코드 변경 없음)
+- [X] T089 [P] 성능 측정 `T/media/integration/ImageUploadPerformanceIT.java`: presign p95 200ms, complete p95 1초(로컬 컨테이너 기준, 100회), 결과를 quickstart §2에 적는다(plan Performance Goals) (구현 메모: presign p95 30ms, complete p95 26ms (quickstart §2에 기록). 1분 한도 때문에 회원 5명 × 20회)
+- [X] T090 [P] 화면 문구 점검: 모든 오류·안내 문구가 data-model §7·spec과 글자까지 같고 끝 마침표가 없는지 `F/features/image-upload/uploadMessages.ts`와 서버 `MediaReasonCode`를 대조한다 (구현 메모: MediaReasonCode·data-model §7·uploadMessages.ts가 글자까지 같고 끝 마침표 없음. 화면 전용 GIF_TOO_MANY_FRAMES 문구 하나를 더했다(T075))
+- [ ] T091 **수동 확인 작업(사파리)**: 실제 아이폰·맥 사파리에서 quickstart §3-2를 실행해 WebP 대체(JPEG)·EXIF 방향·카드 썸네일을 확인하고 결과를 research R22에 적는다(Clarifications Q4 "plan 때 실제 기기로 확인") (구현 메모: 실제 아이폰·맥 사파리가 없어 하지 못했다(웹킷 브라우저도 설치 불가). imageProcessor.test.ts의 WebP 실패 → JPEG 대체 단위 테스트만 있다)
 - [ ] T092 [P] 005 연결 확인: `PostCard`·상세 본문·링크 미리보기가 `thumbnail_url`·GIF 변환을 그대로 쓰는지 005 회귀(`T/discovery/` 상세·카드 테스트)를 돌린다
-- [ ] T093 001 프로필 사진 연결 확인 작업: 001 T084·T121 담당에게 presign `{purpose: PROFILE}`·complete 계약(contracts/openapi.yaml)과 10MB 규칙(Q3: 고른 파일이 10MB를 넘어도 줄인 결과로 판정)을 전달하고, 001 tasks의 "003 선행" 표시를 해제하도록 요청한다(ANALYSIS-tier-a R8)
-- [ ] T094 015 연결 확인 작업: 015 tasks의 `ImageWithdrawalPurgeStep`(order 40)이 `ImagePurgeService.detachAllByUploader`를 부르는지 확인한다(015 후속)
-- [ ] T095 [P] `RedisGuard` OOM 503 확인 작업(research R9): Redis `maxmemory` 1MB + `noeviction` 컨테이너로 presign을 보내 503 `AUTOSAVE_UNAVAILABLE`이 나오는지 기록하고, 화면이 "잠시 후 다시 시도해 주세요"로 보이며 기기에 보관하는지 확인한다. 공용 처리 변경 여부는 팀 결정(ANALYSIS-tier-bc)
+- [ ] T093 001 프로필 사진 연결 확인 작업: 001 T084·T121 담당에게 presign `{purpose: PROFILE}`·complete 계약(contracts/openapi.yaml)과 10MB 규칙(Q3: 고른 파일이 10MB를 넘어도 줄인 결과로 판정)을 전달하고, 001 tasks의 "003 선행" 표시를 해제하도록 요청한다(ANALYSIS-tier-a R8) (구현 메모: 001 담당에게 전달은 보고서로 한다(001 tasks 문서는 고치지 않음). 001 화면 uploadProfileImage·profileImageCrop은 이 기능에서 presign {PROFILE}·complete 계약으로 이미 바꿨다)
+- [X] T094 015 연결 확인 작업: 015 tasks의 `ImageWithdrawalPurgeStep`(order 40)이 `ImagePurgeService.detachAllByUploader`를 부르는지 확인한다(015 후속) (구현 메모: 015 tasks T053(order 40)이 같은 이름·인자(detachAllByUploader(long))를 부른다. 015 탈퇴 단계는 REQUIRES_NEW 트랜잭션 안이라 MANDATORY와 맞고, 03:00 탈퇴 정리 뒤 03:30 사진 정리가 같은 날 지운다)
+- [X] T095 [P] `RedisGuard` OOM 503 확인 작업(research R9): Redis `maxmemory` 1MB + `noeviction` 컨테이너로 presign을 보내 503 `AUTOSAVE_UNAVAILABLE`이 나오는지 기록하고, 화면이 "잠시 후 다시 시도해 주세요"로 보이며 기기에 보관하는지 확인한다. 공용 처리 변경 여부는 팀 결정(ANALYSIS-tier-bc) (구현 메모: ImageRedisOomIT로 확인: 503 AUTOSAVE_UNAVAILABLE + TEMP 행 보상 삭제, 화면은 5xx로 보관. 결과는 research R9. 공용 처리 변경은 팀 결정)
 - [ ] T096 quickstart.md §2 자동 테스트 명령 전체를 실행해 통과를 확인한다(002 회귀 포함)
-- [ ] T097 quickstart.md §3 화면 확인 1~8과 §5 정리 배치 수동 실행을 `docker compose up` 환경에서 확인한다
-- [ ] T098 SC-005·SC-013 측정: quickstart §4대로 카드 9장 썸네일 전송량을 재고 005 quickstart의 SC-005 표와 이 기능 quickstart §4에 기록한다(ANALYSIS-tier-a R7)
+- [ ] T097 quickstart.md §3 화면 확인 1~8과 §5 정리 배치 수동 실행을 `docker compose up` 환경에서 확인한다 (구현 메모: 공용 Docker에서 docker compose up(고정 이름·포트)을 쓸 수 없어 하지 않았다. §3의 1·3·5와 §4는 임의 포트 컨테이너 + jar + Playwright로, §5 정리 배치는 ImageCleanupJobIT로 확인했다)
+- [X] T098 SC-005·SC-013 측정: quickstart §4대로 카드 9장 썸네일 전송량을 재고 005 quickstart의 SC-005 표와 이 기능 quickstart §4에 기록한다(ANALYSIS-tier-a R7) (구현 메모: 썸네일 9장 690KB vs 원본 5.18MB(0.133). 이 quickstart §4에만 적었다 — 005 quickstart는 다른 기능 문서라 고치지 않음(005 담당이 옮김))
 
 ### 조건부 작업 (T002 결과가 PROXY일 때만)
 

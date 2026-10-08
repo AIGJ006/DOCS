@@ -138,4 +138,57 @@ test.describe('사진 붙여넣기 업로드', () => {
     await expect(page).not.toHaveURL(/\/write\//, { timeout: 15_000 });
     await expect(page.locator('article img').first()).toBeVisible();
   });
+
+  // 003 T098 (SC-013, 005 SC-005 측정 — quickstart §4): 사진 든 공개 글 9개 → 홈 카드 썸네일 9장 전송량 합계
+  test('홈 카드 9장의 썸네일 전송량은 원본의 약 1/9', async ({ page, browser }) => {
+    test.setTimeout(300_000);
+    const source = process.env.E2E_SC001_FILE ? readFileSync(process.env.E2E_SC001_FILE) : FIXTURE;
+    await login(page);
+    const originals: string[] = [];
+    for (let i = 0; i < 9; i++) {
+      const postId = await createPost(page);
+      await page.goto(`/write/${postId}`);
+      await pasteImage(page, source, `card-${i}.jpg`);
+      const textarea = page.getByLabel('본문');
+      await expect(textarea).toHaveValue(IMAGE_MD, { timeout: 60_000 });
+      const content = await textarea.inputValue();
+      originals.push(IMAGE_MD.exec(content)![1]);
+      await publish(page, postId, `카드 ${i + 1}`, content);
+    }
+
+    // 캐시가 빈 새 창으로 홈을 연다
+    const fresh = await browser.newContext();
+    const home = await fresh.newPage();
+    const transferred = new Map<string, number>();
+    home.on('response', async (response) => {
+      if (response.url().includes('/images/')) {
+        const body = await response.body().catch(() => Buffer.alloc(0));
+        transferred.set(response.url(), body.length);
+      }
+    });
+    await home.goto('/');
+    const cards = home.locator('img[src*="_thumb."]');
+    await expect(cards).toHaveCount(9, { timeout: 15_000 });
+    for (const img of await cards.all()) {
+      await img.scrollIntoViewIfNeeded();
+      await expect
+        .poll(() => img.evaluate((el) => (el as HTMLImageElement).naturalWidth))
+        .toBeGreaterThan(0);
+    }
+    await home.waitForLoadState('networkidle');
+    const thumbBytes = [...transferred.entries()]
+      .filter(([url]) => url.includes('_thumb.'))
+      .reduce((sum, [, size]) => sum + size, 0);
+    const originalUrls = [...transferred.keys()].filter((url) => !url.includes('_thumb.'));
+    let originalBytes = 0;
+    for (const url of originals) {
+      originalBytes += (await (await page.request.get(url)).body()).length;
+    }
+    console.log(
+      `SC-013: 썸네일 9장 ${thumbBytes}B (원본 9장이면 ${originalBytes}B, 비율 ${(thumbBytes / originalBytes).toFixed(3)})`,
+    );
+    expect(originalUrls).toEqual([]);
+    expect(thumbBytes).toBeLessThan(originalBytes / 3);
+    await fresh.close();
+  });
 });

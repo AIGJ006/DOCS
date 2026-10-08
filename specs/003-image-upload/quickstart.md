@@ -42,11 +42,14 @@ S3_ENDPOINT=https://<NHN 엔드포인트> APP_KEY=… APP_SECRET=… BUCKET=blog
 ## 2. 자동 테스트 (기본 검증 경로)
 
 ```bash
-./mvnw -pl backend verify -Dit.test='ImagePresignIT,ImageCompleteIT,ImageLinkIT,ImageCleanupJobIT,StorageUsageApiIT,PublicBaseUrlChangeIT,ImagePermissionMatrixIT,ImageReferenceResolverAdapterIT,PublishIT,ManualSaveIT,AutosaveFlushJobIT,PublishQueryCountIT'
-./mvnw -pl backend test -Dtest='ImageHeaderReaderTest,StorageKeysTest,ImageUrlsTest'
+cd backend && ./mvnw verify -Dtest=none -Dsurefire.failIfNoSpecifiedTests=false \
+  -Dit.test='ImagePresignIT,ImageCompleteIT,ImageLinkIT,ProfileImageServiceIT,ImageCleanupJobIT,ImageCleanupLockIT,ImagePurgeServiceIT,StorageUsageApiIT,PublicBaseUrlChangeIT,ThumbnailUrlRebaseIT,GifRerenderIT,ImageRedisOomIT,ImageUploadPerformanceIT,ImagePermissionMatrixIT,ImageReferenceResolverAdapterIT,PublishIT,ManualSaveIT,AutosaveFlushJobIT,PublishQueryCountIT,RerenderJobIT'
+cd backend && ./mvnw test -Dtest='ImageHeaderReaderTest,StorageKeysTest,ImageUrlsTest,GifRenderingTest,AltRenderingTest,ContentRendererSyntaxTest'
 (cd frontend && npm test -- image-upload gifPlayer AltTextPanel StorageUsageBar)
-(cd frontend && npx playwright test image-upload.spec.ts --project=chromium --project=webkit)
+(cd frontend && npx playwright test e2e/image-upload.spec.ts --workers=1)   # 저장소·앱을 띄운 뒤 (웹킷은 설치된 경우만 --project 추가)
 ```
+
+성능 측정(`ImageUploadPerformanceIT`, 2026-10-08, 로컬 Testcontainers PostgreSQL·Redis·silo, 각 100회): presign p95 30ms(목표 200ms), complete p95 26ms(목표 1초, 1920px WebP + 640px 썸네일).
 
 | 테스트 | 확인하는 것 | 근거 |
 |---|---|---|
@@ -79,6 +82,8 @@ S3_ENDPOINT=https://<NHN 엔드포인트> APP_KEY=… APP_SECRET=… BUCKET=blog
 1. 사진 있는 공개 글 9개를 만든다(원본 약 400KB, 썸네일 약 40KB).
 2. 홈(`/`)을 캐시 비우고 연다. Network 필터 `images/` → 썸네일 9장의 전송량 합계가 약 0.4MB(원본 사용 시 약 3.6MB)인지 확인한다.
 3. 결과를 005 quickstart의 SC-005 표와 이 문서에 적는다.
+
+측정 결과(2026-10-08, 크로미엄·로컬 silo, `e2e/image-upload.spec.ts` "홈 카드 9장" + `E2E_SC001_FILE` 잡음 많은 4.69MB JPEG 9장): 캐시를 비운 홈에서 썸네일 9장 690,174B(장당 약 77KB), 같은 9장의 원본이면 5,178,456B — 비율 0.133(약 1/7.5). 홈은 원본을 하나도 받지 않았다. 일반 사진(썸네일 약 40KB)이면 목표 약 0.4MB에 가깝다. 005 quickstart SC-005 표에는 005 담당이 옮겨 적는다(다른 기능 문서는 고치지 않음).
 
 ## 5. 정리 배치 수동 실행
 
