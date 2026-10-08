@@ -46,7 +46,7 @@ function detail(overrides: Partial<PostDetail> = {}): PostDetail {
 
 function LocationProbe() {
   const location = useLocation();
-  return <span data-testid="location">{location.pathname + location.search}</span>;
+  return <span data-testid="location">{location.pathname + location.search + location.hash}</span>;
 }
 
 function renderDetail(path = '/@kim755030/posts/7') {
@@ -192,6 +192,36 @@ describe('PostDetailPage', () => {
     await waitFor(() =>
       expect(screen.getByTestId('location')).toHaveTextContent('/@kim755030/posts/7?comment=55'),
     );
+  });
+
+  it('바꿔 끼울 때 쿼리와 #조각을 함께 유지한다 (005 T065)', async () => {
+    stubFetch({ 'GET /api/posts/7': () => json(200, detail()) });
+
+    renderDetail('/@na_ms/posts/7?comment=55#comment-55');
+
+    await waitFor(() =>
+      expect(screen.getByTestId('location')).toHaveTextContent(
+        '/@kim755030/posts/7?comment=55#comment-55',
+      ),
+    );
+  });
+
+  it('문서 제목을 "{제목} - {닉네임}"으로 바꾼다 (005 T065)', async () => {
+    stubFetch({ 'GET /api/posts/7': () => json(200, detail()) });
+
+    renderDetail();
+
+    await waitFor(() => expect(document.title).toBe('제목 <b>굵게</b> 아님 - 김민서'));
+  });
+
+  it('볼 수 없는 글이면 문서 제목이 "볼 수 없는 글이에요" (005 T065)', async () => {
+    stubFetch({
+      'GET /api/posts/7': () => json(404, errorBody('NOT_FOUND', '볼 수 없는 페이지예요')),
+    });
+
+    renderDetail();
+
+    await waitFor(() => expect(document.title).toBe('볼 수 없는 글이에요'));
   });
 
   it('주소가 @로 시작하지 않으면 404 화면', async () => {

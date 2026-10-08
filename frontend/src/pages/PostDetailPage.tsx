@@ -26,11 +26,15 @@ interface DetailState {
 
 const LOADING: DetailState = { status: 'loading', detail: null };
 
+/** 볼 수 없는 글의 문서 제목 — 서버 첫 응답의 공통 문구(06 §3-1)와 같다. */
+export const UNAVAILABLE_TITLE = '볼 수 없는 글이에요';
+
 /**
  * 글 상세 화면 (005 T042, US2, FR-028~037·040·041).
  *
  * - 본문만 서버가 발행 때 정화한 `contentHtml`을 `dangerouslySetInnerHTML`로 넣는다 — 다른 값에는 절대 쓰지 않는다(원칙 IV).
- * - 응답의 `canonicalPath`가 지금 주소와 다르면 쿼리를 유지해 바꿔 끼운다(FR-027, 주소의 블로그가 작성자와 달라 서버가 301한 뒤 등).
+ * - 응답의 `canonicalPath`가 지금 주소와 다르면 쿼리·#조각을 유지해 바꿔 끼운다(FR-027 — 화면 안 링크로 다른 블로그 주소를 연 경우.
+ *   첫 응답은 서버가 301로 처리한다). 문서 제목은 `{제목} - {닉네임}`, 볼 수 없는 글은 "볼 수 없는 글이에요"(T065).
  * - 조회수는 응답 값을 그대로 보여주고(이번 방문의 +1을 기다리지 않음), 기록은 `useViewBeacon`이 따로 보낸다(FR-041).
  *
  * - 작성자 본인(005 T059, US4): 임시글 응답(`status: DRAFT`)이면 `editorPath`로 바꿔 끼우고, 상태 안내
@@ -96,12 +100,25 @@ export default function PostDetailPage({
   const detail = state.detail;
   const canonicalPath = detail?.canonicalPath;
 
-  // 주소 맞추기 (쿼리는 그대로 둔다 — `?comment=`는 댓글 영역이 쓴다)
+  // 주소 맞추기 (쿼리·#조각은 그대로 둔다 — `?comment=`·`#comment-{id}`는 댓글 영역이 쓴다)
   useEffect(() => {
     if (canonicalPath && canonicalPath !== location.pathname) {
-      navigate(canonicalPath + location.search, { replace: true });
+      navigate(canonicalPath + location.search + location.hash, { replace: true });
     }
-  }, [canonicalPath, location.pathname, location.search, navigate]);
+  }, [canonicalPath, location.pathname, location.search, location.hash, navigate]);
+
+  // 문서 제목 (005 T065, research R-22·R-25). 서버 메타는 첫 응답에만 쓰이므로 화면 안 이동은 제목만 바꾼다.
+  const documentTitle =
+    detail !== null
+      ? `${detail.title} - ${detail.author.nickname}`
+      : !blogAddress || state.status === 'not-found'
+        ? UNAVAILABLE_TITLE
+        : null;
+  useEffect(() => {
+    if (documentTitle !== null) {
+      document.title = documentTitle;
+    }
+  }, [documentTitle]);
 
   // 본문을 넣은 뒤 코드 강조(코드 블록이 있을 때만)·GIF 재생을 붙인다
   useEffect(() => {
