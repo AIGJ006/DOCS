@@ -96,7 +96,7 @@ describe('EditorPage 충돌', () => {
     expect(requestsTo(fetchMock, 'PUT', '/api/posts/42/autosave')).toHaveLength(0);
   });
 
-  it('닫으면 배너가 남고, 충돌 중 [발행하기]·[저장]은 비교 창을 다시 연다', async () => {
+  it('닫으면 배너가 남고, 충돌 중 [글 등록]·[임시저장]은 비교 창을 다시 연다', async () => {
     const fetchMock = stubFetch({
       'GET /api/posts/42/working-copy': () => json(200, SERVER_COPY),
       'POST /api/markdown/preview': () => json(200, { html: '' }),
@@ -115,12 +115,12 @@ describe('EditorPage 충돌', () => {
     await user.type(screen.getByLabelText('본문'), ' 더');
     expect(screen.getByLabelText('본문')).toHaveValue('내 본문 더');
 
-    await user.click(screen.getByRole('button', { name: '발행하기' }));
+    await user.click(screen.getByRole('button', { name: '글 등록' }));
     expect(await screen.findByRole('dialog', { name: '저장된 내용과 비교' })).toBeInTheDocument();
     expect(screen.queryByRole('dialog', { name: '발행 설정' })).not.toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: '닫기' }));
 
-    await user.click(screen.getByRole('button', { name: '저장' }));
+    await user.click(screen.getByRole('button', { name: '임시저장' }));
     expect(await screen.findByRole('dialog', { name: '저장된 내용과 비교' })).toBeInTheDocument();
     expect(requestsTo(fetchMock, 'PUT', '/api/posts/42/working-copy')).toHaveLength(0);
   });
@@ -148,7 +148,7 @@ describe('EditorPage 충돌', () => {
     expect(screen.getByText('✓ 저장됨 14:03')).toBeInTheDocument();
   });
 
-  it('[저장]이 409면 바로 비교 창, [편집 중인 내용으로 저장]은 서버 버전으로 덮고 충돌을 푼다', async () => {
+  it('[임시저장]이 409면 바로 비교 창, [편집 중인 내용으로 저장]은 서버 버전으로 덮고 충돌을 푼다', async () => {
     let saves = 0;
     const fetchMock = stubFetch({
       'GET /api/posts/42/working-copy': () => json(200, { ...SERVER_COPY, version: 4 }),
@@ -171,7 +171,7 @@ describe('EditorPage 충돌', () => {
     await user.clear(screen.getByLabelText('제목'));
     await user.type(screen.getByLabelText('제목'), '내 제목');
 
-    await user.click(screen.getByRole('button', { name: '저장' }));
+    await user.click(screen.getByRole('button', { name: '임시저장' }));
     const dialog = await screen.findByRole('dialog', { name: '저장된 내용과 비교' });
     await user.click(within(dialog).getByRole('button', { name: '편집 중인 내용으로 저장' }));
     await user.click(
