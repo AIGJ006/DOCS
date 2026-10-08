@@ -223,7 +223,7 @@ export default function BlogPage({ headerSlot = null, sidebarSlot = null }: Blog
           )}
           <div style={{ minWidth: 0, flex: 1 }}>
             <h1 style={{ fontSize: '1.25rem', margin: 0 }}>{header.nickname}</h1>
-            <p style={{ margin: '0.125rem 0 0', color: 'var(--muted, #868e96)' }}>
+            <p style={{ margin: '0.125rem 0 0', color: 'var(--color-text-muted)' }}>
               @{header.handle}
             </p>
             {header.bio ? (

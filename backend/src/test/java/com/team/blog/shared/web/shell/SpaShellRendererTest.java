@@ -140,4 +140,19 @@ class SpaShellRendererTest {
         assertThat(html).contains("<div id=\"root\"></div>");
         assertThat(INLINE_SCRIPT.matcher(html).find()).isFalse();
     }
+
+    @Test
+    void 테마_결정_태그는_메타를_넣은_뒤에도_app_head_앞에_그대로_있다() {
+        // 016 T023: 빌드 셸의 <head> 앞쪽 color-scheme 메타·theme-init.js가 상세·블로그 셸에도 남는다(첫 그리기 전 테마 결정).
+        SpaShellRenderer renderer =
+                new SpaShellRenderer(new ClassPathResource("static/index.html"));
+
+        String html = renderer.render(article("제목", "설명"));
+
+        int script = html.indexOf("<script src=\"/js/theme-init.js\"></script>");
+        assertThat(html.indexOf("<meta name=\"color-scheme\" content=\"light dark\" />"))
+                .isBetween(html.indexOf("<meta charset"), script);
+        assertThat(script).isLessThan(html.indexOf("og:title"));
+        assertThat(INLINE_SCRIPT.matcher(html).find()).isFalse();
+    }
 }

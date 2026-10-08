@@ -75,7 +75,7 @@ export default function AuthorStatusBanner({
         margin: '0 0 1rem',
         padding: '0.75rem 1rem',
         borderRadius: '0.5rem',
-        background: 'var(--notice-bg, #fff9db)',
+        background: 'var(--color-notice-bg)',
         fontSize: '0.875rem',
       }}
     >
@@ -88,7 +88,7 @@ export default function AuthorStatusBanner({
               marginRight: '0.5rem',
               padding: '0 0.375rem',
               borderRadius: '0.25rem',
-              background: 'var(--badge-bg, #e9ecef)',
+              background: 'var(--thumb-empty)',
             }}
           >
             🔒 비공개
