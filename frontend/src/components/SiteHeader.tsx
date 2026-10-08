@@ -3,6 +3,7 @@ import { Link, useLocation } from 'react-router-dom';
 import { SITE_NAME } from '../config';
 import { logout } from '../features/auth/logout';
 import { useSession } from '../features/auth/useSession';
+import NotificationBell from '../features/notification/NotificationBell';
 import type { MeSummary } from '../api/me';
 import ThemeToggle from '../features/theme/ThemeToggle';
 import DefaultAvatar from './DefaultAvatar';
@@ -22,7 +23,7 @@ function loginHref(pathname: string, search: string): string {
  *
  * - 왼쪽: 서비스 이름 → 홈
  * - 비로그인: [로그인] [회원 가입]
- * - 로그인: [글쓰기] · 피드(010) · 내 블로그 · 계정 메뉴(내 글 관리 · 설정 · 로그아웃)
+ * - 로그인: [글쓰기] · 피드(010) · 내 블로그 · 계정 메뉴(내 글 관리 · 설정 · 로그아웃) · 알림 종(011)
  * - 글쓰기 화면(`/write/*`)에서는 [글쓰기]만 숨긴다. 머리말 자체는 남긴다 — 016 테마 버튼이 "어느 페이지에서나 같은 자리"(45 T-4).
  * - 맨 오른쪽은 016 테마 전환 버튼(`ThemeToggle`)이다. 010 [피드]·011 알림 🔔도 이 줄의 `site-header-actions`에 더하되 테마 버튼보다 앞에 둔다.
  * - 012 검색창(이름 "검색")은 이 줄 맨 앞. 좁은 화면(900px 미만)에서는 입력 대신 [검색] 링크(`/search`, 검색 화면에 입력이 있다).
@@ -59,6 +60,8 @@ export default function SiteHeader() {
                 내 블로그
               </Link>
               <AccountMenu me={me} />
+              {/* 011: 계정 메뉴 옆, 테마 버튼 바로 앞 */}
+              <NotificationBell />
             </>
           ) : (
             <>
