@@ -258,14 +258,14 @@ description: "Task list for 003-image-upload (이미지 업로드)"
 
 ### Tests for User Story 7 ⚠️
 
-- [ ] T078 [P] [US7] `T/media/integration/ImageCleanupJobIT.java`(StorageIntegrationTestBase, `Clock` 고정): `US7_1_TEMP_24시간_삭제`(완료 전·완료 모두), `US7_2_연결해제_7일_삭제`, `US7_3_현재_프로필_유지`, 23시간·6일은 유지, `US7_4_저장소_삭제_실패면_행_유지`(삭제 실패 키를 돌려주는 가짜 `ImageStorage`로 바꿔) → 다음 실행에서 지워짐, 정리 사이 다시 연결된 사진은 행 유지(조건 재확인), 1,001개면 두 묶음, `post_image` CASCADE, 로그에 키·회원 번호 없음
-- [ ] T079 [P] [US7] 잠금 테스트 `T/media/integration/ImageCleanupLockIT.java`: 두 인스턴스(같은 `LockProvider`)에서 동시에 실행해도 한 번만 처리된다(ShedLock `imageCleanup`)
-- [ ] T080 [P] [US7] 탈퇴 정리 메서드 테스트 `T/media/integration/ImagePurgeServiceIT.java`: `detachAllByUploader(m)` 뒤 m의 모든 사진(현재 프로필·TEMP·이미 연결 해제된 사진 포함)이 다음 정리에서 지워질 조건(`detached_at ≤ now() - 7일`)이 되고, 다른 회원 사진은 그대로(contracts/storage.md §3-2, FR-043)
+- [X] T078 [P] [US7] `T/media/integration/ImageCleanupJobIT.java`(StorageIntegrationTestBase, `Clock` 고정): `US7_1_TEMP_24시간_삭제`(완료 전·완료 모두), `US7_2_연결해제_7일_삭제`, `US7_3_현재_프로필_유지`, 23시간·6일은 유지, `US7_4_저장소_삭제_실패면_행_유지`(삭제 실패 키를 돌려주는 가짜 `ImageStorage`로 바꿔) → 다음 실행에서 지워짐, 정리 사이 다시 연결된 사진은 행 유지(조건 재확인), 1,001개면 두 묶음, `post_image` CASCADE, 로그에 키·회원 번호 없음 (구현 메모: Clock Bean을 바꾸지 않고 cleanup(now, maxDuration)에 기준 시각을 넘긴다(006 TrashPurgeJob과 같은 방식). 삭제 실패·다시 연결은 실제 저장소를 감싼 가짜 ImageStorage로 작업 객체를 직접 만들어 재현한다(새 컨텍스트 없음))
+- [X] T079 [P] [US7] 잠금 테스트 `T/media/integration/ImageCleanupLockIT.java`: 두 인스턴스(같은 `LockProvider`)에서 동시에 실행해도 한 번만 처리된다(ShedLock `imageCleanup`) (구현 메모: 다른 인스턴스는 같은 LockProvider로 imageCleanup 잠금을 직접 쥐어 흉내 낸다)
+- [X] T080 [P] [US7] 탈퇴 정리 메서드 테스트 `T/media/integration/ImagePurgeServiceIT.java`: `detachAllByUploader(m)` 뒤 m의 모든 사진(현재 프로필·TEMP·이미 연결 해제된 사진 포함)이 다음 정리에서 지워질 조건(`detached_at ≤ now() - 7일`)이 되고, 다른 회원 사진은 그대로(contracts/storage.md §3-2, FR-043)
 
 ### Implementation for User Story 7
 
-- [ ] T081 [US7] `B/media/application/ImageCleanupJob.java`: `@Scheduled(cron = "${blog.image.cleanup.cron}", zone = "${blog.time-zone}")` + `@SchedulerLock(name = "imageCleanup", lockAtMostFor = …)`, research R13 순서(후보 SELECT → `deleteAll` → `deleteIfStillEligible`), 묶음·최대 시간, INFO 로그 1줄(T078·T079 통과)
-- [ ] T082 [US7] `B/media/application/ImagePurgeService.java` `detachAllByUploader(long memberId)`(`@Transactional(propagation = MANDATORY)`, contracts/storage.md §3-2 SQL)를 만든다(T080 통과). Javadoc에 "015 `ImageWithdrawalPurgeStep`(order 40)이 부른다"를 적는다
+- [X] T081 [US7] `B/media/application/ImageCleanupJob.java`: `@Scheduled(cron = "${blog.image.cleanup.cron}", zone = "${blog.time-zone}")` + `@SchedulerLock(name = "imageCleanup", lockAtMostFor = …)`, research R13 순서(후보 SELECT → `deleteAll` → `deleteIfStillEligible`), 묶음·최대 시간, INFO 로그 1줄(T078·T079 통과) (구현 메모: 후보는 id > afterId 커서로 넘긴다 — 삭제에 실패해 남은 행을 같은 회차에 다시 읽지 않는다. 묶음 오류는 경고 후 다음 묶음 계속. 로그는 개수만)
+- [X] T082 [US7] `B/media/application/ImagePurgeService.java` `detachAllByUploader(long memberId)`(`@Transactional(propagation = MANDATORY)`, contracts/storage.md §3-2 SQL)를 만든다(T080 통과). Javadoc에 "015 `ImageWithdrawalPurgeStep`(order 40)이 부른다"를 적는다 (구현 메모: SQL의 now()는 DB 시각(contracts 그대로). 반환값은 바뀐 행 수)
 
 **Checkpoint**: 정리 배치가 공간을 돌려주고 사용 중인 사진은 남는다
 

@@ -167,10 +167,17 @@ public class ImageRepository {
      */
     public List<CleanupCandidate> cleanupCandidates(
             Instant now, Duration tempTtl, Duration detachedTtl, int limit) {
+        return cleanupCandidates(now, tempTtl, detachedTtl, 0L, limit);
+    }
+
+    /** {@code afterId}보다 큰 번호부터 (삭제에 실패해 남은 행을 같은 회차에 다시 보지 않는다). */
+    public List<CleanupCandidate> cleanupCandidates(
+            Instant now, Duration tempTtl, Duration detachedTtl, long afterId, int limit) {
         return jdbc.sql(
-                        "SELECT id, storage_key, thumb_storage_key FROM image WHERE "
+                        "SELECT id, storage_key, thumb_storage_key FROM image WHERE id > :afterId AND "
                                 + ELIGIBLE
                                 + " ORDER BY id LIMIT :limit")
+                .param("afterId", afterId)
                 .param("tempBefore", Timestamp.from(now.minus(tempTtl)))
                 .param("detachedBefore", Timestamp.from(now.minus(detachedTtl)))
                 .param("limit", limit)
@@ -199,6 +206,23 @@ public class ImageRepository {
                 .param("detachedBefore", Timestamp.from(now.minus(detachedTtl)))
                 .query(Long.class)
                 .list();
+    }
+
+    /**
+     * 탈퇴 정리 (contracts/storage.md §3-2): 회원의 모든 사진을 다음 정리 배치가 지울 상태로 둔다. 이미 오래전 해제된 사진은 그대로 둔다.
+     *
+     * @return 바뀐 행 수
+     */
+    public int detachAllByUploader(long memberId, Duration detachedTtl) {
+        return jdbc.sql(
+                        """
+                        UPDATE image SET detached_at = now() - make_interval(secs => :ttl)
+                         WHERE uploader_id = :member
+                           AND (detached_at IS NULL OR detached_at > now() - make_interval(secs => :ttl))
+                        """)
+                .param("member", memberId)
+                .param("ttl", (double) detachedTtl.toSeconds())
+                .update();
     }
 
     /**
