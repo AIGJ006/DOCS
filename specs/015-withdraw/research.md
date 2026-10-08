@@ -137,7 +137,7 @@
 - **Decision**: 커밋 뒤 `WithdrawalRedisCleaner.clean(memberId, emailHash)`가 지운다(실패는 WARN만 — 키는 모두 TTL이 있다):
   - 세션: `SessionTerminator.terminateAll(memberId, empty)`(익명 처리된 회원 세션은 이미 비로그인 취급이지만 남기지 않는다). 503 예외는 잡아 WARN
   - 토큰: `AuthTokenStore.revokeLatest(VERIFY, memberId)`·`revokeLatest(RESET, memberId)` — 최신 포인터 `auth:{verify|reset}-latest:{memberId}`가 가리키는 토큰 키와 포인터를 지운다(001 `AuthTokenStore`에 메서드 추가)
-  - 실패·요청 횟수: 설정값 `blog.withdraw.purge.redis-key-templates`의 `{memberId}`·`{emailHash}`를 채워 `DEL`. 기본: `auth:pw-change-fail:{memberId}`, `auth:login-fail:{emailHash}`, `rl:verify-resend:{memberId}`, `ratelimit:autosave:{memberId}`, `ratelimit:preview:{memberId}`, `ratelimit:like:{memberId}`, `ratelimit:comment:{memberId}`, `ratelimit:comment-edit:{memberId}`, `ratelimit:image:{memberId}`, `ratelimit:tag-suggest:{memberId}`. 기능이 회원 번호 키를 더하면 이 목록에 한 줄을 더한다
+  - 실패·요청 횟수: 설정값 `blog.withdraw.purge.redis-key-templates`의 `{memberId}`·`{emailHash}`를 채워 `DEL`. 기본: `auth:pw-change-fail:{memberId}`, `auth:login-fail:{emailHash}`, `rl:verify-resend:{memberId}`, `ratelimit:autosave:{memberId}`, `ratelimit:preview:{memberId}`, `ratelimit:like:{memberId}`, `ratelimit:comment:{memberId}`, `ratelimit:comment-edit:{memberId}`, `ratelimit:image:{memberId}`, `ratelimit:tag-suggest:{memberId}`, `ratelimit:follow:{memberId}`(010). 기능이 회원 번호 키를 더하면 이 목록에 한 줄을 더한다
   - `SCAN`은 쓰지 않는다(키 공간 전체를 훑음). 목록에 빠진 키도 TTL(최대 하루)로 사라진다
   - 자동 저장 키(`autosave:post:{id}`)는 006 `PostPurgeService`가 글마다 커밋 후 지운다. 조회 중복 키(`view:seen:*`)는 회원 키가 섞여 있지만 24시간 TTL이라 그대로 둔다(44 §4 "조회수 정리할 개인 데이터 없음")
 - **Rationale**: 13 §3-3 8번, FR-025 11번. 키 이름은 001 research(`rl:`·`auth:`)와 Tier B 기능(`ratelimit:`) 규칙을 그대로 옮겼다 — 두 접두어가 섞여 있는 문제는 ANALYSIS-tier-bc에 적는다.
@@ -225,6 +225,7 @@ blog:
         - "ratelimit:comment-edit:{memberId}"
         - "ratelimit:image:{memberId}"
         - "ratelimit:tag-suggest:{memberId}"
+        - "ratelimit:follow:{memberId}"
 ```
 
 - 비밀번호 잠금 수치는 001 `blog.auth.password-change.max-failures`·`lock-duration`을 그대로 쓴다.

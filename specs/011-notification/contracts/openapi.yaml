@@ -1,0 +1,430 @@
+openapi: 3.1.0
+info:
+  title: 인앱 알림 API (011-notification)
+  version: 0.1.0
+  description: |
+    알림 API 7개. 원문: docs/25-notification.md §2·§3·§5·§7, docs/42-permission-matrix.md §10-3, docs/02-architecture.md §5-1(O8).
+
+    공통 규칙
+    - 현재 사용자는 세션에서만 꺼낸다. 주소·본문에 회원 번호가 없다.
+    - 모든 API는 로그인 필요(비회원 401 LOGIN_REQUIRED). 탈퇴 유예 회원은 001 게이트가 403 ACCOUNT_WITHDRAWN(details.action RESTORE).
+    - 이메일 인증 전 회원도 모두 쓸 수 있다. 바꾸는 요청은 `AccountStatusGuard` ACCOUNT_WRITE(남은 세션의 정지 403 ACCOUNT_SUSPENDED).
+    - 남의 알림·없는 번호·숫자가 아닌 번호는 관리자를 포함해 모두 같은 404 본문.
+    - 오류 본문은 공통 형식 {code, message, errors, details}. errors는 항상 배열, 메시지 끝에 마침표 없음.
+    - 상태를 바꾸는 요청은 `X-XSRF-TOKEN` 헤더(001). 없거나 틀리면 403 CSRF_REJECTED.
+    - 응답은 문장을 주지 않고 조각(닉네임·제목·미리보기·사유 코드)과 이동 주소만 준다. 문장은 화면이 조립한다(research R16).
+servers:
+  - url: http://localhost:8080
+    description: 로컬 Docker Compose
+tags:
+  - name: notifications
+    description: 알림 보기·읽음·삭제
+  - name: notification-settings
+    description: 알림 종류 켜고 끄기
+paths:
+  /api/notifications/unread-count:
+    get:
+      tags: [notifications]
+      operationId: getUnreadNotificationCount
+      summary: 안 읽은 알림 수
+      description: 화면이 페이지를 열 때와 30초마다(탭이 보일 때만) 부른다. 이 요청도 세션 유지 기간·최근 활동을 갱신한다(Clarifications Q2).
+      security:
+        - sessionCookie: []
+      responses:
+        '200':
+          description: 안 읽은 수 (상한 없음 — 화면이 100 이상을 "99+"로 표시)
+          headers:
+            Cache-Control:
+              schema: { type: string, const: 'private, no-store' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/UnreadCount' }
+              example: { count: 3 }
+        '401': { $ref: '#/components/responses/LoginRequired' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  /api/notifications:
+    get:
+      tags: [notifications]
+      operationId: listNotifications
+      summary: 내 알림 목록
+      description: |
+        마지막 갱신 최신순(같으면 번호 큰 순). 펼침 목록은 size=10·커서 없음, 전체 알림 페이지는 size=20 + 커서.
+        알림·행동자·글 제목을 SQL 한 번으로 읽고 읽기 판정도 그 결과로 한다(FR-032).
+      security:
+        - sessionCookie: []
+      parameters:
+        - name: size
+          in: query
+          required: false
+          description: 10 또는 20 (기본 20). 그 밖이면 400 VALIDATION_FAILED
+          schema: { type: integer, enum: [10, 20], default: 20 }
+        - name: cursor
+          in: query
+          required: false
+          description: 앞 페이지 응답의 nextCursor (불투명 Base64URL, 목록 구분 `notifications`)
+          schema: { type: string, maxLength: 512 }
+      responses:
+        '200':
+          description: 한 페이지
+          headers:
+            Cache-Control:
+              schema: { type: string, const: 'private, no-store' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/NotificationPage' }
+              examples:
+                mixed:
+                  value:
+                    items:
+                      - id: 812
+                        type: LIKE
+                        read: false
+                        updatedAt: '2026-10-08T05:12:00Z'
+                        actor: { handle: minseo, nickname: 김민서, profileImageUrl: null }
+                        othersCount: 3
+                        post: { title: 첫 글, url: /@kim755030/posts/41 }
+                        comment: null
+                        report: null
+                        hidden: null
+                        url: /@kim755030/posts/41
+                      - id: 805
+                        type: COMMENT
+                        read: true
+                        updatedAt: '2026-10-07T23:40:00Z'
+                        actor: { withdrawn: true }
+                        othersCount: 0
+                        post: { unavailable: true }
+                        comment: null
+                        report: null
+                        hidden: null
+                        url: null
+                      - id: 790
+                        type: REPORT_RESOLVED
+                        read: false
+                        updatedAt: '2026-10-07T10:00:00Z'
+                        actor: null
+                        othersCount: 0
+                        post: null
+                        comment: null
+                        report: { result: ACTION_TAKEN }
+                        hidden: null
+                        url: null
+                    nextCursor: eyJ2IjoxLCJsIjoibm90aWZpY2F0aW9ucyIsImsiOlsxNzI4MzY4MDAwMDAwMDAwLDc5MF19
+        '400':
+          description: size가 10·20이 아님(VALIDATION_FAILED) 또는 커서 오류(INVALID_CURSOR)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+              examples:
+                size:
+                  value: { code: VALIDATION_FAILED, message: 입력한 내용을 확인해 주세요, errors: [{ field: size, code: INVALID_SIZE, message: 10 또는 20만 쓸 수 있어요 }], details: null }
+                cursor:
+                  value: { code: INVALID_CURSOR, message: 목록을 처음부터 다시 불러와 주세요, errors: [], details: null }
+        '401': { $ref: '#/components/responses/LoginRequired' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  /api/notifications/{notificationId}/read:
+    put:
+      tags: [notifications]
+      operationId: markNotificationRead
+      summary: 읽음으로
+      description: 원문의 PATCH 대신 PUT(상태 지정, clarify 011). 이미 읽음이어도 204. 이동할 곳이 없는 알림도 누르면 이 요청을 보낸다(Clarifications Q3).
+      security:
+        - sessionCookie: []
+      parameters:
+        - $ref: '#/components/parameters/NotificationId'
+        - $ref: '#/components/parameters/CsrfToken'
+      responses:
+        '204': { description: 읽음 }
+        '401': { $ref: '#/components/responses/LoginRequired' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /api/notifications/read-all:
+    post:
+      tags: [notifications]
+      operationId: markAllNotificationsRead
+      summary: 모두 읽음
+      description: 지금 시각까지 갱신된 안 읽은 알림을 모두 읽음으로 바꾸고 바뀐 개수를 돌려준다. 0개여도 200.
+      security:
+        - sessionCookie: []
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+      responses:
+        '200':
+          description: 바뀐 개수
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ReadAllResult' }
+              example: { updated: 12 }
+        '401': { $ref: '#/components/responses/LoginRequired' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  /api/notifications/{notificationId}:
+    delete:
+      tags: [notifications]
+      operationId: deleteNotification
+      summary: 알림 삭제
+      security:
+        - sessionCookie: []
+      parameters:
+        - $ref: '#/components/parameters/NotificationId'
+        - $ref: '#/components/parameters/CsrfToken'
+      responses:
+        '204': { description: 삭제됨 }
+        '401': { $ref: '#/components/responses/LoginRequired' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /api/me/notification-settings:
+    get:
+      tags: [notification-settings]
+      operationId: getNotificationSettings
+      summary: 알림 설정 보기
+      description: 끌 수 있는 5종의 켜짐(true)·꺼짐(false). 새 회원은 모두 true. 운영 알림(신고 결과·숨김)은 목록에 없다(끌 수 없음).
+      security:
+        - sessionCookie: []
+      responses:
+        '200':
+          description: 지금 설정
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/NotificationSettings' }
+              example: { COMMENT: true, REPLY: true, LIKE: false, FOLLOW: true, NEW_POST: true }
+        '401': { $ref: '#/components/responses/LoginRequired' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+    put:
+      tags: [notification-settings]
+      operationId: putNotificationSettings
+      summary: 알림 설정 저장
+      description: 5개 키를 모두 보낸다(빠지거나 boolean이 아니면 400). 끄면 그 종류의 새 알림만 생기지 않고 받은 알림은 그대로다.
+      security:
+        - sessionCookie: []
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/NotificationSettings' }
+      responses:
+        '200':
+          description: 저장된 설정
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/NotificationSettings' }
+        '400':
+          description: 키가 빠졌거나 값이 boolean이 아님
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+              example: { code: VALIDATION_FAILED, message: 입력한 내용을 확인해 주세요, errors: [{ field: LIKE, code: REQUIRED, message: 켜짐 또는 꺼짐을 골라 주세요 }], details: null }
+        '401': { $ref: '#/components/responses/LoginRequired' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+components:
+  parameters:
+    NotificationId:
+      name: notificationId
+      in: path
+      required: true
+      description: 숫자가 아니면 404
+      schema: { type: string, pattern: '^[0-9]+$' }
+    CsrfToken:
+      name: X-XSRF-TOKEN
+      in: header
+      required: true
+      description: CSRF 토큰 (`XSRF-TOKEN` 쿠키 값, 001)
+      schema: { type: string }
+  securitySchemes:
+    sessionCookie:
+      type: apiKey
+      in: cookie
+      name: SESSION
+      description: Spring Session(Redis) 세션 쿠키. HttpOnly, Secure, SameSite=Lax (02 §5).
+
+  headers:
+    RetryAfter:
+      description: 다시 시도할 수 있을 때까지 남은 초
+      schema: { type: integer, minimum: 1 }
+
+  responses:
+    LoginRequired:
+      description: 비회원
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+          example: { code: LOGIN_REQUIRED, message: 로그인이 필요해요, errors: [], details: null }
+    Forbidden:
+      description: |
+        계정 상태 거부(001 `AccountStatusGuard`) 또는 CSRF 거부. 판정 순서상 404보다 먼저다(42 §3).
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+          examples:
+            emailNotVerified:
+              value: { code: EMAIL_NOT_VERIFIED, message: 이메일 인증 후 이용할 수 있어요, errors: [], details: null }
+            withdrawn:
+              value: { code: ACCOUNT_WITHDRAWN, message: 탈퇴 신청한 계정이에요, errors: [], details: null }
+            suspended:
+              value: { code: ACCOUNT_SUSPENDED, message: 정지된 계정이에요, errors: [], details: null }
+            csrfRejected:
+              value: { code: CSRF_REJECTED, message: 요청을 확인하지 못했어요. 페이지를 새로 고친 뒤 다시 시도해 주세요, errors: [], details: null }
+    NotFound:
+      description: 없음·볼 수 없음·남의 것. 본문은 모든 경우 같다(README 2026-10-07).
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+          example: { code: NOT_FOUND, message: 볼 수 없는 페이지예요, errors: [], details: null }
+    TooManyRequests:
+      description: 요청 과다. 판정 순서의 맨 끝(007 Q2). 코드는 `TOO_MANY_REQUESTS` 하나(007 Q3).
+      headers:
+        Retry-After: { $ref: '#/components/headers/RetryAfter' }
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+          example: { code: TOO_MANY_REQUESTS, message: 잠시 후 다시 시도해 주세요, errors: [], details: null }
+    InvalidCursor:
+      description: 풀 수 없거나 다른 목록의 커서
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+          example: { code: INVALID_CURSOR, message: 목록을 처음부터 다시 불러와 주세요, errors: [], details: null }
+
+  schemas:
+    ErrorResponse:
+      type: object
+      description: 공통 오류 본문 (02 §5-1 O8). `errors`는 항상 배열(없으면 []), 메시지 끝에 마침표 없음.
+      required: [code, message, errors, details]
+      properties:
+        code: { type: string, description: 대문자 이유 코드 }
+        message: { type: string }
+        errors:
+          type: array
+          items:
+            type: object
+            required: [field, code, message]
+            properties:
+              field: { type: string }
+              code: { type: string }
+              message: { type: string }
+        details:
+          type: [object, 'null']
+    UnreadCount:
+      type: object
+      required: [count]
+      properties:
+        count: { type: integer, minimum: 0 }
+    ReadAllResult:
+      type: object
+      required: [updated]
+      properties:
+        updated: { type: integer, minimum: 0 }
+    NotificationPage:
+      type: object
+      required: [items, nextCursor]
+      properties:
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/NotificationItem' }
+        nextCursor:
+          type: [string, 'null']
+          description: 다음 페이지가 없으면 null
+    NotificationItem:
+      type: object
+      required: [id, type, read, updatedAt, actor, othersCount, post, comment, report, hidden, url]
+      properties:
+        id: { type: integer, format: int64 }
+        type:
+          type: string
+          enum: [COMMENT, REPLY, LIKE, FOLLOW, NEW_POST, REPORT_RESOLVED, CONTENT_HIDDEN]
+        read: { type: boolean }
+        updatedAt: { type: string, format: date-time, description: 마지막 갱신 시각(묶음에 사람이 더해질 때 바뀜). 화면은 상대 시각으로 표시 }
+        actor:
+          description: 운영 알림(REPORT_RESOLVED·CONTENT_HIDDEN)은 null. 탈퇴 유예·익명 처리된 사람은 {withdrawn:true}
+          oneOf:
+            - $ref: '#/components/schemas/ActorMember'
+            - $ref: '#/components/schemas/ActorWithdrawn'
+            - type: 'null'
+        othersCount: { type: integer, minimum: 0, description: 묶음 알림의 "외 N명". 하나짜리는 0 }
+        post:
+          description: 글이 없는 종류(FOLLOW·REPORT_RESOLVED)와 댓글 숨김은 null. 받는 사람이 지금 읽을 수 없으면 {unavailable:true}
+          oneOf:
+            - $ref: '#/components/schemas/PostReadable'
+            - $ref: '#/components/schemas/PostUnavailable'
+            - type: 'null'
+        comment:
+          description: COMMENT·REPLY이고 글을 읽을 수 있을 때만
+          oneOf:
+            - $ref: '#/components/schemas/CommentRef'
+            - type: 'null'
+        report:
+          description: REPORT_RESOLVED만. 신고 대상·작성자·신고자·관리자 정보는 없다
+          oneOf:
+            - $ref: '#/components/schemas/ReportRef'
+            - type: 'null'
+        hidden:
+          description: CONTENT_HIDDEN만
+          oneOf:
+            - $ref: '#/components/schemas/HiddenRef'
+            - type: 'null'
+        url:
+          type: [string, 'null']
+          description: |
+            누르면 갈 곳. 댓글·답글·댓글 숨김 `/@{h}/posts/{p}?comment={c}#comment-{c}`, 좋아요·새 글·글 숨김 `/@{h}/posts/{p}`,
+            팔로우 `/@{내 주소}/followers`. 신고 결과와 읽을 수 없는 글은 null(누르면 읽음만)
+    ActorMember:
+      type: object
+      required: [handle, nickname, profileImageUrl]
+      properties:
+        handle: { type: string }
+        nickname: { type: string, description: 지금 닉네임 }
+        profileImageUrl: { type: [string, 'null'] }
+    ActorWithdrawn:
+      type: object
+      required: [withdrawn]
+      properties:
+        withdrawn: { type: boolean, const: true, description: 화면은 "탈퇴한 사용자" }
+    PostReadable:
+      type: object
+      required: [title, url]
+      properties:
+        title: { type: string, description: 지금 제목 }
+        url: { type: string }
+    PostUnavailable:
+      type: object
+      required: [unavailable]
+      properties:
+        unavailable: { type: boolean, const: true, description: 화면은 "볼 수 없는 글이에요" }
+    CommentRef:
+      type: object
+      required: [id, preview]
+      properties:
+        id: { type: integer, format: int64 }
+        preview: { type: string, maxLength: 51, description: 지금 내용의 앞 50자(공백은 한 칸으로) + 넘으면 "…". 서식으로 해석하지 않는다 }
+    ReportRef:
+      type: object
+      required: [result]
+      properties:
+        result: { type: string, enum: [ACTION_TAKEN, NO_VIOLATION] }
+    HiddenRef:
+      type: object
+      required: [targetType, stillHidden, reason]
+      properties:
+        targetType: { type: string, enum: [POST, COMMENT] }
+        stillHidden: { type: boolean, description: false면 "숨겨졌었어요 (지금은 다시 보여요)" }
+        reason:
+          type: [string, 'null']
+          enum: [SPAM, ABUSE, SEXUAL, PRIVACY, COPYRIGHT, OTHER, null]
+          description: 숨김 중일 때만 지금 사유 코드(014). 화면이 이름으로 바꾼다
+    NotificationSettings:
+      type: object
+      required: [COMMENT, REPLY, LIKE, FOLLOW, NEW_POST]
+      additionalProperties: false
+      properties:
+        COMMENT: { type: boolean, description: 내 글에 달린 댓글 }
+        REPLY: { type: boolean, description: 내 댓글에 달린 답글 }
+        LIKE: { type: boolean, description: 내 글 좋아요 }
+        FOLLOW: { type: boolean, description: 새 팔로워 }
+        NEW_POST: { type: boolean, description: 팔로우한 사람의 새 글 }

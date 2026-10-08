@@ -1,0 +1,310 @@
+openapi: 3.1.0
+info:
+  title: 팔로우·피드 API (010-follow-feed)
+  version: 0.1.0
+  description: |
+    팔로우 관계·팔로워/팔로잉 목록·팔로잉 피드 REST 계약. 원문: docs/24-follow-feed.md §2·§3·§5, docs/42-permission-matrix.md §3·§10-1, docs/02-architecture.md §5-1(O8).
+
+    공통 규칙
+    - 현재 사용자는 세션에서만 꺼낸다.
+    - 팔로우 판정 순서: 401 LOGIN_REQUIRED → 403 계정 상태(탈퇴 유예·남은 세션의 정지) → 404 대상(없는 주소·탈퇴 유예·익명 처리, 본문 고정) → 400 CANNOT_FOLLOW_SELF → 429 TOO_MANY_REQUESTS(맨 끝).
+    - 이메일 인증은 필요 없다. 관리자도 일반 회원과 같다.
+    - 오류 본문은 공통 형식 {code, message, errors, details}. errors는 항상 배열, 메시지 끝에 마침표 없음.
+    - 상태를 바꾸는 요청은 세션 쿠키 + `X-XSRF-TOKEN` 헤더(001). 없거나 틀리면 403 CSRF_REJECTED.
+    - 수는 저장하지 않고 볼 때 센다. 탈퇴 유예 회원은 수·목록·피드에서 빠진다.
+servers:
+  - url: http://localhost:8080
+    description: 로컬 Docker Compose
+tags:
+  - name: follows
+    description: 팔로우 관계
+  - name: feed
+    description: 팔로잉 피드
+  - name: blogs
+    description: 블로그 머리말 (005 확장)
+paths:
+  /api/members/{handle}/follow:
+    put:
+      tags: [follows]
+      operationId: followMember
+      summary: 팔로우 상태로
+      description: |
+        이미 팔로우 중이어도 200(변화·이벤트 없음). 실제로 생겼을 때만 MemberFollowed.
+        followerCount는 같은 트랜잭션에서 센 지금 값. 팔로우·언팔로우 합쳐 회원당 1분 30번.
+      security:
+        - sessionCookie: []
+      parameters:
+        - $ref: '#/components/parameters/Handle'
+        - $ref: '#/components/parameters/CsrfToken'
+      responses:
+        '200':
+          description: 지금 상태
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/FollowState' }
+              example: { following: true, followerCount: 13 }
+        '400':
+          description: 자기 자신
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+              example: { code: CANNOT_FOLLOW_SELF, message: 자기 자신은 팔로우할 수 없어요, errors: [], details: null }
+        '401': { $ref: '#/components/responses/LoginRequired' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+    delete:
+      tags: [follows]
+      operationId: unfollowMember
+      summary: 팔로우 해제 상태로
+      description: |
+        팔로우하지 않은 상태여도 200(변화·이벤트 없음). 실제로 지워졌을 때만 MemberUnfollowed. 확인 창은 화면에도 없다.
+      security:
+        - sessionCookie: []
+      parameters:
+        - $ref: '#/components/parameters/Handle'
+        - $ref: '#/components/parameters/CsrfToken'
+      responses:
+        '200':
+          description: 지금 상태
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/FollowState' }
+              example: { following: false, followerCount: 12 }
+        '400':
+          description: 자기 자신
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+        '401': { $ref: '#/components/responses/LoginRequired' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+
+  /api/members/{handle}/followers:
+    get:
+      tags: [follows]
+      operationId: listFollowers
+      summary: 팔로워 목록 (누구나)
+      description: |
+        최근에 팔로우한 순(같으면 회원 번호 큰 순) 20개. 탈퇴 신청 회원은 빠진다. 클라이언트의 size는 무시한다.
+        SQL은 목록 1번 + 보는 사람의 팔로우 여부 1번(비회원이면 목록 1번).
+      parameters:
+        - $ref: '#/components/parameters/Handle'
+        - $ref: '#/components/parameters/Cursor'
+      responses:
+        '200':
+          description: 한 페이지
+          headers:
+            Cache-Control: { schema: { type: string, const: 'private, no-cache' } }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/FollowListPage' }
+        '400': { $ref: '#/components/responses/InvalidCursor' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /api/members/{handle}/following:
+    get:
+      tags: [follows]
+      operationId: listFollowing
+      summary: 팔로잉 목록 (누구나)
+      description: listFollowers와 같은 규칙. 항목은 이 회원이 팔로우한 사람.
+      parameters:
+        - $ref: '#/components/parameters/Handle'
+        - $ref: '#/components/parameters/Cursor'
+      responses:
+        '200':
+          description: 한 페이지
+          headers:
+            Cache-Control: { schema: { type: string, const: 'private, no-cache' } }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/FollowListPage' }
+        '400': { $ref: '#/components/responses/InvalidCursor' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /api/feed:
+    get:
+      tags: [feed]
+      operationId: getFeed
+      summary: 팔로잉 피드 (로그인 필요)
+      description: |
+        내가 팔로우한 사람의 공개·발행 글(휴지통·숨김·작성자 탈퇴 유예 제외, 친구 공개 제외)을 최초 공개 최신순(같으면 글 번호 큰 순) 9개씩.
+        카드 형식·커서 규칙은 005 홈 목록과 같다. hasFollowing은 첫 페이지가 비었을 때 빈 화면 문구를 고르는 값이다.
+      security:
+        - sessionCookie: []
+      parameters:
+        - $ref: '#/components/parameters/Cursor'
+      responses:
+        '200':
+          description: 한 페이지
+          headers:
+            Cache-Control: { schema: { type: string, const: 'private, no-cache' } }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/FeedPage' }
+        '400': { $ref: '#/components/responses/InvalidCursor' }
+        '401': { $ref: '#/components/responses/LoginRequired' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  /api/members/{handle}:
+    get:
+      tags: [blogs]
+      operationId: getBlogHeader
+      x-extends: specs/005-post-reading/contracts/openapi.yaml#getBlogHeader
+      summary: 블로그 머리말 — 팔로우 세 칸 추가
+      description: 005 계약에 followerCount·followingCount·followedByMe만 더한다. 나머지 칸·오류는 005 그대로.
+      parameters:
+        - $ref: '#/components/parameters/Handle'
+      responses:
+        '200':
+          description: 머리말
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/BlogHeaderFollowFields' }
+              example: { followerCount: 12, followingCount: 30, followedByMe: false }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+components:
+  parameters:
+    Handle:
+      name: handle
+      in: path
+      required: true
+      description: 블로그 주소(소문자). 저장된 값과 정확히 같아야 한다 — 대문자가 섞이면 404(화면 경로는 셸이 301)
+      schema: { type: string }
+    Cursor:
+      name: cursor
+      in: query
+      required: false
+      description: 앞 페이지 응답의 nextCursor 그대로. 다른 목록의 커서는 400 INVALID_CURSOR
+      schema: { type: string, maxLength: 512 }
+    CsrfToken:
+      name: X-XSRF-TOKEN
+      in: header
+      required: true
+      description: CSRF 토큰 (`XSRF-TOKEN` 쿠키 값, 001)
+      schema: { type: string }
+  securitySchemes:
+    sessionCookie:
+      type: apiKey
+      in: cookie
+      name: SESSION
+      description: Spring Session(Redis) 세션 쿠키. HttpOnly, Secure, SameSite=Lax (02 §5).
+
+  headers:
+    RetryAfter:
+      description: 다시 시도할 수 있을 때까지 남은 초
+      schema: { type: integer, minimum: 1 }
+
+  responses:
+    LoginRequired:
+      description: 비회원
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+          example: { code: LOGIN_REQUIRED, message: 로그인이 필요해요, errors: [], details: null }
+    Forbidden:
+      description: |
+        계정 상태 거부(001 `AccountStatusGuard`) 또는 CSRF 거부. 판정 순서상 404보다 먼저다(42 §3).
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+          examples:
+            emailNotVerified:
+              value: { code: EMAIL_NOT_VERIFIED, message: 이메일 인증 후 이용할 수 있어요, errors: [], details: null }
+            withdrawn:
+              value: { code: ACCOUNT_WITHDRAWN, message: 탈퇴 신청한 계정이에요, errors: [], details: null }
+            suspended:
+              value: { code: ACCOUNT_SUSPENDED, message: 정지된 계정이에요, errors: [], details: null }
+            csrfRejected:
+              value: { code: CSRF_REJECTED, message: 요청을 확인하지 못했어요. 페이지를 새로 고친 뒤 다시 시도해 주세요, errors: [], details: null }
+    NotFound:
+      description: 없음·볼 수 없음·남의 것. 본문은 모든 경우 같다(README 2026-10-07).
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+          example: { code: NOT_FOUND, message: 볼 수 없는 페이지예요, errors: [], details: null }
+    TooManyRequests:
+      description: 요청 과다. 판정 순서의 맨 끝(007 Q2). 코드는 `TOO_MANY_REQUESTS` 하나(007 Q3).
+      headers:
+        Retry-After: { $ref: '#/components/headers/RetryAfter' }
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+          example: { code: TOO_MANY_REQUESTS, message: 잠시 후 다시 시도해 주세요, errors: [], details: null }
+    InvalidCursor:
+      description: 풀 수 없거나 다른 목록의 커서
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+          example: { code: INVALID_CURSOR, message: 목록을 처음부터 다시 불러와 주세요, errors: [], details: null }
+
+  schemas:
+    ErrorResponse:
+      type: object
+      description: 공통 오류 본문 (02 §5-1 O8). `errors`는 항상 배열(없으면 []), 메시지 끝에 마침표 없음.
+      required: [code, message, errors, details]
+      properties:
+        code: { type: string, description: 대문자 이유 코드 }
+        message: { type: string }
+        errors:
+          type: array
+          items:
+            type: object
+            required: [field, code, message]
+            properties:
+              field: { type: string }
+              code: { type: string }
+              message: { type: string }
+        details:
+          type: [object, 'null']
+    FollowState:
+      type: object
+      required: [following, followerCount]
+      properties:
+        following: { type: boolean }
+        followerCount: { type: integer, minimum: 0 }
+    FollowListItem:
+      type: object
+      required: [handle, nickname, profileImageUrl, bio, followedByMe, isMe]
+      properties:
+        handle: { type: string }
+        nickname: { type: string }
+        profileImageUrl: { type: [string, 'null'] }
+        bio: { type: [string, 'null'], description: 원문. 화면은 첫 줄만 텍스트로 보여 준다 }
+        followedByMe: { type: boolean }
+        isMe: { type: boolean }
+    FollowListPage:
+      type: object
+      required: [items, nextCursor]
+      properties:
+        items:
+          type: array
+          maxItems: 20
+          items: { $ref: '#/components/schemas/FollowListItem' }
+        nextCursor: { type: [string, 'null'] }
+    FeedPage:
+      type: object
+      required: [items, nextCursor, hasFollowing]
+      properties:
+        items:
+          type: array
+          maxItems: 9
+          items:
+            type: object
+            description: 005 PostCard 그대로 (specs/005-post-reading/contracts/openapi.yaml#/components/schemas/PostCard)
+        nextCursor: { type: [string, 'null'] }
+        hasFollowing:
+          type: boolean
+          description: 팔로우한 사람이 한 명이라도 있는가. 첫 페이지가 비었을 때만 실제로 확인하고 그 밖에는 true
+    BlogHeaderFollowFields:
+      type: object
+      description: 005 BlogHeader에 더하는 칸
+      required: [followerCount, followingCount, followedByMe]
+      properties:
+        followerCount: { type: integer, minimum: 0 }
+        followingCount: { type: integer, minimum: 0 }
+        followedByMe: { type: boolean, description: 비회원·내 블로그면 false }
