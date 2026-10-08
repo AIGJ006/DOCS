@@ -61,6 +61,16 @@ public class CommentQueryService {
                 Long.class);
     }
 
+    /** 그 댓글이 지금 정상인가 — 행이 있고 삭제·숨김이 아님 (011 알림 처리 시점 확인, data-model §4). 없는 번호는 {@code false}. */
+    public boolean isActive(long commentId) {
+        return Boolean.TRUE.equals(
+                jdbc.queryForObject(
+                        "SELECT EXISTS (SELECT 1 FROM comment WHERE id = :id"
+                                + " AND deleted_at IS NULL AND hidden_at IS NULL)",
+                        Map.of("id", commentId),
+                        Boolean.class));
+    }
+
     /**
      * 댓글 목록 한 페이지. {@code cursor}가 있으면 그 위치(다음 또는 이전 방향), 없고 {@code around}가 그 글의 보이는 댓글이면 그 댓글의
      * 최상위부터, 그 밖에는 첫 페이지.
