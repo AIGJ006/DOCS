@@ -162,7 +162,7 @@ plan을 쓰는 동안 이미 고친 것(이번 표에 넣지 않음): 015 resear
 
 ## 6. 팀 결정 필요
 
-1. **Redis OOM 응답(R1)**: 002 `RedisGuard`가 자동 저장 밖에서는 `TEMPORARILY_UNAVAILABLE`을 던지게 바꿀지(추천), 기능마다 계속 피해 갈지.
+1. **Redis OOM 응답(R1)**: 002 `RedisGuard`가 자동 저장 밖에서는 `TEMPORARILY_UNAVAILABLE`을 던지게 바꿀지(추천), 기능마다 계속 피해 갈지. (009 T044 확인: 좋아요는 요청 제한 쓰기에서 503 `AUTOSAVE_UNAVAILABLE`을 받고 DB는 바뀌지 않으며, 화면은 code를 보지 않고 누르기 전 상태로 되돌린 뒤 "좋아요를 반영하지 못했어요"를 보인다. 조회 기록은 OOM이어도 건너뛰고 204 — `LikeViewRedisOomIT`, `useLikeToggle.test.ts`.)
 2. **헌법 II 모듈 목록(R2)**: `moderation`(014)·`notification`(011)을 더하는 헌법 개정.
 3. **키 이름 규칙(R3·R4, Tier A R10)**: 요청 제한 Redis 키 `ratelimit:`로 통일(001 `rl:` 옮김), 설정 키 `blog.<기능>` 확정.
 4. **원문에 없는 제안 승인(R7·R15)**: 010 T003(모듈·`ACCOUNT_WRITE`·문구), 012 T003(새 코드 2개·`snippet`·정렬), 013 T003 ②③(`details.reason`·상태 API·동의 조회 API), 014 T004(새 코드 7개·칸 오류·직접 숨김 위치), 015 T002(`confirmed`·코드 2개·잠금 코드), 007 R9(비공개가 된 글의 내 댓글 삭제 허용).

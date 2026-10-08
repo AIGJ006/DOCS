@@ -7,6 +7,7 @@ import type { CommentPage } from '../api/types/comments';
 import type { PostDetail } from '../api/types/reading';
 import AuthorCard from '../components/AuthorCard';
 import AuthorChip from '../components/AuthorChip';
+import LikeButton from '../components/LikeButton';
 import ReactionBar from '../components/ReactionBar';
 import RelativeTime from '../components/RelativeTime';
 import TagList from '../components/TagList';
@@ -41,6 +42,8 @@ export const UNAVAILABLE_TITLE = '볼 수 없는 글이에요';
  * - 응답의 `canonicalPath`가 지금 주소와 다르면 쿼리·#조각을 유지해 바꿔 끼운다(FR-027 — 화면 안 링크로 다른 블로그 주소를 연 경우.
  *   첫 응답은 서버가 301로 처리한다). 문서 제목은 `{제목} - {닉네임}`, 볼 수 없는 글은 "볼 수 없는 글이에요"(T065).
  * - 조회수는 응답 값을 그대로 보여주고(이번 방문의 +1을 기다리지 않음), 기록은 `useViewBeacon`이 따로 보낸다(FR-041).
+ * - 좋아요는 009 `LikeButton`이 `ReactionBar`의 `likeButton` 자리를 채운다(처음 상태 `viewer.likedByMe`·`likeCount`).
+ *   작성자 본인에게는 버튼 없이 ♥ + 수.
  *
  * - 작성자 본인(005 T059, US4): 임시글 응답(`status: DRAFT`)이면 `editorPath`로 바꿔 끼우고, 상태 안내
  *   (`AuthorStatusBanner`)와 [수정]·[공개 범위 ▾]·[삭제] 줄(`AuthorActions`)을 보이며 [좋아요]·[신고]·[팔로우]와 조회 기록은 넣지
@@ -225,6 +228,15 @@ export default function PostDetailPage({
           likeCount={detail.likeCount}
           viewCount={detail.viewCount}
           likedByMe={detail.viewer.likedByMe}
+          likeButton={
+            <LikeButton
+              key={detail.id}
+              postId={detail.id}
+              viewer={detail.viewer}
+              initialLiked={detail.viewer.likedByMe}
+              initialCount={detail.likeCount}
+            />
+          }
         />
       </article>
       <AuthorCard author={detail.author} isMe={isAuthor} />

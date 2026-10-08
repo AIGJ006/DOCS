@@ -1,0 +1,54 @@
+/* 009 좋아요 버튼 (T018·T042). 375px부터 줄바꿈되고 가로 스크롤이 없다. 누를 자리 44px 이상, 색은 styles/tokens.css 변수만 쓴다. */
+
+.like-area {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.like-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.375rem;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0 0.75rem;
+  border: 1px solid var(--color-border);
+  border-radius: 22px;
+  background: var(--color-surface);
+  color: var(--color-text);
+  font: inherit;
+  cursor: pointer;
+}
+
+.like-button[aria-pressed='true'] {
+  border-color: var(--color-danger);
+  color: var(--color-danger);
+}
+
+.like-button:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
+}
+
+.like-button__icon {
+  font-size: 1.125rem;
+  line-height: 1;
+}
+
+.like-notice {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+  color: var(--color-text);
+}
+
+.like-notice:empty {
+  display: none;
+}

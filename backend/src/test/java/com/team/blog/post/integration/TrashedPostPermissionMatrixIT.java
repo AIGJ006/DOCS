@@ -6,6 +6,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.team.blog.discovery.support.ReadingApi;
 import com.team.blog.interaction.support.CommentApi;
+import com.team.blog.interaction.support.LikeApi;
 import com.team.blog.post.support.TrashApi;
 import com.team.blog.post.support.TrashFixtures;
 import com.team.blog.support.IntegrationTestBase;
@@ -175,9 +176,23 @@ class TrashedPostPermissionMatrixIT extends IntegrationTestBase {
         }
     }
 
+    /** 009 T022: 휴지통 글의 좋아요·취소는 로그인한 누구에게나 같은 404다(작성자 포함, 비회원은 판정 순서상 401). */
     @Test
-    void 좋아요는_404() {
-        assumeHandler("PUT", "/api/posts/1/like", "009 좋아요");
+    void 좋아요는_404() throws Exception {
+        LikeApi likes = new LikeApi(mockMvc);
+        for (Map.Entry<String, Cookie> viewer : viewers.entrySet()) {
+            for (long id : trashed) {
+                for (MvcResult result :
+                        List.of(
+                                likes.like(viewer.getValue(), id),
+                                likes.unlike(viewer.getValue(), id))) {
+                    int expected = viewer.getValue() == null ? 401 : 404;
+                    assertThat(status(result))
+                            .as(viewer.getKey() + " 좋아요 " + id)
+                            .isEqualTo(expected);
+                }
+            }
+        }
     }
 
     private long publicPostCount(Cookie session) throws Exception {

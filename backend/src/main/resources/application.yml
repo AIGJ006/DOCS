@@ -204,6 +204,24 @@ blog:
       rate-limit:
         limit: 60
         window: 1m
+  # 좋아요 (009 research R14). 좋아요·취소를 합쳐 회원당 제한, 매일 새벽 좋아요 수 보정
+  like:
+    rate-limit:
+      limit: 60
+      window: 1m
+    reconcile-cron: "0 10 4 * * *"
+  # 조회수 (009 research R14, FR-022). 중복 기준을 바꾸면 화면 안내 문구(005 VIEW_COUNT_NOTICE)도 함께 바꾼다
+  view:
+    dedupe-window: 24h
+    max-per-window: 1
+    rate-limit:
+      limit: 60
+      window: 1m
+    flush-interval: 1m
+    daily-retention: 90d
+    retention-cron: "0 20 4 * * *"
+    bot-user-agent-words: classpath:policy/view-bot-user-agents.txt
+    visitor-cookie-max-age: 365d
   # 글 읽기 (005 data-model §6). 클라이언트의 size는 무시하고 이 값으로 고정 (10 L-2)
   list:
     page-size: 9
