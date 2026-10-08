@@ -92,10 +92,19 @@ public class SignupService {
 
         if (!EmailAddress.isValid(email)) {
             errors.add(fieldError("email", AccountReasonCode.EMAIL_INVALID_FORMAT));
-        } else if (authIdentities
-                .findByProviderAndProviderUserId(Provider.LOCAL, email)
-                .isPresent()) {
-            errors.add(fieldError("email", AccountReasonCode.EMAIL_ALREADY_REGISTERED));
+        } else {
+            authIdentities
+                    .findByProviderAndProviderUserId(Provider.LOCAL, email)
+                    .ifPresent(
+                            existing ->
+                                    errors.add(
+                                            fieldError(
+                                                    "email",
+                                                    isWithdrawalPending(existing.getMemberId())
+                                                            ? AccountReasonCode
+                                                                    .EMAIL_WITHDRAWAL_PENDING
+                                                            : AccountReasonCode
+                                                                    .EMAIL_ALREADY_REGISTERED)));
         }
 
         List<AccountReasonCode> handleFailures = handlePolicy.validate(handle, Provider.LOCAL);
@@ -241,6 +250,17 @@ public class SignupService {
     }
 
     /** 동시 가입에서 진 쪽: 제약 이름 → 칸 오류 (R-09). 트랜잭션이 끝난 뒤라 대안 주소를 새로 조회할 수 있다. */
+    /**
+     * 같은 이메일의 이메일 가입 계정이 탈퇴 유예 중인가 (015 T037, FR-022, research R13): {@code status = WITHDRAWN AND
+     * deleted_at IS NULL}. 익명 처리 뒤에는 로그인 수단이 지워져 여기까지 오지 않는다.
+     */
+    private boolean isWithdrawalPending(long memberId) {
+        return members.findById(memberId)
+                .filter(m -> m.getStatus() == com.team.blog.account.domain.MemberStatus.WITHDRAWN)
+                .filter(m -> !m.isDeleted())
+                .isPresent();
+    }
+
     private RuntimeException duplicateOf(DataIntegrityViolationException e, String handle) {
         return duplicateOf(e, handle, "handle");
     }

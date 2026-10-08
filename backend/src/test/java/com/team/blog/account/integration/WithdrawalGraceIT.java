@@ -154,7 +154,8 @@ class WithdrawalGraceIT extends IntegrationTestBase {
         mockMvc.perform(get("/api/me").cookie(session))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value("WITHDRAWN"));
-        mockMvc.perform(get("/api/auth/csrf").cookie(session)).andExpect(status().is2xxSuccessful());
+        mockMvc.perform(get("/api/auth/csrf").cookie(session))
+                .andExpect(status().is2xxSuccessful());
         for (String url :
                 List.of("/api/me/settings", "/api/me/withdrawal", "/api/posts/" + othersPost)) {
             mockMvc.perform(get(url).cookie(session))
