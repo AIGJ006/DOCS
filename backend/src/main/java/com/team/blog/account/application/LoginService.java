@@ -23,21 +23,29 @@ public class LoginService {
     private final AuthIdentityRepository authIdentities;
     private final MemberRepository members;
     private final AgreementService agreementService;
+    private final SuspensionService suspensionService;
     private final Clock clock;
 
     public LoginService(
             AuthIdentityRepository authIdentities,
             MemberRepository members,
             AgreementService agreementService,
+            SuspensionService suspensionService,
             Clock clock) {
         this.authIdentities = authIdentities;
         this.members = members;
         this.agreementService = agreementService;
+        this.suspensionService = suspensionService;
         this.clock = clock;
     }
 
+    /**
+     * 비밀번호(또는 소셜 인증)가 맞은 뒤의 판정. 기한 지난 정지는 해제하고, 열린 정지가 남아 있으면 {@code AccountStateException}(403
+     * {@code ACCOUNT_SUSPENDED})을 던진다 — 호출한 쪽이 인증을 되돌린다.
+     */
     @Transactional
     public LoginOutcome onSuccess(long memberId) {
+        suspensionService.requireNotSuspended(memberId);
         AuthIdentity identity =
                 authIdentities
                         .findByMemberId(memberId)

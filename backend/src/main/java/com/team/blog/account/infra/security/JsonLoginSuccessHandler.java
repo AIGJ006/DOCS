@@ -4,6 +4,8 @@ import com.team.blog.account.application.LoginOutcome;
 import com.team.blog.account.application.LoginService;
 import com.team.blog.account.domain.Provider;
 import com.team.blog.account.web.dto.LoginResult;
+import com.team.blog.shared.error.ApiException;
+import com.team.blog.shared.error.ErrorResponseWriter;
 import com.team.blog.shared.security.MemberPrincipal;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -11,25 +13,48 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import org.springframework.http.MediaType;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContext;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.context.SecurityContextHolderStrategy;
 import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
+import org.springframework.security.web.context.HttpSessionSecurityContextRepository;
+import org.springframework.security.web.context.SecurityContextRepository;
 import org.springframework.stereotype.Component;
 import tools.jackson.databind.json.JsonMapper;
 
 /**
  * 이메일 로그인 성공 → 200 {@link LoginResult} JSON (리다이렉트 없음, React가 이동을 정한다 — R-04). 세션 ID는 Spring
- * Security가 이미 새로 발급했다(세션 고정 방지). {@link LoginService#onSuccess}로 {@code last_login_at}을 갱신하고 갱신 전
- * 값을 세션에 담는다.
+ * Security가 이미 새로 발급했다(세션 고정 방지). {@link LoginService#onSuccess}로 정지 판정·{@code last_login_at} 갱신을
+ * 하고 갱신 전 값을 세션에 담는다.
  *
- * <p>이동 주소는 지금은 항상 {@code /}이다. 요청의 {@code redirect} 검사(SafeRedirectResolver)는 US5에서 연결한다.
+ * <ul>
+ *   <li>이동 주소: 폼의 {@code redirect}를 {@link SafeRedirectResolver}로 검사한 값, 아니면 {@code /} (FR-039).
+ *   <li>정지 계정: 인증을 되돌리고 403 {@code ACCOUNT_SUSPENDED} {@code details {endsAt, reason}} (FR-038,
+ *       R-23).
+ * </ul>
  */
 @Component
 public class JsonLoginSuccessHandler implements AuthenticationSuccessHandler {
 
-    private final LoginService loginService;
-    private final JsonMapper jsonMapper;
+    public static final String REDIRECT_PARAMETER = "redirect";
 
-    public JsonLoginSuccessHandler(LoginService loginService, JsonMapper jsonMapper) {
+    private final LoginService loginService;
+    private final SafeRedirectResolver safeRedirect;
+    private final ErrorResponseWriter errorWriter;
+    private final JsonMapper jsonMapper;
+    private final SecurityContextHolderStrategy contextHolder =
+            SecurityContextHolder.getContextHolderStrategy();
+    private final SecurityContextRepository contextRepository =
+            new HttpSessionSecurityContextRepository();
+
+    public JsonLoginSuccessHandler(
+            LoginService loginService,
+            SafeRedirectResolver safeRedirect,
+            ErrorResponseWriter errorWriter,
+            JsonMapper jsonMapper) {
         this.loginService = loginService;
+        this.safeRedirect = safeRedirect;
+        this.errorWriter = errorWriter;
         this.jsonMapper = jsonMapper;
     }
 
@@ -38,10 +63,22 @@ public class JsonLoginSuccessHandler implements AuthenticationSuccessHandler {
             HttpServletRequest request, HttpServletResponse response, Authentication authentication)
             throws IOException {
         MemberPrincipal principal = (MemberPrincipal) authentication.getPrincipal();
-        LoginOutcome outcome = loginService.onSuccess(principal.memberId());
+        LoginOutcome outcome;
+        try {
+            outcome = loginService.onSuccess(principal.memberId());
+        } catch (ApiException e) {
+            SecurityContext empty = contextHolder.createEmptyContext();
+            contextHolder.setContext(empty);
+            contextRepository.saveContext(empty, request, response);
+            errorWriter.write(response, e);
+            return;
+        }
         LoginSession.record(request.getSession(), Provider.LOCAL, outcome);
         LoginResult body =
-                new LoginResult("/", outcome.reagreementRequired(), outcome.status().name());
+                new LoginResult(
+                        safeRedirect.resolve(request.getParameter(REDIRECT_PARAMETER)),
+                        outcome.reagreementRequired(),
+                        outcome.status().name());
         response.setStatus(HttpServletResponse.SC_OK);
         response.setCharacterEncoding(StandardCharsets.UTF_8.name());
         response.setContentType(MediaType.APPLICATION_JSON_VALUE);

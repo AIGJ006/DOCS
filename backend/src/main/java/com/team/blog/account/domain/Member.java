@@ -141,6 +141,14 @@ public class Member {
         return deletedAt;
     }
 
+    /** 기한이 지난 정지를 해제한다(R-23). 정지 상태일 때만 ACTIVE로 돌린다. */
+    public void liftSuspension(Instant now) {
+        if (status == MemberStatus.SUSPENDED) {
+            this.status = MemberStatus.ACTIVE;
+            this.updatedAt = now;
+        }
+    }
+
     /** 익명 처리(015)되어 더 이상 사람으로 보이지 않는 회원. */
     public boolean isDeleted() {
         return deletedAt != null;

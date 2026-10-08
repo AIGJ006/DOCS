@@ -346,7 +346,10 @@ paths:
       operationId: popSocialLoginError
       x-origin: proposed
       summary: 소셜 로그인 콜백에서 생긴 오류 한 번 읽기
-      description: 콜백이 세션에 보관한 오류(정지 계정 등)를 돌려주고 지운다. 없으면 204.
+      description: |
+        콜백이 세션에 보관한 오류를 돌려주고 지운다. 없으면 204. 코드: `ACCOUNT_SUSPENDED`(정지 계정),
+        `SOCIAL_EMAIL_NOT_VERIFIED`(Google `email_verified=false`, 제안 코드), `SOCIAL_LOGIN_FAILED`(state 불일치·제공자 오류, 제안 코드).
+        Redis 장애로 세션을 쓸 수 없으면 콜백은 `/login?error=unavailable`로 보낸다.
       security: []
       responses:
         '200':
@@ -355,6 +358,27 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/ErrorResponse' }
         '204': { description: 보관된 오류 없음 }
+
+  /api/auth/social-providers:
+    get:
+      tags: [social]
+      operationId: listSocialProviders
+      x-origin: proposed
+      summary: 로그인 화면에 보일 소셜 로그인 수단
+      description: 앱 키(`GOOGLE_CLIENT_*`·`GITHUB_CLIENT_*`)가 설정된 제공자만 돌려준다. 키가 없으면 그 버튼을 숨긴다.
+      security: []
+      responses:
+        '200':
+          description: 설정된 제공자 (GOOGLE, GITHUB 순)
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [providers]
+                properties:
+                  providers:
+                    type: array
+                    items: { type: string, enum: [GOOGLE, GITHUB] }
 
   /api/auth/social-signup:
     get:

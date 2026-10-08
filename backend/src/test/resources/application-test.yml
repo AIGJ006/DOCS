@@ -17,3 +17,13 @@ blog:
   # 002 T119: 트랜잭션 안의 Redis 쓰기(RedisGuard.callWrite·runWrite)는 시험에서 예외로 막는다(운영 기본은 경고 로그).
   redis:
     fail-on-write-in-transaction: true
+  # 001 US2: 소셜 로그인 흐름 시험용 가짜 앱 키(실제 비밀값 아님). 토큰 교환·사용자 정보는
+  # account/integration/FakeSocialProvider가 대신한다.
+  auth:
+    social:
+      google:
+        client-id: test-google-client
+        client-secret: test-google-secret
+      github:
+        client-id: test-github-client
+        client-secret: test-github-secret

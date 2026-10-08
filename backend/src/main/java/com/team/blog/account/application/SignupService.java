@@ -103,7 +103,7 @@ public class SignupService {
             errors.add(fieldError("handle", handleFailures.getFirst()));
         } else if (members.existsByHandle(handle)) {
             suggestion = handleSuggester.nextAvailable(handle);
-            errors.add(handleDuplicate("이미 사용 중인 주소예요", suggestion));
+            errors.add(handleDuplicate("handle", "이미 사용 중인 주소예요", suggestion));
         }
 
         errors.addAll(
@@ -144,8 +144,109 @@ public class SignupService {
                 memberId, handle, nickname, false, member.getRole(), Provider.LOCAL);
     }
 
+    /**
+     * 소셜 가입 마무리 (FR-008·010·030, R-07·R-09). 대기 정보가 없거나 만료면 410(호출한 쪽이 확인). {@code handleBody}에 가입
+     * 수단 접두어를 붙여 검사하고, 닉네임·동의, ({@code emailRequired}이면) 이메일 형식을 검사한다. 한 트랜잭션에서 {@code
+     * member}·{@code auth_identity}(제공자가 확인한 이메일이면 가입 시각으로 인증, 직접 입력이면 인증 전 + 인증 메일)·동의 2행을 만든다. 같은
+     * 소셜 계정이 그 사이에 가입을 마쳤으면({@code uq_auth_identity}) 그 계정을 돌려준다(이미 연결된 계정으로 로그인).
+     */
+    public SignedUpMember completeSocialSignup(
+            SocialSignupCommand command, PendingSocialSignup pending) {
+        Provider provider = pending.provider();
+        String body = command.handleBody() == null ? "" : command.handleBody().strip();
+        String handle = provider.handlePrefix() + body;
+        List<FieldError> errors = new ArrayList<>();
+        String suggestion = null;
+
+        String email =
+                pending.emailRequired() ? EmailAddress.normalize(command.email()) : pending.email();
+        if (pending.emailRequired() && !EmailAddress.isValid(email)) {
+            errors.add(fieldError("email", AccountReasonCode.EMAIL_INVALID_FORMAT));
+        }
+
+        List<AccountReasonCode> handleFailures = handlePolicy.validate(handle, provider);
+        if (!handleFailures.isEmpty()) {
+            errors.add(fieldError("handleBody", handleFailures.getFirst()));
+        } else if (members.existsByHandle(handle)) {
+            suggestion = handleSuggester.nextAvailable(handle);
+            errors.add(handleDuplicate("handleBody", "이미 사용 중인 주소예요", suggestion));
+        }
+
+        NicknameCheck nickname = nicknamePolicy.check(command.nickname(), null);
+        if (!nickname.valid()) {
+            errors.add(nickname.toFieldError("nickname"));
+        }
+        errors.addAll(agreementService.consentErrors(command.agreements()));
+
+        if (!errors.isEmpty()) {
+            throw new ValidationException(
+                    errors, suggestion == null ? null : Map.of(HANDLE_SUGGESTION, suggestion));
+        }
+        requireSessionStore();
+
+        boolean verified = !pending.emailRequired();
+        try {
+            return transaction.execute(
+                    status ->
+                            createSocialMember(
+                                    pending, handle, nickname.normalized(), email, verified));
+        } catch (DataIntegrityViolationException e) {
+            if ("uq_auth_identity".equals(UniqueViolations.constraintName(e).orElse(""))) {
+                return alreadyLinked(pending).orElseThrow(() -> e);
+            }
+            throw duplicateOf(e, handle, "handleBody");
+        }
+    }
+
+    private SignedUpMember createSocialMember(
+            PendingSocialSignup pending,
+            String handle,
+            String nickname,
+            String email,
+            boolean verified) {
+        Instant now = clock.instant();
+        Member member = members.saveAndFlush(Member.join(handle, nickname, now));
+        long memberId = member.getId();
+        authIdentities.saveAndFlush(
+                AuthIdentity.social(
+                        memberId,
+                        pending.provider(),
+                        pending.providerUserId(),
+                        email,
+                        verified,
+                        now));
+        agreementService.recordOnSignup(memberId, now);
+        if (!verified) {
+            events.publishEvent(new VerificationMailRequested(memberId));
+        }
+        return new SignedUpMember(
+                memberId, handle, nickname, verified, member.getRole(), pending.provider());
+    }
+
+    private java.util.Optional<SignedUpMember> alreadyLinked(PendingSocialSignup pending) {
+        return authIdentities
+                .findByProviderAndProviderUserId(pending.provider(), pending.providerUserId())
+                .flatMap(
+                        identity ->
+                                members.findById(identity.getMemberId())
+                                        .map(
+                                                m ->
+                                                        new SignedUpMember(
+                                                                m.getId(),
+                                                                m.getHandle(),
+                                                                m.getNickname(),
+                                                                identity.isEmailVerified(),
+                                                                m.getRole(),
+                                                                identity.getProvider())));
+    }
+
     /** 동시 가입에서 진 쪽: 제약 이름 → 칸 오류 (R-09). 트랜잭션이 끝난 뒤라 대안 주소를 새로 조회할 수 있다. */
     private RuntimeException duplicateOf(DataIntegrityViolationException e, String handle) {
+        return duplicateOf(e, handle, "handle");
+    }
+
+    private RuntimeException duplicateOf(
+            DataIntegrityViolationException e, String handle, String handleField) {
         String constraint = UniqueViolations.constraintName(e).orElse("");
         return switch (constraint) {
             case "uq_auth_identity" ->
@@ -156,7 +257,7 @@ public class SignupService {
             case "uq_member_handle" -> {
                 String suggestion = handleSuggester.nextAvailable(handle);
                 yield new ValidationException(
-                        List.of(handleDuplicate("방금 다른 분이 이 주소를 사용했어요", suggestion)),
+                        List.of(handleDuplicate(handleField, "방금 다른 분이 이 주소를 사용했어요", suggestion)),
                         Map.of(HANDLE_SUGGESTION, suggestion));
             }
             case "uq_member_nickname" ->
@@ -174,9 +275,9 @@ public class SignupService {
         }
     }
 
-    private static FieldError handleDuplicate(String lead, String suggestion) {
+    private static FieldError handleDuplicate(String field, String lead, String suggestion) {
         return new FieldError(
-                "handle",
+                field,
                 AccountReasonCode.HANDLE_DUPLICATE.code(),
                 lead + ". `" + suggestion + "`는 어떠세요?");
     }

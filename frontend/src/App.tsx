@@ -12,6 +12,7 @@ import NotFoundPage from './pages/NotFoundPage';
 import PostDetailPage from './pages/PostDetailPage';
 import PrivacyPage from './pages/PrivacyPage';
 import SignupPage from './pages/SignupPage';
+import SocialSignupPage from './pages/SocialSignupPage';
 import TermsPage from './pages/TermsPage';
 import VerifyEmailPage from './pages/VerifyEmailPage';
 
@@ -60,7 +61,7 @@ export default function App() {
         <Routes>
           <Route path="/" element={<HomePage />} />
           <Route path="/signup" element={<SignupPage />} />
-          <Route path="/signup/social" element={<Placeholder name="signup-social" />} />
+          <Route path="/signup/social" element={<SocialSignupPage />} />
           <Route path="/login" element={<LoginPage />} />
           <Route path="/verify-email" element={<VerifyEmailPage />} />
           <Route path="/forgot-password" element={<Placeholder name="forgot-password" />} />
