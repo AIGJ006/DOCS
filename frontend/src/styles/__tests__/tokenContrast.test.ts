@@ -102,7 +102,8 @@ export function contrast(a: string, b: string): number {
   return (hi + 0.05) / (lo + 0.05);
 }
 
-const isHex = (v: string | undefined): v is string => !!v && /^#[0-9a-f]{3}([0-9a-f]{3})?$/i.test(v);
+const isHex = (v: string | undefined): v is string =>
+  !!v && /^#[0-9a-f]{3}([0-9a-f]{3})?$/i.test(v);
 
 const LIGHT = parseBlock(TOKENS_CSS, /:root,\s*\[data-theme='light'\]\s*\{/);
 const DARK = parseBlock(TOKENS_CSS, /\[data-theme='dark'\]\s*\{/);

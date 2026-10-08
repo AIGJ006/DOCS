@@ -10,7 +10,8 @@ import { describe, expect, it } from 'vitest';
 
 const SRC = resolve(__dirname, '../..');
 
-const NAMED = 'white|black|red|green|blue|gray|grey|silver|yellow|orange|purple|pink|brown|navy|teal';
+const NAMED =
+  'white|black|red|green|blue|gray|grey|silver|yellow|orange|purple|pink|brown|navy|teal';
 
 const RULES: Array<{ pattern: RegExp; css: boolean; ts: boolean }> = [
   // 16진 색: CSS 값 위치(`:`·공백·`,`·`(` 뒤) 또는 따옴표 바로 뒤. 주소 조각(#add-section)은 뒤가 `-`·글자라 잡지 않음
@@ -73,7 +74,10 @@ function stripLine(line: string, state: { inBlock: boolean }, css: boolean): str
   return out.replace(/&#\w+;/g, '');
 }
 
-export function findRawColors(source: string, kind: 'css' | 'ts'): Array<{ line: number; value: string }> {
+export function findRawColors(
+  source: string,
+  kind: 'css' | 'ts',
+): Array<{ line: number; value: string }> {
   const css = kind === 'css';
   const state = { inBlock: false };
   const found: Array<{ line: number; value: string }> = [];
@@ -165,7 +169,10 @@ describe('noRawColors', () => {
     const files = scanTargets();
     expect(files.length).toBeGreaterThan(10);
     const failures = files.flatMap((path) =>
-      findRawColors(readFileSync(join(SRC, path), 'utf8'), path.endsWith('.css') ? 'css' : 'ts').map(
+      findRawColors(
+        readFileSync(join(SRC, path), 'utf8'),
+        path.endsWith('.css') ? 'css' : 'ts',
+      ).map(
         ({ line, value }) => `${path}:${line}: 색 값을 직접 쓰지 말고 토큰을 쓰세요 (${value})`,
       ),
     );

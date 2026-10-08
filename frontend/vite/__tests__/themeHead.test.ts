@@ -13,19 +13,22 @@ const HTML = `<!doctype html>
 </html>`;
 
 describe('themeHead', () => {
-  it.each([undefined, 'true', ''])('VITE_DARK_MODE=%s → charset 다음, CSS보다 앞에 두 태그', (value) => {
-    const html = injectThemeHead(HTML, value);
-    const charset = html.indexOf('<meta charset');
-    const meta = html.indexOf('<meta name="color-scheme" content="light dark" />');
-    const script = html.indexOf('<script src="/js/theme-init.js"></script>');
-    const css = html.indexOf('<link rel="stylesheet"');
-    expect(charset).toBeGreaterThanOrEqual(0);
-    expect(meta).toBeGreaterThan(charset);
-    expect(script).toBeGreaterThan(meta);
-    expect(css).toBeGreaterThan(script);
-    const tag = html.match(/<script src="\/js\/theme-init\.js"[^>]*>/)?.[0] ?? '';
-    expect(tag).not.toMatch(/defer|async|type=/);
-  });
+  it.each([undefined, 'true', ''])(
+    'VITE_DARK_MODE=%s → charset 다음, CSS보다 앞에 두 태그',
+    (value) => {
+      const html = injectThemeHead(HTML, value);
+      const charset = html.indexOf('<meta charset');
+      const meta = html.indexOf('<meta name="color-scheme" content="light dark" />');
+      const script = html.indexOf('<script src="/js/theme-init.js"></script>');
+      const css = html.indexOf('<link rel="stylesheet"');
+      expect(charset).toBeGreaterThanOrEqual(0);
+      expect(meta).toBeGreaterThan(charset);
+      expect(script).toBeGreaterThan(meta);
+      expect(css).toBeGreaterThan(script);
+      const tag = html.match(/<script src="\/js\/theme-init\.js"[^>]*>/)?.[0] ?? '';
+      expect(tag).not.toMatch(/defer|async|type=/);
+    },
+  );
 
   it('VITE_DARK_MODE=false → 넣지 않는다', () => {
     expect(injectThemeHead(HTML, 'false')).toBe(HTML);
