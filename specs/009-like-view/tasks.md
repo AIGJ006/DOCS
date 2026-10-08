@@ -194,7 +194,7 @@ description: "Task list for 009-like-view (좋아요와 조회수)"
 - [X] T046 [P] 처리방침 문단(T002 결과가 "공개 전"일 때): `F/pages/PrivacyPage.tsx`에 research R15 문단을 더한다(001 소유 화면 — 001 담당에게 알림, 버전 값은 바꾸지 않음) (구현 메모: 기존 절 번호를 바꾸지 않으려고 '5. 조회수 집계' 절을 끝에 더함. 001 소유 화면이라 보고에 적음, 버전 값은 그대로)
 - [X] T047 `grep -rn "009 좋아요\|009에서 교체\|009가 넘겨받\|TODO(009)" backend/src frontend/src`가 0건인지 확인하고 남은 표시를 정리한다(005 T033·T039·T040 구현 메모) (구현 메모: 남은 것은 설명 문구(009 소유 표시)뿐이고 교체 대기 표시(009에서 교체·TODO(009))는 0건. 004 PostActions의 onLike 자리는 상세 화면이 쓰지 않아 그대로 두고 ReactionBar likeButton 자리를 채움)
 - [X] T048 quickstart.md §1~§5를 처음부터 끝까지 실행하고 결과를 기록한다 (구현 메모: §1 임의 포트 컨테이너+jar로 기동(새 마이그레이션 없음), §2 자동 테스트 전부 통과, §3 1~9는 like-view.spec.ts로 통과, §4는 ViewPrivacyIT(Redis·DB·로그 IP·vid 0건), §5는 006 CASCADE(ViewDailyRetentionJobIT)·015 LikePurgeServiceIT로 확인. 011·012는 아직 없음)
-- [ ] T049 전체 회귀: `./mvnw -pl backend verify`(004·005 테스트 포함)와 `npm test`·`npm run build`·`npm run lint`
+- [X] T049 전체 회귀: `./mvnw -pl backend verify`(004·005 테스트 포함)와 `npm test`·`npm run build`·`npm run lint` (구현 메모: main(c42b5c8) 병합 뒤 backend ./mvnw -q verify 통과(2621개, 실패 0, 건너뜀 56 — 아직 없는 기능 행), npm ci·npm test(683개)·npm run build·npm run lint 통과)
 
 ---
 
