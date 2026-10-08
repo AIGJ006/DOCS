@@ -4,6 +4,8 @@ import type { PublishResponse, ServerCopy, Visibility } from '../../api/posts';
 import { EDITOR_CONFIG } from '../../features/editor/editorConfig';
 import { PUBLISH_FAILED, publishOnce } from '../../features/editor/publish';
 import VisibilitySelect from '../../features/visibility/VisibilitySelect';
+import AiTagSuggest from '../../features/ai-suggest/AiTagSuggest';
+import { normalizeTag } from '../../features/tag/normalizeTag';
 import AltTextPanel from './AltTextPanel';
 import TagInput from './TagInput';
 
@@ -18,6 +20,8 @@ import TagInput from './TagInput';
  *   (`features/editor/publish.ts`, US6 T112). 응답 전에는 버튼을 끄고 "발행 중…"으로 보인다.
  * - 409 `VERSION_CONFLICT`면 `onConflict`로 서버 내용을 넘겨 비교 창(US5)을 연다.
  * - 400 `errors[]`는 칸마다 보인다: 태그는 그 칩 옆, 공개 범위는 선택 상자 옆, 제목·본문은 `onFieldErrors`로 에디터에 넘긴다.
+ * - 013 AI 태그 추천: `title`·`contentMd`를 받으면 `TagInput` 바로 아래에 `AiTagSuggest`를 둔다. 추천 칩은 누를 때만
+ *   `TagInput`과 같은 검사(정규화·중복·최대 개수)를 거쳐 칩이 된다 — 서버에는 발행 때 보낸다.
  */
 export interface PublishContent {
   title: string;
@@ -41,6 +45,8 @@ interface Props {
   onSettled?: () => void;
   /** 지금 본문과 본문 바꾸기 — 주면 대체글 권유(003 US5)를 창 위쪽에 보인다. */
   contentMd?: string;
+  /** 지금 제목 — `contentMd`와 함께 주면 AI 태그 추천(013)을 보인다. */
+  title?: string;
   onContentChange?: (contentMd: string) => void;
 }
 
@@ -57,6 +63,7 @@ export default function PublishDialog({
   onSettled,
   contentMd,
   onContentChange,
+  title,
 }: Props) {
   const [tags, setTags] = useState<string[]>(initialTags);
   const [visibility, setVisibility] = useState<Visibility>(initialVisibility);
@@ -71,6 +78,16 @@ export default function PublishDialog({
     // 칩이 바뀌면 칸 번호가 어긋나므로 태그 칸 오류를 지운다
     setErrors((current) => current.filter((e) => !e.field.startsWith('tags')));
     onTagsChange?.(next);
+  }
+
+  /** AI 추천 칩 → 태그 (TagInput의 추가와 같은 검사). 붙였으면 true. */
+  function addSuggested(raw: string): boolean {
+    const result = normalizeTag(raw);
+    if (!result.ok || tags.includes(result.name) || tags.length >= EDITOR_CONFIG.maxTags) {
+      return false;
+    }
+    changeTags([...tags, result.name]);
+    return true;
   }
 
   function errorFor(field: string): FieldError | undefined {
@@ -143,6 +160,17 @@ export default function PublishDialog({
             disabled={busy}
           />
           {tagsError ? <p className="field-error">{tagsError.message}</p> : null}
+          {title !== undefined && contentMd !== undefined ? (
+            <AiTagSuggest
+              postId={postId}
+              title={title}
+              contentMd={contentMd}
+              currentTags={tags}
+              max={EDITOR_CONFIG.maxTags}
+              onAdd={addSuggested}
+              disabled={busy}
+            />
+          ) : null}
         </fieldset>
 
         <VisibilitySelect

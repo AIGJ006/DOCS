@@ -242,4 +242,44 @@ describe('PublishDialog', () => {
     expect(sentKey(a)).toMatch(UUID);
     expect(sentKey(b)).toBe(sentKey(a));
   });
+  it('013: AI 추천 칩을 누르기 전에는 태그가 그대로이고, 누르면 발행 태그에 들어간다', async () => {
+    const fetchMock = stubFetch({
+      'GET /api/posts/42/tag-suggestions/status': () =>
+        json(200, {
+          available: true,
+          consentRequired: false,
+          consentVersion: '2026-10-08',
+          provider: 'GEMINI',
+          remainingToday: 20,
+        }),
+      'POST /api/posts/42/tag-suggestions': () =>
+        json(200, {
+          tags: ['jpa', 'hibernate'],
+          provider: 'GEMINI',
+          cached: false,
+          truncated: false,
+          remainingToday: 19,
+        }),
+      'POST /api/posts/42/publish': () => json(200, PUBLISHED),
+    });
+    const user = userEvent.setup();
+    renderDialog({ title: '제목', contentMd: '본문' });
+
+    await user.click(await screen.findByRole('button', { name: 'AI 태그 추천' }));
+    expect(await screen.findByRole('button', { name: 'jpa 태그 붙이기' })).toBeInTheDocument();
+    // 칩을 누르기 전: 태그는 그대로
+    expect(screen.queryByText('#jpa')).toBeNull();
+    expect(screen.getByText('#spring')).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'jpa 태그 붙이기' }));
+    expect(screen.getByText('#jpa')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: '발행' }));
+    await waitFor(() =>
+      expect(requestsTo(fetchMock, 'POST', '/api/posts/42/publish')).toHaveLength(1),
+    );
+    expect(sentBody(requestsTo(fetchMock, 'POST', '/api/posts/42/publish')[0]).tags).toEqual([
+      'spring',
+      'jpa',
+    ]);
+  });
 });

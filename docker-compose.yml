@@ -84,6 +84,37 @@ services:
       timeout: 3s
       retries: 20
 
+  ollama:
+    # 013 자체 AI (태그 추천 대체 공급자, research R12). 고정 태그(2026-10-08 기준 2주 넘게 지난 마지막 패치판) — 올릴 때 OllamaSmokeIT(-Dollama.smoke=true)로 다시 잰다.
+    # 호스트 포트를 열지 않는다(app만 compose 안에서 http://ollama:11434로 부른다). 개발 중 직접 부르려면 아래 주석을 푼다:
+    # ports:
+    #   - "11434:11434"
+    # 메모리: qwen2.5:1.5b 기준 약 2GB(모델) + 여유. 배포 서버에서는 2~4GB 한도를 둔다(T005 가정):
+    # deploy:
+    #   resources:
+    #     limits:
+    #       memory: 4g
+    image: ollama/ollama:0.34.4
+    volumes:
+      - ollama-data:/root/.ollama
+    healthcheck:
+      test: ["CMD", "ollama", "list"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+
+  ollama-pull:
+    # 일회성: 모델 내려받기 (볼륨에 있으면 바로 끝난다). app은 기다리지 않는다 — 첫 내려받기(약 1GB) 동안이나
+    # 내려받기가 실패해도 앱은 뜨고, 자체 AI 추천만 잠시 쓸 수 없다(Gemini 키가 있으면 Gemini를 먼저 쓴다)
+    image: ollama/ollama:0.34.4
+    entrypoint: ["ollama", "pull", "${OLLAMA_MODEL:-qwen2.5:1.5b}"]
+    environment:
+      OLLAMA_HOST: http://ollama:11434
+    depends_on:
+      ollama:
+        condition: service_healthy
+    restart: "no"
+
   app:
     build:
       context: .
@@ -100,6 +131,10 @@ services:
       # 로컬 전용 기본값(.env에 없을 때). minio-init과 같은 값이어야 한다
       BLOG_IMAGE_STORAGE_ACCESS_KEY: ${BLOG_IMAGE_STORAGE_ACCESS_KEY:-blog-app-local}
       BLOG_IMAGE_STORAGE_SECRET_KEY: ${BLOG_IMAGE_STORAGE_SECRET_KEY:-blog-app-local-secret}
+      # 013 AI 태그 추천: Gemini 키(무료 등급)가 비어 있거나 한도가 다 되면 compose 안 Ollama로 추천한다
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      OLLAMA_MODEL: ${OLLAMA_MODEL:-qwen2.5:1.5b}
+      BLOG_AI_TAG_SUGGEST_OLLAMA_BASE_URL: http://ollama:11434
     ports:
       - "8080:8080"
     depends_on:
@@ -118,3 +153,4 @@ volumes:
   postgres-data:
   redis-data:
   minio-data:
+  ollama-data:
