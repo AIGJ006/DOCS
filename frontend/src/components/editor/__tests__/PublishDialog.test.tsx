@@ -54,7 +54,7 @@ describe('PublishDialog', () => {
     const props = renderDialog();
 
     expect(screen.getByLabelText('공개 범위')).toHaveValue('PRIVATE');
-    expect(screen.getByText('spring')).toBeInTheDocument();
+    expect(screen.getByText('#spring')).toBeInTheDocument();
     await user.type(screen.getByLabelText('태그 입력'), 'JPA{Enter}');
     await user.selectOptions(screen.getByLabelText('공개 범위'), 'PUBLIC');
     await user.click(screen.getByRole('button', { name: '발행' }));
@@ -64,7 +64,7 @@ describe('PublishDialog', () => {
     expect(sentBody(call)).toEqual({
       title: '제목',
       contentMd: '본문',
-      tags: ['spring', 'JPA'],
+      tags: ['spring', 'jpa'],
       visibility: 'PUBLIC',
       baseVersion: 3,
     });
@@ -118,6 +118,58 @@ describe('PublishDialog', () => {
       { field: 'tags[1]', code: 'INVALID_TAG', message: '쓸 수 없는 글자가 있어요' },
     ]);
     expect(props.onPublished).not.toHaveBeenCalled();
+  });
+
+  it('008 태그 입력(TagInput)을 쓰고 보내는 tags는 칩의 정규화된 이름 순서 그대로다', async () => {
+    const fetchMock = stubFetch({ 'POST /api/posts/42/publish': () => json(200, PUBLISHED) });
+    const user = userEvent.setup();
+    renderDialog({ initialTags: [] });
+
+    expect(screen.getByRole('list', { name: '붙인 태그' })).toBeInTheDocument();
+    await user.type(screen.getByLabelText('태그 입력'), 'Spring Boot{Enter}#JPA,Node.JS{Enter}');
+    await user.click(screen.getByRole('button', { name: '발행' }));
+
+    await waitFor(() =>
+      expect(requestsTo(fetchMock, 'POST', '/api/posts/42/publish')).toHaveLength(1),
+    );
+    const [call] = requestsTo(fetchMock, 'POST', '/api/posts/42/publish');
+    expect(sentBody(call).tags).toEqual(['spring-boot', 'jpa', 'node.js']);
+  });
+
+  it('400 TAG_BANNED_WORD는 그 칩에만 보이고 다른 칩은 정상이다', async () => {
+    stubFetch({
+      'POST /api/posts/42/publish': () =>
+        json(
+          400,
+          errorBody('VALIDATION_FAILED', '입력한 내용을 확인해 주세요', [
+            {
+              field: 'tags[2]',
+              code: 'TAG_BANNED_WORD',
+              message: '쓸 수 없는 단어가 들어 있어요',
+            },
+          ]),
+        ),
+    });
+    const user = userEvent.setup();
+    renderDialog({ initialTags: ['spring', 'jpa', 'nope'] });
+    await user.click(screen.getByRole('button', { name: '발행' }));
+
+    const error = await screen.findByText('쓸 수 없는 단어가 들어 있어요');
+    const chip = error.closest('li')!;
+    expect(chip).toHaveTextContent('#nope');
+    expect(chip).toHaveAttribute('aria-invalid', 'true');
+    expect(chip).toHaveTextContent('⚠');
+    expect(screen.getByText('#spring').closest('li')).not.toHaveAttribute('aria-invalid');
+    expect(screen.getByText('#jpa').closest('li')).not.toHaveAttribute('aria-invalid');
+  });
+
+  it('발행하지 않고 닫으면 지금 칩을 알린다(같은 화면에서 다시 열면 그대로)', async () => {
+    stubFetch({});
+    const user = userEvent.setup();
+    const onTagsChange = vi.fn();
+    renderDialog({ initialTags: ['spring'], onTagsChange });
+    await user.type(screen.getByLabelText('태그 입력'), 'jpa{Enter}');
+    expect(onTagsChange).toHaveBeenLastCalledWith(['spring', 'jpa']);
   });
 
   it('태그는 최대 10개까지 넣는다', async () => {

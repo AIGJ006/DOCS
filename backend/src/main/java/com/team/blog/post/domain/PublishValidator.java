@@ -54,12 +54,12 @@ public class PublishValidator {
             errors.add(PostReasonCode.PENDING_IMAGES.fieldError("contentMd"));
         }
 
+        // 개수는 받아들인 이름의 중복 제거 후 개수로 센다. 개수 초과여도 칸별 오류를 함께 모은다(008 research R3, SC-006)
         List<String> tags = tagService.normalizeAll(rawTags);
         if (tags.size() > properties.post().maxTags()) {
             errors.add(PostReasonCode.TOO_MANY_TAGS.fieldError("tags"));
-        } else {
-            errors.addAll(tagService.validate(rawTags));
         }
+        errors.addAll(tagService.validate(rawTags));
 
         Visibility visibility = null;
         try {
