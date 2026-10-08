@@ -28,6 +28,7 @@ import TermsPage from './pages/TermsPage';
 import VerifyEmailPage from './pages/VerifyEmailPage';
 import { RestoreGate } from './features/withdraw/RestoreGate';
 import RestorePage from './pages/RestorePage';
+import SearchPage from './pages/SearchPage';
 import WithdrawnPage from './pages/WithdrawnPage';
 import WithdrawPage from './pages/WithdrawPage';
 
@@ -129,6 +130,8 @@ export default function App() {
                   </AdminRouteGate>
                 }
               />
+              {/* 012 검색 — `?q&tab&sort` */}
+              <Route path="/search" element={<SearchPage />} />
               {/* 008 태그 — `/:handle`보다 앞에 둔다. `:name`은 react-router가 디코드해 준다(`c%23` → `c#`) */}
               <Route path="/tags" element={<TagIndexPage />} />
               <Route path="/tags/:name" element={<TagPage />} />

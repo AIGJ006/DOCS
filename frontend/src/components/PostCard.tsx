@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import type { PostCard as PostCardData } from '../api/types/reading';
 import AuthorChip from './AuthorChip';
@@ -11,6 +12,8 @@ export interface PostCardProps {
   card: PostCardData;
   /** 홈은 true, 개인 블로그는 false (작성자 영역 생략) */
   showAuthor?: boolean;
+  /** 요약 자리에 대신 그릴 내용 (012 검색 결과의 주변 문장 `SnippetText`). 없으면 `excerpt` */
+  preview?: ReactNode;
 }
 
 const CLAMP = {
@@ -19,7 +22,7 @@ const CLAMP = {
   overflow: 'hidden',
 };
 
-export default function PostCard({ card, showAuthor = true }: PostCardProps) {
+export default function PostCard({ card, showAuthor = true, preview }: PostCardProps) {
   return (
     <article
       data-testid="post-card"
@@ -83,7 +86,7 @@ export default function PostCard({ card, showAuthor = true }: PostCardProps) {
             color: 'var(--card-excerpt-color, #495057)',
           }}
         >
-          {card.excerpt ?? ''}
+          {preview ?? card.excerpt ?? ''}
         </p>
       </Link>
       <div

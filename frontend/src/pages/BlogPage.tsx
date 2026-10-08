@@ -13,6 +13,10 @@ import PostCardGrid from '../components/PostCardGrid';
 import FollowButton from '../features/follow/FollowButton';
 import FollowCounts from '../features/follow/FollowCounts';
 import { useCursorList } from '../features/post-list/useCursorList';
+import PostSearchResults from '../features/search/PostSearchResults';
+import SearchBox from '../features/search/SearchBox';
+import { BLOG_SEARCH_BOX_LABEL } from '../features/search/searchMessages';
+import type { SearchSort } from '../api/types/discovery';
 import NotFoundPage from './NotFoundPage';
 
 /** 글이 없을 때 (FR-023). */
@@ -44,6 +48,9 @@ const LOADING: HeaderState = { status: 'loading', header: null };
  * 010: 머리말의 "공개 글 N" 줄을 `FollowCounts`("공개 글 · 팔로워 · 팔로잉", 목록 링크)로 바꾸고 옆에 `FollowButton`(내 블로그면
  * 없음, `followedByMe`로 시작)을 둔다. 버튼을 누르면 팔로워 수가 바로 바뀐다(`onCountChange`).
  *
+ * 012: 머리말 아래 "이 블로그에서 검색" 입력. `?q=`가 있으면 목록 자리에 이 블로그 안 검색 결과(같은 카드·정렬 탭,
+ * `?sort=latest`)를 보이고 글 목록은 부르지 않는다. 서버 셸은 `q`가 있으면 `noindex`다.
+ *
  * 001 `FriendButton`(T132)·`LastActiveBadge`(T142)와 개인 확장(카테고리·시리즈)은 아직 없어 `headerSlot`·
  * `sidebarSlot` prop 자리만 둔다.
  */
@@ -64,8 +71,10 @@ export default function BlogPage({ headerSlot = null, sidebarSlot = null }: Blog
   /** 팔로우 버튼이 알려 준 팔로워 수 (어느 블로그의 값인지 함께 둔다) */
   const [followers, setFollowers] = useState<{ handle: string; count: number } | null>(null);
   const onFollowerCount = useCallback((count: number) => setFollowers({ handle, count }), [handle]);
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const tag = searchParams.get('tag');
+  const q = searchParams.get('q');
+  const sort: SearchSort = searchParams.get('sort') === 'latest' ? 'latest' : 'relevance';
   /** 태그 줄 (어느 블로그의 결과인지 함께 둔다) */
   const [strip, setStrip] = useState<{ handle: string; tags: BlogTags } | null>(null);
 
@@ -111,17 +120,6 @@ export default function BlogPage({ headerSlot = null, sidebarSlot = null }: Blog
       cancelled = true;
     };
   }, [handle, blogAddress]);
-
-  const navigationType = useNavigationType();
-  const load = useCallback(
-    (cursor?: string | null) => listBlogPosts(handle, cursor, tag),
-    [handle, tag],
-  );
-  // 뒤로 가기로 돌아오면 30분 안의 보관값으로 복원한다 (005 T071, FR-018)
-  const list = useCursorList(load, {
-    listKey: tag === null ? `blog:${handle}` : `blog:${handle}:tag:${tag}`,
-    restore: navigationType === 'POP',
-  });
 
   if (!blogAddress || state.status === 'not-found') {
     return <NotFoundPage />;
@@ -228,6 +226,64 @@ export default function BlogPage({ headerSlot = null, sidebarSlot = null }: Blog
 
       {sidebarSlot}
 
+      <SearchBox
+        key={`search:${handle}:${q ?? ''}`}
+        label={BLOG_SEARCH_BOX_LABEL}
+        placeholder={BLOG_SEARCH_BOX_LABEL}
+        defaultValue={q ?? ''}
+        className="search-page-form"
+        onSearch={(next) => setSearchParams({ q: next })}
+      />
+
+      {q !== null && q.trim() !== '' ? (
+        <section aria-label="이 블로그 검색 결과">
+          <p role="status" className="tag-filter-header">
+            <strong style={{ overflowWrap: 'anywhere', minWidth: 0 }}>'{q}' 검색 결과</strong>
+            <Link to={`/@${handle}`}>검색 해제</Link>
+          </p>
+          <PostSearchResults
+            q={q}
+            sort={sort}
+            blog={handle}
+            showAuthor={false}
+            onSortChange={(next) => setSearchParams(next === 'latest' ? { q, sort: next } : { q })}
+          />
+        </section>
+      ) : (
+        <BlogPostList
+          key={`list:${handle}:${tag ?? ''}`}
+          handle={handle}
+          tag={tag}
+          isMe={header?.isMe ?? false}
+        />
+      )}
+    </main>
+  );
+}
+
+/** 블로그 글 목록 (005 T051·008 태그 필터). 검색 중이 아닐 때만 부른다. */
+function BlogPostList({
+  handle,
+  tag,
+  isMe,
+}: {
+  handle: string;
+  tag: string | null;
+  isMe: boolean;
+}) {
+  const navigationType = useNavigationType();
+  const load = useCallback(
+    (cursor?: string | null) => listBlogPosts(handle, cursor, tag),
+    [handle, tag],
+  );
+  // 뒤로 가기로 돌아오면 30분 안의 보관값으로 복원한다 (005 T071, FR-018)
+  const list = useCursorList(load, {
+    listKey: tag === null ? `blog:${handle}` : `blog:${handle}:tag:${tag}`,
+    restore: navigationType === 'POP',
+  });
+
+  return (
+    <>
       <PostCardGrid>
         {list.items.map((card) => (
           <PostCard key={card.id} card={card} showAuthor={false} />
@@ -245,7 +301,7 @@ export default function BlogPage({ headerSlot = null, sidebarSlot = null }: Blog
         <div style={{ textAlign: 'center', padding: '3rem 1rem' }}>
           {tag !== null ? (
             <p style={{ margin: 0 }}>{EMPTY_TAG_FILTER_TEXT}</p>
-          ) : header?.isMe ? (
+          ) : isMe ? (
             <p style={{ margin: 0 }}>
               {EMPTY_MY_BLOG_TEXT} <Link to="/write/new">글쓰기</Link>
             </p>
@@ -261,6 +317,6 @@ export default function BlogPage({ headerSlot = null, sidebarSlot = null }: Blog
           onRetry={() => void list.retry()}
         />
       )}
-    </main>
+    </>
   );
 }

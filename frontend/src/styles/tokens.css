@@ -16,4 +16,6 @@
   --thumb-empty: #f1f3f5;
   --color-code-bg: #f8f9fa;
   --color-focus: #1c7ed6;
+  /* 012 검색어 강조 <mark> 바탕 (본문색 글자 대비 4.5:1 이상, 굵기로도 구분) */
+  --color-mark-bg: #fff3bf;
 }
