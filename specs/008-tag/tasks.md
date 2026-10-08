@@ -222,22 +222,22 @@ description: "Task list for 008-tag (태그와 태그별 글 목록)"
 
 **Purpose**: 성능 측정, 종단 확인, 접근성·화면 폭, 문서·인계
 
-- [ ] T063 [P] 성능 측정 `T/tag/integration/TagPerformanceIT.java`(`@Tag("perf")`, 기본 빌드에서 제외): quickstart §4 시드를 SQL `generate_series`로 만들고 5가지 요청의 p95와 태그별 목록 `EXPLAIN (ANALYZE, BUFFERS)`를 출력한다. 결과를 quickstart §4 표에 적는다(SC-007, FR-029). 전체 태그 목록이 300ms를 넘으면 T073을 연다
-- [ ] T064 [P] 종단 확인 `E/tag.spec.ts`(Playwright): quickstart §3의 1~9번(발행 칩 → 상세 태그 → 태그 페이지 → 301 → 404 → 비공개 전용 태그 빈 화면 → `/tags` → 블로그 필터)을 자동화한다
-- [ ] T065 [P] 한글 입력기 확인: Playwright로 `compositionstart`/`compositionend`를 흉내 내 조합 중 `/api/tags/suggest` 요청이 없는지(quickstart §3-10). 실제 입력기 확인은 수동(크롬·사파리)으로 하고 결과를 quickstart에 적는다
-- [ ] T066 [P] 375px 확인: 발행 창 칩 10개(30자 태그 포함)·태그 페이지·`/tags`·블로그 태그 줄에서 가로 스크롤 없음(`E/tag.spec.ts`의 `viewport: {width: 375}` 단계)
-- [ ] T067 [P] 접근성 확인: 칩 오류가 색 + 글자로 표시되는지, Alt+방향키 안내가 `aria-live`로 읽히는지, 자동완성 `listbox`가 키보드만으로 쓰이는지 `@axe-core/playwright`(이미 있으면) 또는 수동 점검표로 확인
-- [ ] T068 `grep -rn "TODO(008)\|008 소유\|008에서 교체\|008이 교체" backend/src frontend/src`가 0건인지 확인하고 남은 표시를 정리한다(002 T046·005 T033·T039 구현 메모)
-- [ ] T069 [P] 012·013 인계 메모: `specs/012-trending-search/plan.md`·`specs/013-ai-tag-suggest/plan.md`(작성되어 있으면)의 의존 항목에 `TagNormalizer.normalizeQuery`/`normalize`, `normalizeTag.ts`, `tagPath.ts`의 위치와 계약(contracts/normalization.md §5)을 적는다
-- [ ] T070 [P] 원문 문서 갱신 제안: `docs/22-tag.md` §5~§8 API 표 옆에 "구현 계약은 specs/008-tag/contracts/openapi.yaml (머리말 `/summary`, 캐시 없음, 오류 형식 O8)"를 덧붙이는 변경을 팀에 제안한다(원문 수정은 팀 승인 후)
-- [ ] T071 quickstart.md §1~§5를 처음부터 끝까지 실행하고 결과를 기록한다
+- [X] T063 [P] 성능 측정 `T/tag/integration/TagPerformanceIT.java`(`@Tag("perf")`, 기본 빌드에서 제외): quickstart §4 시드를 SQL `generate_series`로 만들고 5가지 요청의 p95와 태그별 목록 `EXPLAIN (ANALYZE, BUFFERS)`를 출력한다. 결과를 quickstart §4 표에 적는다(SC-007, FR-029). 전체 태그 목록이 300ms를 넘으면 T073을 연다 (구현 메모: @Tag("perf") + @EnabledIfSystemProperty(blog.perf=true)로 기본 빌드에서 빠진다(pom 변경 없음). 결과는 quickstart §4 표 — 모두 35ms 이하)
+- [X] T064 [P] 종단 확인 `E/tag.spec.ts`(Playwright): quickstart §3의 1~9번(발행 칩 → 상세 태그 → 태그 페이지 → 301 → 404 → 비공개 전용 태그 빈 화면 → `/tags` → 블로그 필터)을 자동화한다 (구현 메모: 회원 하나로 돈다(§3-6의 남의 비공개 태그는 TagSuggestIT). e2e008.sh로 desktop 통과)
+- [X] T065 [P] 한글 입력기 확인: Playwright로 `compositionstart`/`compositionend`를 흉내 내 조합 중 `/api/tags/suggest` 요청이 없는지(quickstart §3-10). 실제 입력기 확인은 수동(크롬·사파리)으로 하고 결과를 quickstart에 적는다 (구현 메모: Playwright dispatchEvent로 조합 이벤트를 흉내 내 확인(통과). 실제 입력기 수동 확인은 이 환경에서 못 해 quickstart 실행 기록에 남겼다)
+- [X] T066 [P] 375px 확인: 발행 창 칩 10개(30자 태그 포함)·태그 페이지·`/tags`·블로그 태그 줄에서 가로 스크롤 없음(`E/tag.spec.ts`의 `viewport: {width: 375}` 단계) (구현 메모: tag.spec.ts 안에서 375px로 바꿔 발행 창 칩·태그 페이지·/tags·블로그 태그 줄 확인(통과))
+- [X] T067 [P] 접근성 확인: 칩 오류가 색 + 글자로 표시되는지, Alt+방향키 안내가 `aria-live`로 읽히는지, 자동완성 `listbox`가 키보드만으로 쓰이는지 `@axe-core/playwright`(이미 있으면) 또는 수동 점검표로 확인 (구현 메모: @axe-core/playwright가 없어 수동 점검표로 quickstart 실행 기록에 적었다(의존성은 더하지 않음))
+- [X] T068 `grep -rn "TODO(008)\|008 소유\|008에서 교체\|008이 교체" backend/src frontend/src`가 0건인지 확인하고 남은 표시를 정리한다(002 T046·005 T033·T039 구현 메모) (구현 메모: 검색 0건 확인. 남아 있던 editorConfig.maxTags 주석의 '008 화면이 교체'를 정리했다(002 T046 TODO는 US1, 005 TagList·PostReadingPorts 표시는 US2에서 정리))
+- [X] T069 [P] 012·013 인계 메모: `specs/012-trending-search/plan.md`·`specs/013-ai-tag-suggest/plan.md`(작성되어 있으면)의 의존 항목에 `TagNormalizer.normalizeQuery`/`normalize`, `normalizeTag.ts`, `tagPath.ts`의 위치와 계약(contracts/normalization.md §5)을 적는다 (구현 메모: 브리프 규칙(맡지 않은 기능의 문서는 고치지 않음)에 따라 012·013 plan.md는 고치지 않고 인계 내용(TagNormalizer.normalizeQuery/normalize — backend tag/domain, normalizeTag.ts·tagPath.ts — frontend features/tag, 계약 contracts/normalization.md §5)을 작업 보고로 넘겼다)
+- [X] T070 [P] 원문 문서 갱신 제안: `docs/22-tag.md` §5~§8 API 표 옆에 "구현 계약은 specs/008-tag/contracts/openapi.yaml (머리말 `/summary`, 캐시 없음, 오류 형식 O8)"를 덧붙이는 변경을 팀에 제안한다(원문 수정은 팀 승인 후) (구현 메모: 제안만 — 원문 docs/22-tag.md는 고치지 않고 작업 보고에 제안 문구를 적었다)
+- [X] T071 quickstart.md §1~§5를 처음부터 끝까지 실행하고 결과를 기록한다 (구현 메모: quickstart 끝 '실행 기록' 절에 적었다. 실제 한글 입력기·화면 읽기 프로그램 수동 확인은 남김)
 - [ ] T072 전체 회귀: `./mvnw -pl backend verify`(002·005 테스트 포함)와 `npm test`·`npm run build`·`npm run lint`
 
 ### 조건부 작업
 
-- [ ] T073 (T063에서 전체 태그 목록 p95 > 300ms일 때만) "공개에서 빠질 때 지우는 캐시"(Clarifications Q1 B안): Redis `tags:top`(TTL 10분) + `PostWentPublic`·`PostVisibilityChanged`·`PostTrashed`·`PostRestored`·`PostPurged`·숨김(014)·탈퇴 신청/철회(015) 이벤트의 AFTER_COMMIT 리스너에서 키 삭제. Redis 장애면 매번 계산으로 돌아간다. `TagIndexIT#비공개로_바꾸면_다음_요청에서_빠진다`가 그대로 통과해야 한다
-- [ ] T074 (팀이 태그 페이지 sitemap 포함을 정하면) 012 sitemap 작업에 태그 페이지 주소 생성을 넘긴다 — 현재 결정은 "포함하지 않음"(012 Clarifications)
-- [ ] T075 (T002 결과 "운영 배포가 먼저"일 때만) 정리 마이그레이션 `R/db/migration/V{다음 번호}__tag_renormalize.sql` + Java 마이그레이션 `B/tag/infra/migration/V{n}__TagRenormalize.java`: 모든 `tag.name`을 `TagNormalizer.normalizeQuery`로 바꾸고, 같은 이름이 되면 하나로 합친 뒤 `post_tag`를 옮긴다(한 글에 겹치면 작은 `position` 유지, 나머지 `position` 다시 매김), 형식 실패 태그는 연결을 지우고 태그를 남겨 로그 집계만. 번호는 ANALYSIS-tier-bc의 마이그레이션 번호 배정을 따른다
+- [X] T073 (T063에서 전체 태그 목록 p95 > 300ms일 때만) "공개에서 빠질 때 지우는 캐시"(Clarifications Q1 B안): Redis `tags:top`(TTL 10분) + `PostWentPublic`·`PostVisibilityChanged`·`PostTrashed`·`PostRestored`·`PostPurged`·숨김(014)·탈퇴 신청/철회(015) 이벤트의 AFTER_COMMIT 리스너에서 키 삭제. Redis 장애면 매번 계산으로 돌아간다. `TagIndexIT#비공개로_바꾸면_다음_요청에서_빠진다`가 그대로 통과해야 한다 (구현 메모: T063 결과 전체 태그 목록 p95 26.7ms로 조건(>300ms)에 해당하지 않아 하지 않음)
+- [X] T074 (팀이 태그 페이지 sitemap 포함을 정하면) 012 sitemap 작업에 태그 페이지 주소 생성을 넘긴다 — 현재 결정은 "포함하지 않음"(012 Clarifications) (구현 메모: 팀 결정이 '포함하지 않음' 그대로라 하지 않음)
+- [X] T075 (T002 결과 "운영 배포가 먼저"일 때만) 정리 마이그레이션 `R/db/migration/V{다음 번호}__tag_renormalize.sql` + Java 마이그레이션 `B/tag/infra/migration/V{n}__TagRenormalize.java`: 모든 `tag.name`을 `TagNormalizer.normalizeQuery`로 바꾸고, 같은 이름이 되면 하나로 합친 뒤 `post_tag`를 옮긴다(한 글에 겹치면 작은 `position` 유지, 나머지 `position` 다시 매김), 형식 실패 태그는 연결을 지우고 태그를 남겨 로그 집계만. 번호는 ANALYSIS-tier-bc의 마이그레이션 번호 배정을 따른다 (구현 메모: T002 가정(008 전에 운영 배포 없음)에 따라 해당 없음 — 마이그레이션을 만들지 않았다)
 
 ---
 

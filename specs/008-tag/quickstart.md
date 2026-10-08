@@ -68,12 +68,14 @@ docker compose up -d postgres redis minio
 
 | 측정 | 대상 | 기준 | 결과 |
 |---|---|---|---|
-| 전체 태그 목록 p95 (20회) | `GET /api/tags` | 300ms | |
-| 가장 많이 쓰인 태그 목록 첫 페이지 p95 | `GET /api/tags/{top}/posts` | 300ms | |
-| 그 태그 마지막 페이지 근처 p95 | 커서 이어서 | 300ms | |
-| 자동완성 한 글자 p95 | `GET /api/tags/suggest?q=s` | 300ms | |
-| 블로그 태그 줄 (글 1천 건 블로그) | `GET /api/members/{h}/tags` | 300ms | |
-| EXPLAIN | 태그별 목록 | `ix_post_tag_tag` 사용, `post` 순차 읽기 없음 | |
+| 전체 태그 목록 p95 (20회) | `GET /api/tags` | 300ms | 26.7ms (p50 19.3ms) |
+| 가장 많이 쓰인 태그 목록 첫 페이지 p95 | `GET /api/tags/{top}/posts` | 300ms | 8.3ms |
+| 그 태그 마지막 페이지 근처 p95 | 커서 이어서 | 300ms | 7.3ms (공개 글 800건의 마지막 쪽) |
+| 자동완성 한 글자 p95 | `GET /api/tags/suggest?q=s` | 300ms | 34.6ms |
+| 블로그 태그 줄 (글 1천 건 블로그) | `GET /api/members/{h}/tags` | 300ms | 11.0ms |
+| EXPLAIN | 태그별 목록 | `ix_post_tag_tag` 사용, `post` 순차 읽기 없음 | `ix_post_tag_tag` Index Only Scan → `post_pkey`·`member_pkey`, 순차 읽기 없음 (2.4ms) |
+
+(구현 메모: 2026-10-08 개발 컨테이너의 Testcontainers PostgreSQL에서 MockMvc로 1번 잰 값 — `./mvnw verify -Dit.test=TagPerformanceIT -Dblog.perf=true`. 3번 측정·운영 사양 측정은 하지 않았다. 모든 항목이 기준의 1/8 이하라 T073은 열지 않는다.)
 
 전체 태그 목록이 300ms를 넘으면 research R8대로 "공개에서 빠질 때 지우는 캐시" 작업(tasks T073)을 연다.
 
@@ -82,3 +84,12 @@ docker compose up -d postgres redis minio
 - 006: 글을 영구 삭제하면 `post_tag` 행이 없어지고 `tag` 행은 남는다. `/tags/{그 태그}` → 200 빈 목록
 - 014: 관리자 숨김 글의 태그가 다음 요청부터 `/tags`·태그별 목록에서 빠진다
 - 015: 탈퇴 신청 회원의 글 태그가 다음 요청부터 빠지고, 철회하면 돌아온다
+
+## 실행 기록 (2026-10-08, 008 구현 브랜치)
+
+- §1 기동: docker compose 대신 임의 포트 PostgreSQL·Redis 컨테이너 + 빌드한 jar(`local` 프로필)로 띄웠다(같은 기계의 다른 작업자와 포트가 겹치지 않게).
+- §2 자동 테스트: `./mvnw -q verify`, `npm test`·`npm run build`·`npm run lint` — 결과는 T072 구현 메모.
+- §3 화면 확인: 1~5·7~9·11은 `frontend/e2e/tag.spec.ts`(Playwright, 설치된 Chromium, desktop)로 자동화해 통과했다. 6은 회원 하나라 "내 비공개 태그가 내 자동완성에 `mine`으로 보인다"만 E2E로, "남의 비공개 태그는 안 보인다"는 `TagSuggestIT`로 확인했다. 10은 `compositionstart`/`compositionend` 이벤트를 흉내 내 조합 중 요청 0번·끝난 뒤 1번을 확인했다 — 실제 한글 입력기(크롬·사파리) 수동 확인은 이 환경에서 할 수 없어 남겨 둔다.
+- 접근성 점검표(T067, `@axe-core/playwright` 없음): 칩 오류는 테두리 + "⚠" 글자 + 문구(TagInput 시험), Alt+←/→ 안내는 `role="status"`·`aria-live="polite"`(E2E에서 "c++ 태그를 2번째로 옮겼어요" 확인), 자동완성은 `role="combobox"` + `role="listbox"`·`aria-activedescendant`, ↑↓·Enter·Esc만으로 쓰인다(TagInput 시험). 화면 읽기 프로그램 실제 청취는 하지 않았다.
+- §4 측정: 위 표.
+- §5 다른 기능: 006 영구 삭제 시 `post_tag` CASCADE·`tag` 유지는 V1 제약 그대로라 따로 시험하지 않았다(`TagPostListIT`의 "없는 태그와 같은 응답"이 결과 화면을 덮는다). 014·015는 아직 없다 — 숨김(`hidden_at`)·탈퇴 유예(`withdrawn_at`)가 다음 요청부터 빠지는 것은 `TagIndexIT#비공개로_바꾸면_다음_요청에서_빠진다`가 확인한다.
