@@ -7,12 +7,14 @@ import { createPost, hasAccount, login } from './support';
  */
 const BANNER = /다른 탭이나 기기에서 이 글이 수정되었어요\(\d{2}:\d{2}\)/;
 
-async function saveIn(page: Page, title: string) {
+/** [임시저장]은 저장 뒤 내 글 관리로 나가므로, 저장을 확인하고 같은 글을 다시 연다. */
+async function saveIn(page: Page, title: string, postId: number) {
   await page.getByLabel('제목').fill(title);
   await page.getByRole('button', { name: '임시저장', exact: true }).click();
-  await expect(page.locator('.save-status')).toHaveText(/^✓ 저장됨 \d{2}:\d{2}$/, {
-    timeout: 10_000,
-  });
+  await expect(page).toHaveURL(/\/manage\/posts\?tab=drafts$/, { timeout: 10_000 });
+  await expect(page.getByText('임시저장했어요')).toBeVisible();
+  await page.goto(`/write/${postId}`);
+  await expect(page.getByLabel('제목')).toHaveValue(title);
 }
 
 async function typeUntilConflict(page: Page, text: string) {
@@ -37,7 +39,7 @@ test.describe('여러 탭에서 같은 글을 고쳐도 몰래 덮어쓰지 않�
     await expect(tabB.getByLabel('제목')).toHaveValue('처음 제목');
 
     // ① A 저장 → B 입력 → 배너, 편집은 계속된다
-    await saveIn(tabA, 'A 탭 제목');
+    await saveIn(tabA, 'A 탭 제목', postId);
     await typeUntilConflict(tabB, 'B 탭 본문');
     await tabB.getByLabel('본문').fill('B 탭 본문 계속');
     await expect(tabB.getByLabel('본문')).toHaveValue('B 탭 본문 계속');
@@ -63,7 +65,7 @@ test.describe('여러 탭에서 같은 글을 고쳐도 몰래 덮어쓰지 않�
     await expect(tabB.getByRole('alert').filter({ hasText: BANNER })).toHaveCount(0);
 
     // ② 다시 충돌 → [편집 중인 내용으로 저장] → 확인 → 배너 해제
-    await saveIn(tabA, 'A 탭 두 번째');
+    await saveIn(tabA, 'A 탭 두 번째', postId);
     await typeUntilConflict(tabB, 'B 탭이 이긴다');
     await tabB.getByRole('alert').getByRole('button', { name: '비교하기' }).click();
     await dialog.getByRole('button', { name: '편집 중인 내용으로 저장' }).click();
@@ -76,7 +78,7 @@ test.describe('여러 탭에서 같은 글을 고쳐도 몰래 덮어쓰지 않�
     // A 탭은 ②에서 B가 덮어쓴 버전을 모르므로 새로 연 뒤 저장한다
     await tabA.reload();
     await expect(tabA.getByLabel('본문')).toHaveValue('B 탭이 이긴다');
-    await saveIn(tabA, 'A 탭 세 번째');
+    await saveIn(tabA, 'A 탭 세 번째', postId);
     await typeUntilConflict(tabB, 'B 탭 따로 저장');
     await tabB.getByRole('alert').getByRole('button', { name: '비교하기' }).click();
     await dialog.getByRole('button', { name: '새 임시글로 따로 저장' }).click();
