@@ -1,6 +1,7 @@
 import { render, screen } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
-import HiddenReasonText, { hiddenNotice } from '../HiddenReasonText';
+import HiddenReasonText from '../HiddenReasonText';
+import { hiddenNotice } from '../hiddenNotice';
 
 describe('HiddenReasonText', () => {
   it('사유가 있으면 괄호 안에 사유 이름', () => {

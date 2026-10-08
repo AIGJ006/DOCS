@@ -4,13 +4,13 @@ import { ApiError } from '../../api/client';
 import { discardWorkingCopy } from '../../api/posts';
 import type { PostAuthorView, PostDetail } from '../../api/types/reading';
 import ConfirmDialog from '../../components/editor/ConfirmDialog';
-import HiddenReasonText, { hiddenNotice } from '../moderation/HiddenReasonText';
+import HiddenReasonText from '../moderation/HiddenReasonText';
 import { formatDateTime } from '../time/dateFormat';
 
 /** 비공개 글 안내 (FR-039, 40 §2-1). */
 export const PRIVATE_NOTICE = '나만 볼 수 있는 글이에요';
 /** 관리자 숨김 안내 — 사유가 없을 때의 문장 (FR-039). 사유가 있으면 014 `HiddenReasonText`가 "(사유: …)"를 넣는다. */
-export const HIDDEN_NOTICE = hiddenNotice(null);
+export const HIDDEN_NOTICE = '운영 정책에 따라 숨겨진 글이에요. 다른 사람에게는 보이지 않아요';
 /** [변경 취소] 확인 문구 — 002 에디터(`EditorPage.DISCARD_CONFIRM`)와 같은 문구. 006 `confirmDialogs.ts`가 생기면 그쪽으로 옮긴다. */
 export const DISCARD_CONFIRM = '고치던 내용을 버리고 발행한 내용으로 돌아갈까요?';
 const DISCARD_FAILED = '변경 취소에 실패했어요. 잠시 후 다시 시도해 주세요';
