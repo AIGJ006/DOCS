@@ -5,8 +5,8 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * 503 {@code AI_UNAVAILABLE} + {@code details {reason}} (013 data-model §5). 원인 예외는 붙이지 않는다 — 공통 처리기가 5xx를
- * 원인과 함께 로그에 남기는데, 외부 응답 본문·입력이 원인 메시지에 들어 있을 수 있다(R11).
+ * 503 {@code AI_UNAVAILABLE} + {@code details {reason}} (013 data-model §5). 원인 예외는 붙이지 않는다 — 공통
+ * 처리기가 5xx를 원인과 함께 로그에 남기는데, 외부 응답 본문·입력이 원인 메시지에 들어 있을 수 있다(R11).
  */
 public class AiUnavailableException extends ApiException {
 
