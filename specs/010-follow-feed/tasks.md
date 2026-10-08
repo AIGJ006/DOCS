@@ -96,7 +96,7 @@ description: "Task list for 010-follow-feed (팔로우·팔로잉 피드)"
 - [X] T013 [P] [US1] 통합 테스트 `T/interaction/integration/FollowApiIT.java`(`@RecordApplicationEvents`): `US1_1_팔로우_응답`(`{following:true, followerCount}`, `MemberFollowed` 1번) · `US1_2_언팔로우`(`MemberUnfollowed` 1번) · `US1_4_안_한_상태_언팔로우_200_변화없음`(이벤트 0) · 이미 팔로우 중 `PUT` 200·이벤트 0 · `US1_5_자기자신_400`(`CANNOT_FOLLOW_SELF`, 행 0) · `US1_6_비회원_401` · `US1_7_인증전_200` · `US1_8_없는주소_유예회원_404`(본문 바이트 같음, 대문자 주소도 404) · 유예 회원 본인 403 `ACCOUNT_WITHDRAWN` · 남은 세션의 정지 회원 403 `ACCOUNT_SUSPENDED` · 정지된 대상은 팔로우 가능 · 관리자 동일 · 팔로우·언팔로우 합쳐 31번째 429 `TOO_MANY_REQUESTS` + `Retry-After` · Redis 정지 중 제한 없이 200 · CSRF 헤더 없으면 403 · 판정 순서: 유예 회원이 자기 자신을 팔로우 → 403, 요청 횟수를 넘긴 회원이 없는 주소 → 404(429보다 먼저), 요청 횟수를 넘긴 회원이 자기 자신 → 400 (구현 메모: 이벤트 확인은 @RecordApplicationEvents 대신 009 LikeEventProbe와 같은 테스트 소스 @Profile("test") @Component FollowEventProbe(AFTER_COMMIT)로 했다 — 커밋된 이벤트만 세고 새 컨텍스트를 만들지 않는다. Redis 정지 시험은 세션도 Redis에 있어 FollowService를 직접 부른다)
 - [X] T014 [P] [US1] 동시성 통합 테스트 `T/interaction/integration/FollowConcurrencyIT.java`: `US1_3_동시_20번_관계_1개`(행 1, `MemberFollowed` 1번 — SC-001), 팔로우·언팔로우 섞어 50번 3회 → 마지막 상태와 행 수가 맞음·이벤트 수 = 실제 바뀐 수 (구현 메모: 요청 제한(회원당 1분 30번) 때문에 '섞어 50번'은 두 회원이 같은 대상에 25번씩 동시에 보내는 것으로 했다(회차마다 제한 키 삭제))
 - [X] T015 [P] [US1] 통합 테스트 `T/discovery/integration/BlogHeaderFollowIT.java`: `GET /api/members/{handle}`에 `followerCount`·`followingCount`(유예 회원 제외)·`followedByMe`(비회원·내 블로그 false), 005 기존 칸 그대로, 글 상세 `viewer.followingAuthor`가 실제 값(팔로우 전 false → 후 true)
-- [ ] T016 [P] [US1] 화면 테스트 `F/features/follow/__tests__/FollowButton.test.tsx`·`useFollowToggle.test.ts`(가짜 타이머): [팔로우] → 누르는 즉시 [팔로잉 ✓]·수 +1, 마우스·초점이면 [언팔로우] 글자, 확인 창 없음, 0.3초 안에 여러 번 누르면 마지막 상태 한 번만 전송, 응답 값으로 맞춤, 실패하면 되돌림 + "잠시 후 다시 시도해 주세요"(`role="status"`), 비회원이면 `useAuthGate` 로그인 안내(요청 없음), `aria-pressed`, 내 블로그면 버튼 없음
+- [X] T016 [P] [US1] 화면 테스트 `F/features/follow/__tests__/FollowButton.test.tsx`·`useFollowToggle.test.ts`(가짜 타이머): [팔로우] → 누르는 즉시 [팔로잉 ✓]·수 +1, 마우스·초점이면 [언팔로우] 글자, 확인 창 없음, 0.3초 안에 여러 번 누르면 마지막 상태 한 번만 전송, 응답 값으로 맞춤, 실패하면 되돌림 + "잠시 후 다시 시도해 주세요"(`role="status"`), 비회원이면 `useAuthGate` 로그인 안내(요청 없음), `aria-pressed`, 내 블로그면 버튼 없음
 
 ### Implementation for User Story 1
 
@@ -104,10 +104,10 @@ description: "Task list for 010-follow-feed (팔로우·팔로잉 피드)"
 - [X] T018 [US1] `B/interaction/web/FollowController.java`(`PUT`·`DELETE /api/members/{handle}/follow`, `@LoginRequired`, `@CurrentUser`) (T013·T014 통과)
 - [X] T019 [P] [US1] `B/interaction/application/FollowQueryService.java`의 `isFollowing`·`headerStats(ownerId, viewer)`(contracts §6)와 `B/interaction/application/AuthorFollowStatusQueryAdapter.java`(`AuthorFollowStatusQuery` 구현 Bean — 005 기본 구현이 물러나는지 확인) (구현 메모: 005 PostReadingPorts의 @ConditionalOnMissingBean 기본 Bean은 008·009처럼 지웠다(스캔 순서에 따라 판정이 흔들릴 수 있음). 세 포트가 모두 소유 기능을 가져 PostReadingPorts 클래스 자체를 없앴다)
 - [X] T020 [US1] 005 `B/discovery/application/BlogHeaderView.java`에 세 칸을 더하고 `BlogQueryService.getHeader`가 `FollowQueryService.headerStats`를 부르게 한다(005 소유 파일 — 005 블로그 테스트 함께 실행) (T015 통과) (구현 메모: 005 ReadingContractConformanceIntegrationTest가 계약에 없는 필드를 막으므로 010 contracts의 BlogHeaderFollowFields를 BlogHeader에 allOf로 합쳐 읽게 고쳤다)
-- [ ] T021 [P] [US1] `F/features/follow/useFollowToggle.ts`(즉시 반영·0.3초 마지막 상태·되돌림, 009 `useLikeToggle`과 같은 방식)·`F/features/follow/followMessages.ts`(24 §2 문구, 끝 마침표 없음)
-- [ ] T022 [US1] `F/features/follow/FollowButton.tsx`(props: `handle`, `initialFollowing`, `onCountChange?`, `isMe`) (T016 통과)
-- [ ] T023 [US1] 005 `F/pages/PostDetailPage.tsx`에서 `AuthorCard`의 `followButton`에 `FollowButton`(`initialFollowing = viewer.followingAuthor`)을 넣고 005 `PostDetailPage.author.test.tsx`에 사례를 더한다
-- [ ] T024 [US1] 005 `F/pages/BlogPage.tsx` 머리말에 `FollowButton`(`isMe`면 없음, `followedByMe`로 시작, 팔로워 수 변화를 머리말 수에 반영)을 넣고 005 `BlogPage.test.tsx`에 사례를 더한다
+- [X] T021 [P] [US1] `F/features/follow/useFollowToggle.ts`(즉시 반영·0.3초 마지막 상태·되돌림, 009 `useLikeToggle`과 같은 방식)·`F/features/follow/followMessages.ts`(24 §2 문구, 끝 마침표 없음)
+- [X] T022 [US1] `F/features/follow/FollowButton.tsx`(props: `handle`, `initialFollowing`, `onCountChange?`, `isMe`) (T016 통과)
+- [X] T023 [US1] 005 `F/pages/PostDetailPage.tsx`에서 `AuthorCard`의 `followButton`에 `FollowButton`(`initialFollowing = viewer.followingAuthor`)을 넣고 005 `PostDetailPage.author.test.tsx`에 사례를 더한다
+- [X] T024 [US1] 005 `F/pages/BlogPage.tsx` 머리말에 `FollowButton`(`isMe`면 없음, `followedByMe`로 시작, 팔로워 수 변화를 머리말 수에 반영)을 넣고 005 `BlogPage.test.tsx`에 사례를 더한다
 
 **Checkpoint**: 팔로우·언팔로우가 끝까지 동작한다(US1 단독 데모 가능)
 
@@ -122,13 +122,13 @@ description: "Task list for 010-follow-feed (팔로우·팔로잉 피드)"
 ### Tests for User Story 2 ⚠️
 
 - [X] T025 [P] [US2] 통합 테스트 `T/discovery/integration/FeedApiIT.java`: `US2_1_팔로우한_사람_공개글만_최신순`(같은 `first_public_at`이면 글 번호 큰 순, 카드 칸은 005 카드와 같음) · `US2_2_비공개_임시_휴지통_숨김_유예작성자_제외`(SC-003, 친구 공개 값이 있으면 그것도 제외) · `US2_3_끝까지_넘기기_중복누락_0`(30개, SC-004) · `US2_4_언팔로우_직후_빠짐`(SC-005) · `US2_5_팔로우_없음_hasFollowing_false` · `US2_6_글_없음_hasFollowing_true` · `US2_7_비회원_401` · 유예 회원 403 · 다른 목록 커서 400 `INVALID_CURSOR` · 카드 SQL 1번 + 사진 조회(`SqlCounter`) · 글 1만 건·팔로우 300명에서 `EXPLAIN (ANALYZE)` 200ms 이내 · `Cache-Control: private, no-cache` · 클라이언트 `size` 무시 (구현 메모: SQL 수는 MockMvc 대신 FeedQueryService를 직접 불러 셌다(카드 1번, 빈 첫 페이지만 +1 — 세션 확인 SQL을 빼려고). 친구 공개 값은 V1 ck_post_visibility에 없어(PUBLIC·PRIVATE만) 해당 경우는 없다)
-- [ ] T026 [P] [US2] 화면 테스트 `F/pages/__tests__/FeedPage.test.tsx`: 9개 카드·[더 보기]·이미 있는 글 건너뛰기, 빈 상태 두 문구(`hasFollowing`), 비로그인이면 `/login?returnTo=/feed`, 뒤로 가기 복원(`listKey: 'feed'`, 30분), 로딩·실패 표시는 홈과 같음, 머리말 [피드]는 로그인했을 때만(`SessionBar`)
+- [X] T026 [P] [US2] 화면 테스트 `F/pages/__tests__/FeedPage.test.tsx`: 9개 카드·[더 보기]·이미 있는 글 건너뛰기, 빈 상태 두 문구(`hasFollowing`), 비로그인이면 `/login?returnTo=/feed`, 뒤로 가기 복원(`listKey: 'feed'`, 30분), 로딩·실패 표시는 홈과 같음, 머리말 [피드]는 로그인했을 때만(`SessionBar`)
 
 ### Implementation for User Story 2
 
 - [X] T027 [US2] `B/discovery/application/FeedQueryService.java`: `page(me, cursor)` → `PostListService.page(ListScope.feed(), CardFilter(followerId = me), cursor, Viewer.anonymous())` + 첫 페이지가 비었을 때만 `FollowQueryService.hasFollowing(me)`(interaction 공개 메서드를 더함) → `FeedPage`
 - [X] T028 [US2] `B/discovery/web/FeedController.java`(`GET /api/feed`, `@LoginRequired`, `Cache-Control: private, no-cache` — 005 `CacheControlPolicy.NO_CACHE`) (T025 통과)
-- [ ] T029 [US2] (**006 머지 후** — `App.tsx`) `F/pages/FeedPage.tsx`(005 `PostCardGrid`·`LoadMoreButton`·`useCursorList({listKey: 'feed', restore: true})`)와 `F/App.tsx` `/feed` 경로, 001 `F/features/auth/SessionBar.tsx`에 로그인했을 때만 [피드] 링크(001 담당에게 알림) (T026 통과)
+- [X] T029 [US2] (**006 머지 후** — `App.tsx`) `F/pages/FeedPage.tsx`(005 `PostCardGrid`·`LoadMoreButton`·`useCursorList({listKey: 'feed', restore: true})`)와 `F/App.tsx` `/feed` 경로, 001 `F/features/auth/SessionBar.tsx`에 로그인했을 때만 [피드] 링크(001 담당에게 알림) (T026 통과) (구현 메모: SessionBar가 공통 머리말 SiteHeader로 바뀌어 [피드] 링크를 SiteHeader의 site-header-actions(로그인 회원만)에 넣었다. 첫 응답 hasFollowing은 첫 요청 때만 담는다)
 
 **Checkpoint**: 팔로우와 피드가 모두 동작한다(US1 + US2 = 권장 MVP)
 
@@ -145,15 +145,15 @@ description: "Task list for 010-follow-feed (팔로우·팔로잉 피드)"
 - [X] T030 [P] [US3] 통합 테스트 `T/interaction/integration/FollowListApiIT.java`: `US3_1_비회원도_수와_목록` · `US3_2_항목_칸과_정렬`(`handle`·`nickname`·`profileImageUrl`·`bio`·`followedByMe`·`isMe`, 최근 팔로우 순·같은 `created_at`이면 회원 번호 큰 순, 45명 → 20·20·5 중복·누락 0) · `US3_3_유예회원_빠졌다가_복구하면_돌아옴`(수와 목록 모두) · `US3_4_빈_목록` · `US3_5_없는_유예_주소_404` · 다른 목록(`following:` ↔ `followers:`, 다른 주소) 커서 400 · SQL 2번(로그인)·1번(비회원) · 클라이언트 `size` 무시 · `Cache-Control: private, no-cache` · 탈퇴 유예 회원이 로그인해 목록을 보면 403(게이트) (구현 메모: SQL 수는 서비스 직접 호출로 셌다: 주인 확인(001 findReadableBlogOwner) 1번이 더해져 비회원 2번·로그인 3번)
 - [X] T031 [P] [US3] 성능 통합 테스트 `T/interaction/integration/FollowCountPerformanceIT.java`(SC-007): 팔로워 1만 명(유예 50명) → 수 9,950, `EXPLAIN (ANALYZE, BUFFERS)`에 `ix_follow_followee`, 실행 10ms 이내(넘으면 실패 메시지에 "24 §5 카운터 검토"). 팔로잉 수도 `ix_follow_follower` (구현 메모: follow 12만 행(팬 1만 명이 star 양방향 + 팬끼리 10명씩)으로 플래너가 인덱스를 고르게 했다 — star 관계가 테이블의 1/3이면 순차 스캔이 더 싸서 고른다)
 - [X] T032 [P] [US3] 페이지 셸 통합 테스트 `T/discovery/integration/FollowListPageShellIT.java`: `/@{handle}/followers`·`/following` — 대문자 → 301 소문자(쿼리 유지), 없는 주소·유예·익명 처리 → 404 + 공통 404 HTML(005 `NotFoundPageRenderer`), 정상 → 200 SPA 셸
-- [ ] T033 [P] [US3] 화면 테스트 `F/pages/__tests__/FollowListPage.test.tsx`·`F/features/follow/__tests__/FollowCounts.test.tsx`: "공개 글 24 · 팔로워 12 · 팔로잉 30"(숫자 `toLocaleString`, 팔로워·팔로잉은 목록 링크), 목록 제목·항목(소개 첫 줄만, 텍스트 노드), `isMe` 항목 버튼 없음, 20개 [더 보기], 빈 문구 두 가지, 404면 공통 404 화면
+- [X] T033 [P] [US3] 화면 테스트 `F/pages/__tests__/FollowListPage.test.tsx`·`F/features/follow/__tests__/FollowCounts.test.tsx`: "공개 글 24 · 팔로워 12 · 팔로잉 30"(숫자 `toLocaleString`, 팔로워·팔로잉은 목록 링크), 목록 제목·항목(소개 첫 줄만, 텍스트 노드), `isMe` 항목 버튼 없음, 20개 [더 보기], 빈 문구 두 가지, 404면 공통 404 화면
 
 ### Implementation for User Story 3
 
 - [X] T034 [US3] `FollowQueryService`에 `followers(handle, cursor, viewer)`·`following(handle, cursor, viewer)`(대상 확인 → `FollowRepository.page*` → `followedAmong` → 사진 주소 `ImageUrlResolver`) (T030·T031 통과)
 - [X] T035 [US3] `B/interaction/web/FollowListController.java`(`GET /api/members/{handle}/followers|following`, 로그인 불필요, `Cache-Control: private, no-cache`)
 - [X] T036 [US3] 005 `B/discovery/web/PageShellController.java`에 `/@{handle}/followers`·`/@{handle}/following` 매핑을 블로그 셸과 같은 규칙으로 더한다(005 소유 파일 — 005 셸 테스트 함께 실행) (T032 통과) (구현 메모: 목록 주소의 미리보기 메타는 블로그 메타(metaFactory.forBlog)를 그대로 쓴다)
-- [ ] T037 [P] [US3] `F/features/follow/FollowCounts.tsx`와 005 `F/pages/BlogPage.tsx` 머리말의 "공개 글 N" 줄 교체(팔로우 버튼 변화가 팔로워 수에 반영)
-- [ ] T038 [US3] (**006 머지 후** — `App.tsx`) `F/features/follow/FollowListItem.tsx`와 `F/pages/FollowListPage.tsx`(`mode: 'followers' | 'following'`, 005 `useCursorList`·`LoadMoreButton`, 복원 없음) + `F/App.tsx`에 `/:handle/followers`·`/:handle/following` 경로(`/:handle`보다 먼저) (T033 통과)
+- [X] T037 [P] [US3] `F/features/follow/FollowCounts.tsx`와 005 `F/pages/BlogPage.tsx` 머리말의 "공개 글 N" 줄 교체(팔로우 버튼 변화가 팔로워 수에 반영)
+- [X] T038 [US3] (**006 머지 후** — `App.tsx`) `F/features/follow/FollowListItem.tsx`와 `F/pages/FollowListPage.tsx`(`mode: 'followers' | 'following'`, 005 `useCursorList`·`LoadMoreButton`, 복원 없음) + `F/App.tsx`에 `/:handle/followers`·`/:handle/following` 경로(`/:handle`보다 먼저) (T033 통과) (구현 메모: 상태가 작아 useCursorList(PostCard 전용)를 쓰지 않고 같은 규칙(커서 그대로·중복 건너뛰기·실패 시 같은 위치 재시도)을 화면 안에서 구현)
 
 **Checkpoint**: 수·목록까지 동작한다
 
@@ -183,11 +183,11 @@ description: "Task list for 010-follow-feed (팔로우·팔로잉 피드)"
 
 **Purpose**: 권한 매트릭스, 종단 확인, 정리, 인계
 
-- [ ] T043 [P] 권한 매트릭스: `TR/permission/follow.csv`(research R11 표, owner `010`)와 `T/interaction/permission/FollowActions.java`(`follow.put`·`follow.delete`·`follow.followers`·`follow.following`·`feed.read` — 대상 회원은 글 픽스처의 작성자, `AUTHOR` 행위자는 자기 자신), `T/interaction/permission/FollowPermissionMatrixIT.java`(004 `AbstractPermissionMatrixIT` 상속)
+- [X] T043 [P] 권한 매트릭스: `TR/permission/follow.csv`(research R11 표, owner `010`)와 `T/interaction/permission/FollowActions.java`(`follow.put`·`follow.delete`·`follow.followers`·`follow.following`·`feed.read` — 대상 회원은 글 픽스처의 작성자, `AUTHOR` 행위자는 자기 자신), `T/interaction/permission/FollowPermissionMatrixIT.java`(004 `AbstractPermissionMatrixIT` 상속) (구현 메모: 행위자 AUTHOR·SUSPENDED·WITHDRAWN은 하네스에서 글 작성자 본인이라 자기 자신이 대상이다. AUTHOR×AUTHOR_WITHDRAWN 등 본인이 유예가 되는 조합은 WITHDRAWN 행과 같아 뺐다(75행). 거부된 팔로우 요청은 follow 행 수가 그대로인지도 본다)
 - [ ] T044 [P] 종단 확인 `E/follow-feed.spec.ts`(Playwright): quickstart §3의 1~11번(두 회원·비로그인 컨텍스트, 네트워크 끊기는 `page.route`)
 - [ ] T045 [P] 375px·접근성: 피드·목록·머리말 가로 스크롤 없음, 버튼 44px 이상, 포커스 표시, [팔로잉 ✓]↔[언팔로우] 전환이 키보드 초점에서도 동작, 상태가 색만으로 구분되지 않음
 - [ ] T046 `grep -rn "010 팔로우\|TODO(010)\|010이 넘겨받\|010 전까지" backend/src frontend/src`가 0건인지 확인하고 남은 표시를 정리한다(005 `AuthorFollowStatusQuery`·`AuthorCard`·`BlogHeaderView` 주석)
-- [ ] T047 [P] 001 `B/shared/security/ActionKind.java` 주석의 `ACCOUNT_WRITE` 설명에 "팔로우"를 더한다(T003 결과가 기본안일 때, 001 담당에게 알림)
+- [X] T047 [P] 001 `B/shared/security/ActionKind.java` 주석의 `ACCOUNT_WRITE` 설명에 "팔로우"를 더한다(T003 결과가 기본안일 때, 001 담당에게 알림)
 - [ ] T048 [P] 011 인계 확인: `specs/011-notification/tasks.md`가 `MemberFollowed`·`MemberUnfollowed` 필드 이름(contracts/follow-sql.md §5)과 새 글 알림의 `follow` 직접 읽기(25 §4-1)를 쓰는지 확인한다
 - [ ] T049 quickstart.md §1~§4를 처음부터 끝까지 실행하고 결과를 기록한다
 - [ ] T050 전체 회귀: `./mvnw -pl backend verify`(004·005·008 테스트 포함)와 `npm test`·`npm run build`·`npm run lint`

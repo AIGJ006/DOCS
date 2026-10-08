@@ -9,6 +9,8 @@ import HomePage from './pages/HomePage';
 import LoginPage from './pages/LoginPage';
 import ManagePostsPage from './pages/ManagePostsPage';
 import BlogPage from './pages/BlogPage';
+import FeedPage from './pages/FeedPage';
+import FollowListPage from './pages/FollowListPage';
 import NotFoundPage from './pages/NotFoundPage';
 import PostDetailPage from './pages/PostDetailPage';
 import VisibilitySelect from './features/visibility/VisibilitySelect';
@@ -106,6 +108,8 @@ export default function App() {
             />
             {/* 006 내 글 관리 — 사용자를 가리키는 값 없이 본인 글만 (FR-002) */}
             <Route path="/manage/posts" element={<ManagePostsPage />} />
+            {/* 010 팔로잉 피드 — 로그인 회원만. 비로그인은 화면이 로그인으로 보낸다 */}
+            <Route path="/feed" element={<FeedPage />} />
             {/* 004 관리자 화면 가드 — 비로그인은 로그인으로, 일반 회원은 공통 404. 하위 화면은 014가 채운다 */}
             <Route
               path="/admin/*"
@@ -128,6 +132,9 @@ export default function App() {
                 />
               }
             />
+            {/* 010 팔로우 목록 — `/:handle`보다 앞에 둔다 */}
+            <Route path="/:handle/followers" element={<FollowListPage mode="followers" />} />
+            <Route path="/:handle/following" element={<FollowListPage mode="following" />} />
             <Route path="/:handle" element={<BlogPage />} />
             <Route path="*" element={<NotFoundPage />} />
           </Routes>

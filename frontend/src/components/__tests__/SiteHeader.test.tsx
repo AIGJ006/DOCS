@@ -51,6 +51,8 @@ describe('공통 머리말 (SiteHeader)', () => {
     );
     expect(within(header).queryByRole('link', { name: '글쓰기' })).toBeNull();
     expect(within(header).queryByRole('button', { name: /계정 메뉴/ })).toBeNull();
+    // 010: [피드]는 로그인 회원에게만
+    expect(within(header).queryByRole('link', { name: '피드' })).toBeNull();
   });
 
   it('로그인 화면에서는 [로그인]에 returnTo를 붙이지 않는다', async () => {
@@ -75,6 +77,8 @@ describe('공통 머리말 (SiteHeader)', () => {
       '/@kim755030',
     );
     expect(within(header).queryByRole('link', { name: '로그인' })).toBeNull();
+    // 010: [피드] → /feed
+    expect(within(header).getByRole('link', { name: '피드' })).toHaveAttribute('href', '/feed');
 
     const menuButton = within(header).getByRole('button', { name: /계정 메뉴/ });
     expect(menuButton).toHaveAttribute('aria-expanded', 'false');

@@ -1,9 +1,10 @@
-import { act, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { PostDetail } from '../../api/types/reading';
 import { json, requestsTo, stubFetch } from '../../test/fetchRoutes';
 import { VIEW_BEACON_DELAY_MS } from '../../features/post-detail/useViewBeacon';
+import { FOLLOW_DEBOUNCE_MS } from '../../features/follow/useFollowToggle';
 import PostDetailPage from '../PostDetailPage';
 
 function authorDetail(overrides: Partial<PostDetail> = {}): PostDetail {
@@ -219,5 +220,60 @@ describe('PostDetailPage — 작성자', () => {
 
     await waitFor(() => expect(screen.getByTestId('location')).toHaveTextContent('/write/9'));
     expect(screen.queryByTestId('post-content')).not.toBeInTheDocument();
+  });
+  describe('작성자 카드 [팔로우] (010 T023)', () => {
+    function readerDetail(followingAuthor: boolean, loggedIn = true) {
+      return authorDetail({
+        viewer: {
+          loggedIn,
+          isAuthor: false,
+          likedByMe: false,
+          followingAuthor,
+          emailVerified: true,
+          isAdmin: false,
+        },
+        authorView: null,
+      });
+    }
+
+    it('독자에게는 작성자 카드에 [팔로우], 팔로우 중이면 [팔로잉 ✓]', async () => {
+      stubFetch({ 'GET /api/posts/7': () => json(200, readerDetail(true)) });
+
+      renderDetail();
+
+      const card = await screen.findByTestId('author-card');
+      const button = within(card).getByRole('button', { pressed: true });
+      expect(button).toHaveTextContent('팔로잉 ✓');
+    });
+
+    it('누르면 PUT /api/members/{작성자}/follow', async () => {
+      const fetchMock = stubFetch({
+        'GET /api/posts/7': () => json(200, readerDetail(false)),
+        'PUT /api/members/kim755030/follow': () => json(200, { following: true, followerCount: 1 }),
+      });
+
+      renderDetail();
+
+      const card = await screen.findByTestId('author-card');
+      fireEvent.click(within(card).getByRole('button', { name: '팔로우' }));
+      expect(within(card).getByRole('button', { pressed: true })).toHaveTextContent('팔로잉 ✓');
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(FOLLOW_DEBOUNCE_MS);
+      });
+      expect(requestsTo(fetchMock, 'PUT', '/api/members/kim755030/follow')).toHaveLength(1);
+    });
+
+    it('비회원이 누르면 요청 없이 로그인 안내', async () => {
+      const fetchMock = stubFetch({
+        'GET /api/posts/7': () => json(200, readerDetail(false, false)),
+      });
+
+      renderDetail();
+
+      const card = await screen.findByTestId('author-card');
+      fireEvent.click(within(card).getByRole('button', { name: '팔로우' }));
+      expect(within(card).getByRole('alert')).toHaveTextContent('로그인이 필요해요');
+      expect(requestsTo(fetchMock, 'PUT', '/api/members/kim755030/follow')).toHaveLength(0);
+    });
   });
 });

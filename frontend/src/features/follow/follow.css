@@ -1,0 +1,137 @@
+/* 010 팔로우·피드 화면 (T022·T037·T038·T045). 375px부터 줄바꿈되고 가로 스크롤이 없다. 누를 자리 44px 이상, 색은 styles/tokens.css 변수만 쓴다. */
+
+.follow-area {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.follow-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 5.5rem;
+  min-height: 44px;
+  padding: 0 1rem;
+  border: 1px solid var(--color-brand-fill);
+  border-radius: 22px;
+  background: var(--color-brand-fill);
+  color: var(--color-bg);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.follow-button[aria-pressed='true'] {
+  background: var(--color-surface);
+  border-color: var(--color-text-muted);
+  color: var(--color-text);
+}
+
+.follow-button[aria-pressed='true']:hover,
+.follow-button[aria-pressed='true']:focus-visible {
+  border-color: var(--color-danger);
+  color: var(--color-danger);
+}
+
+.follow-button:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
+}
+
+.follow-notice {
+  color: var(--color-danger);
+}
+
+.follow-notice:empty {
+  display: none;
+}
+
+.follow-counts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 0.5rem;
+  margin: 0.5rem 0 0;
+  color: var(--color-text-muted);
+}
+
+.follow-counts a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  color: inherit;
+}
+
+.follow-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.follow-list-item {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+  padding: 0.75rem 0;
+  border-bottom: 1px solid var(--color-border);
+  min-width: 0;
+}
+
+.follow-list-item__avatar {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex: 0 0 48px;
+}
+
+.follow-list-item__body {
+  min-width: 0;
+  flex: 1;
+}
+
+.follow-list-item__name {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.follow-list-item__name a {
+  color: var(--color-text);
+  font-weight: 600;
+}
+
+.follow-list-item__handle {
+  color: var(--color-text-muted);
+  font-weight: 400;
+}
+
+.follow-list-item__bio {
+  margin: 0.25rem 0 0;
+  color: var(--color-text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.follow-page {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: var(--page-max-width, 72rem);
+  margin: 0 auto;
+  padding: 1.5rem 1rem;
+}
+
+.follow-empty {
+  text-align: center;
+  padding: 3rem 1rem;
+}
+
+@media (max-width: 480px) {
+  .follow-list-item {
+    flex-wrap: wrap;
+  }
+}
