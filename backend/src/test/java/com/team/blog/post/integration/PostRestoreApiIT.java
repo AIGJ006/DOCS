@@ -27,7 +27,7 @@ import org.springframework.test.web.servlet.MvcResult;
 
 /**
  * 휴지통에서 복구 {@code POST /api/posts/{postId}/restore} (006 T026, US2, FR-027·028, SC-002, research
- * R2·R3·R19). 권한 매트릭스 행은 {@code TrashPermissionMatrixIT}가 {@code RestorePostAction}으로 실행한다.
+ * R2·R3·R19). 권한 매트릭스 행은 004 {@code PermissionMatrixIT}가 {@code RestorePostAction}으로 실행한다.
  */
 @Import(PostTestConfig.class)
 class PostRestoreApiIT extends IntegrationTestBase {

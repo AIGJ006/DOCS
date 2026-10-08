@@ -18,6 +18,10 @@ public class AccountStatusGuardService implements AccountStatusGuard {
     /** 탈퇴 유예 회원에게 복구 화면으로 안내하라는 표시 (004 contracts {@code details.action}). */
     public static final Map<String, Object> RESTORE_DETAILS = Map.of("action", "RESTORE");
 
+    /** 인증 전 회원에게 인증 메일 다시 보내기를 안내하라는 표시 (004 contracts {@code AccountStateDenied}). */
+    public static final Map<String, Object> RESEND_VERIFICATION_DETAILS =
+            Map.of("action", "RESEND_VERIFICATION");
+
     private final JdbcClient jdbc;
 
     public AccountStatusGuardService(JdbcClient jdbc) {
@@ -56,7 +60,8 @@ public class AccountStatusGuardService implements AccountStatusGuard {
             case SUSPENDED -> throw new AccountStateException(CommonReasonCode.ACCOUNT_SUSPENDED);
             case ACTIVE -> {
                 if (kind.requiresVerifiedEmail() && !state.emailVerified()) {
-                    throw new AccountStateException(CommonReasonCode.EMAIL_NOT_VERIFIED);
+                    throw new AccountStateException(
+                            CommonReasonCode.EMAIL_NOT_VERIFIED, RESEND_VERIFICATION_DETAILS);
                 }
             }
         }

@@ -2,29 +2,23 @@ package com.team.blog.support.permission;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 
+import com.jayway.jsonpath.JsonPath;
+import com.team.blog.support.TestLogin;
 import com.team.blog.support.fixture.PostFixtures;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.CsvFileSource;
 import org.opentest4j.TestAbortedException;
+import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
 /**
- * 권한 매트릭스 하네스 자체 확인 (004 T021~T023). {@code post-read.csv}의 004 읽기 판정 행을 실제 DB·세션으로 실행해 픽스처(7개 글
- * 상태가 CHECK를 통과)·행위자 세션·기대값 비교가 동작하는지 본다. 전체 매트릭스(쓰기 행 포함, 작성자 번호 끼워 넣기 변형)는 US3 {@code
- * PermissionMatrixIT}(T045)가 맡는다.
+ * 권한 매트릭스 하네스 자체 확인 (004 T021~T023): 실행기 찾기·pending 건너뛰기·중복 이름 거부·스냅샷 비교·픽스처(7개 글 상태가 CHECK를 통과).
+ * CSV 행 실행(읽기·쓰기 전부, 작성자 번호 끼워 넣기 변형)은 US3 {@code PermissionMatrixIT}(T045)가 맡는다.
  */
 class PermissionHarnessIT extends AbstractPermissionMatrixIT {
-
-    @ParameterizedTest(name = "{0} × {1} × {2} → {3} {4}")
-    @CsvFileSource(resources = "/permission/post-read.csv", numLinesToSkip = 1)
-    void post_read_행(
-            String actor, String target, String action, String status, String code, String owner)
-            throws Exception {
-        verify(actor, target, action, status, code, owner);
-    }
 
     @Test
     void 컴포넌트_스캔으로_실행기를_찾는다() {
@@ -111,5 +105,38 @@ class PermissionHarnessIT extends AbstractPermissionMatrixIT {
                         assertThat(row.get("member_status")).isEqualTo("WITHDRAWN");
             }
         }
+    }
+
+    @Test
+    void 작성자_번호_끼워_넣기_필터는_켠_동안만_본문과_매개변수에_더한다() throws Exception {
+        var session = TestLogin.loginAs(mockMvc, members().member().create());
+        String plain = echo(session, "{\"visibility\":\"PRIVATE\"}");
+        assertThat((String) JsonPath.read(plain, "$.body"))
+                .isEqualTo("{\"visibility\":\"PRIVATE\"}");
+
+        String injected =
+                OwnerFieldInjector.armed(77L, () -> echo(session, "{\"visibility\":\"PRIVATE\"}"));
+        String body = JsonPath.read(injected, "$.body");
+        for (String field : OwnerFieldInjector.FIELDS) {
+            assertThat(body).contains("\"" + field + "\":77");
+            assertThat((String) JsonPath.read(injected, "$.params." + field)).isEqualTo("77");
+        }
+        assertThat(body).contains("\"visibility\":\"PRIVATE\"");
+        assertThat(
+                        (String)
+                                JsonPath.read(
+                                        OwnerFieldInjector.armed(77L, () -> echo(session, "{}")),
+                                        "$.body"))
+                .isEqualTo("{\"authorId\":77,\"memberId\":77,\"ownerId\":77,\"userId\":77}");
+    }
+
+    private String echo(jakarta.servlet.http.Cookie session, String json) throws Exception {
+        return mockMvc.perform(
+                        TestLogin.withCsrf(post("/api/__test/echo"), session)
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(json))
+                .andReturn()
+                .getResponse()
+                .getContentAsString(StandardCharsets.UTF_8);
     }
 }

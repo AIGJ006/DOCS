@@ -90,22 +90,6 @@ public class PostCardQueryRepository {
      */
     public record CardQuery(String sql, Map<String, Object> params) {}
 
-    /**
-     * 블로그 공개 글 수 (목록과 같은 조건의 {@code COUNT(*)}, {@code ix_post_blog}).
-     *
-     * <p>(구현 메모) 004 T044 {@code PostQueryRepository.countListedByAuthor}가 아직 없어 같은 조건으로 여기 둔다.
-     * 004가 만들면 그것으로 바꾼다.
-     */
-    public long countListed(Viewer viewer, long authorId) {
-        SqlCondition condition = visibilityFilter.forViewer(viewer, authorId);
-        return jdbc.sql(
-                        "SELECT count(*) FROM post p JOIN member m ON m.id = p.author_id WHERE "
-                                + condition.sql())
-                .params(condition.params())
-                .query(Long.class)
-                .single();
-    }
-
     private static PostCardRow toRow(ResultSet rs, int rowNum) throws SQLException {
         OffsetDateTime at = rs.getObject("first_public_at", OffsetDateTime.class);
         return new PostCardRow(
