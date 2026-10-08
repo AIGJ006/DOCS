@@ -6,7 +6,10 @@ import java.security.NoSuchAlgorithmException;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneOffset;
+import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Repository;
@@ -153,6 +156,20 @@ public class CommentRepository {
                                 + " WHERE id = :id")
                 .param("id", id)
                 .update();
+    }
+
+    /** 댓글마다 숨김 여부 (014 처리됨 목록). 없는 번호는 결과에 없다. 빈 입력은 SQL 없이 빈 맵. */
+    public Map<Long, Boolean> hiddenOf(Collection<Long> ids) {
+        Map<Long, Boolean> result = new HashMap<>();
+        if (ids == null || ids.isEmpty()) {
+            return result;
+        }
+        jdbc.sql("SELECT id, hidden_at IS NOT NULL AS hidden FROM comment WHERE id IN (:ids)")
+                .param("ids", ids)
+                .query(
+                        (org.springframework.jdbc.core.RowCallbackHandler)
+                                rs -> result.put(rs.getLong("id"), rs.getBoolean("hidden")));
+        return result;
     }
 
     /** 트랜잭션이 끝날 때까지 이 키로 줄을 세운다 (10초 중복 방지, research R7). */

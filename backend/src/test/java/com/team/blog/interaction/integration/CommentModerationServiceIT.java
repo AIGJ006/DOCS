@@ -72,4 +72,41 @@ class CommentModerationServiceIT extends IntegrationTestBase {
                 .isEqualTo("");
         assertThat(moderation.snapshot(9_999_999L)).isEmpty();
     }
+
+    @Test
+    void 스냅샷은_삭제_숨김_작성자_탈퇴_상태를_싣는다() {
+        long author = members().member().create();
+        long leaving = members().member().create();
+        PostFixtures posts = new PostFixtures(jdbc);
+        long postId = posts.create(author, PostFixtures.State.PUBLISHED_PUBLIC);
+        CommentFixtures comments = new CommentFixtures(jdbc);
+        long normal = comments.on(postId, author).content("보통").create();
+        long hidden = comments.on(postId, author).hidden().create();
+        long placeholder = comments.on(postId, author).deleted().create();
+        long byLeaving = comments.on(postId, leaving).create();
+        posts.withdraw(leaving);
+
+        CommentModerationService.CommentSnapshot s = moderation.snapshot(normal).orElseThrow();
+        assertThat(s.postId()).isEqualTo(postId);
+        assertThat(s.authorId()).isEqualTo(author);
+        assertThat(s.deleted()).isFalse();
+        assertThat(s.hidden()).isFalse();
+        assertThat(s.authorWithdrawn()).isFalse();
+        assertThat(moderation.snapshot(hidden).orElseThrow().hidden()).isTrue();
+        assertThat(moderation.snapshot(placeholder).orElseThrow().deleted()).isTrue();
+        assertThat(moderation.snapshot(byLeaving).orElseThrow().authorWithdrawn()).isTrue();
+    }
+
+    @Test
+    void hiddenOf는_있는_댓글만_숨김_여부를_돌려준다() {
+        long author = members().member().create();
+        long postId = new PostFixtures(jdbc).create(author, PostFixtures.State.PUBLISHED_PUBLIC);
+        CommentFixtures comments = new CommentFixtures(jdbc);
+        long normal = comments.on(postId, author).create();
+        long hidden = comments.on(postId, author).hidden().create();
+
+        assertThat(moderation.hiddenOf(java.util.List.of(normal, hidden, 9_999_999L)))
+                .containsExactlyInAnyOrderEntriesOf(java.util.Map.of(normal, false, hidden, true));
+        assertThat(moderation.hiddenOf(java.util.List.of())).isEmpty();
+    }
 }
