@@ -173,16 +173,16 @@ description: "Task list for 013-ai-tag-suggest (AI 태그 추천)"
 
 ### Tests for User Story 4 ⚠️
 
-- [ ] T044 [P] [US4] 테스트 `T/tag/integration/TagSuggestRoutingIT.java`: US4 #1~#5, SC-005 — 우리 집계 450 뒤 Ollama + `exhausted`(TTL = 태평양 시간 다음 0시), `QuotaExceeded(PER_DAY)` → 같은 요청 Ollama 200, `PER_MINUTE` → 60초 동안 Ollama 뒤 Gemini(`MutableClock`), `UNKNOWN` 세 번 → `exhausted`, `Failed(TIMEOUT)` → 이번 503 `FAILED` + 60초 Ollama + 횟수 되돌림, 비공개 글 + Ollama 꺼짐 → 503 `FAILED`, Ollama 동시 2번째 → 503 `BUSY` + 횟수 되돌림, `inflight` 키가 끝나면 0, 상태 API의 `provider` 예측이 위 상태를 따른다, 공급자 날짜 경계
-- [ ] T045 [P] [US4] `T/tag/infra/GeminiTagSuggesterTest.java`에 429 본문 세 종류(`QuotaFailure` `quotaId` `…PerDay…`·`…PerMinute…`·없음) → `QuotaExceeded(kind)` 추가
+- [X] T044 [P] [US4] 테스트 `T/tag/integration/TagSuggestRoutingIT.java`: US4 #1~#5, SC-005 — 우리 집계 450 뒤 Ollama + `exhausted`(TTL = 태평양 시간 다음 0시), `QuotaExceeded(PER_DAY)` → 같은 요청 Ollama 200, `PER_MINUTE` → 60초 동안 Ollama 뒤 Gemini(`MutableClock`), `UNKNOWN` 세 번 → `exhausted`, `Failed(TIMEOUT)` → 이번 503 `FAILED` + 60초 Ollama + 횟수 되돌림, 비공개 글 + Ollama 꺼짐 → 503 `FAILED`, Ollama 동시 2번째 → 503 `BUSY` + 횟수 되돌림, `inflight` 키가 끝나면 0, 상태 API의 `provider` 예측이 위 상태를 따른다, 공급자 날짜 경계 (구현 메모: MutableClock 대신 Redis 상태 키를 직접 두고 지워 시간 경과를 흉내 낸다. 공급자 날짜 경계는 router.choose(post, Instant)에 시각을 넘겨 확인)
+- [X] T045 [P] [US4] `T/tag/infra/GeminiTagSuggesterTest.java`에 429 본문 세 종류(`QuotaFailure` `quotaId` `…PerDay…`·`…PerMinute…`·없음) → `QuotaExceeded(kind)` 추가 (구현 메모: T024 때 함께 작성됨(GeminiTagSuggesterTest 429 세 종류))
 
 ### Implementation for User Story 4
 
-- [ ] T046 [US4] `GeminiTagSuggester`의 429 해석(contracts/providers.md §3 표, 응답 본문은 해석만 하고 로그에 넣지 않음)(T045 통과)
-- [ ] T047 [US4] `B/tag/application/suggest/ProviderState.java`(`ai:gemini:count`·`exhausted`·`cooldown`·`unknown-429`, `quota-zone` 날짜·다음 초기화 TTL)와 `TagSuggesterRouter` 전환 표 완성(contracts/providers.md §5 — 같은 요청 Ollama 재시도, 시간 초과·5xx는 실패로 끝냄, `NONE`), `TagSuggestService`의 횟수 되돌림 연결
-- [ ] T048 [US4] `OllamaTagSuggester` 앞의 동시 처리 제한(`ai:ollama:inflight`, `max-concurrency`, `finally DECR`, TTL 60초 안전장치) → `Busy`(T044 통과)
-- [ ] T049 [US4] `docker-compose.yml`에 `ollama`(고정 태그 이미지 — 구현 때 그 시점 안정 버전, 볼륨 `ollama-data`, 호스트 포트 없음, 메모리 제한 주석)·`ollama-pull`(한 번만, `ollama pull ${OLLAMA_MODEL:-qwen2.5:1.5b}`) 서비스, `app`의 `depends_on: ollama-pull: condition: service_completed_successfully`와 `BLOG_AI_TAG_SUGGEST_OLLAMA_BASE_URL=http://ollama:11434`, `.env.example`에 `GEMINI_API_KEY=`(빈 값)·`OLLAMA_MODEL=qwen2.5:1.5b`, 개발용 포트 열기 예시는 주석(research R12)
-- [ ] T050 [US4] 화면: 503 `BUSY` 문구, 상태 API `provider = OLLAMA`일 때 대기 문구, 30초 대기 중 버튼 비활성 — `AiTagSuggest.test.tsx` 두 경우 추가
+- [X] T046 [US4] `GeminiTagSuggester`의 429 해석(contracts/providers.md §3 표, 응답 본문은 해석만 하고 로그에 넣지 않음)(T045 통과) (구현 메모: T024 때 함께 구현됨)
+- [X] T047 [US4] `B/tag/application/suggest/ProviderState.java`(`ai:gemini:count`·`exhausted`·`cooldown`·`unknown-429`, `quota-zone` 날짜·다음 초기화 TTL)와 `TagSuggesterRouter` 전환 표 완성(contracts/providers.md §5 — 같은 요청 Ollama 재시도, 시간 초과·5xx는 실패로 끝냄, `NONE`), `TagSuggestService`의 횟수 되돌림 연결 (구현 메모: T025·T027 때 함께 구현됨. T044로 확인)
+- [X] T048 [US4] `OllamaTagSuggester` 앞의 동시 처리 제한(`ai:ollama:inflight`, `max-concurrency`, `finally DECR`, TTL 60초 안전장치) → `Busy`(T044 통과) (구현 메모: T025 때 라우터 안(callOllama)에 구현 — OllamaTagSuggester가 아니라 TagSuggesterRouter가 ProviderState.acquireOllama/releaseOllama를 부른다(가짜 공급자로도 시험되도록))
+- [X] T049 [US4] `docker-compose.yml`에 `ollama`(고정 태그 이미지 — 구현 때 그 시점 안정 버전, 볼륨 `ollama-data`, 호스트 포트 없음, 메모리 제한 주석)·`ollama-pull`(한 번만, `ollama pull ${OLLAMA_MODEL:-qwen2.5:1.5b}`) 서비스, `app`의 `depends_on: ollama-pull: condition: service_completed_successfully`와 `BLOG_AI_TAG_SUGGEST_OLLAMA_BASE_URL=http://ollama:11434`, `.env.example`에 `GEMINI_API_KEY=`(빈 값)·`OLLAMA_MODEL=qwen2.5:1.5b`, 개발용 포트 열기 예시는 주석(research R12) (구현 메모: 이미지 ollama/ollama:0.34.4(2026-09-24 판 — 최신 0.40.x는 나온 지 며칠이라 피함). 상태 확인은 ollama list. app 환경에 GEMINI_API_KEY(빈 기본값)·OLLAMA_MODEL·BLOG_AI_TAG_SUGGEST_OLLAMA_BASE_URL. docker compose config로 문법 확인, 실제 기동은 하지 않음(공용 포트·자원))
+- [X] T050 [US4] 화면: 503 `BUSY` 문구, 상태 API `provider = OLLAMA`일 때 대기 문구, 30초 대기 중 버튼 비활성 — `AiTagSuggest.test.tsx` 두 경우 추가 (구현 메모: T031 때 함께 작성됨(AiTagSuggest.test.tsx 503 BUSY 문구·자체 AI 대기 문구와 버튼 비활성))
 
 **Checkpoint**: 모든 User Story 동작
 
