@@ -6,10 +6,11 @@
  *   1920px 이하로 다시 그린 뒤 WebP 0.8로 만든다. 결과 `type`이 WebP가 아니면(사파리) JPEG 0.8로 다시 만든다.
  *   캔버스로 다시 그리므로 EXIF(GPS 포함)·XMP가 남지 않는다.
  * - 썸네일: 가로 640px 이하(세로 4096px 이하)로 같은 형식. 1MB를 넘으면 품질 0.7 → 0.6, 그래도 넘으면 실패.
- * - GIF는 줄이지 않고 원본 바이트 그대로(10MB 이하), 썸네일은 첫 장면.
+ * - GIF는 줄이지 않고 원본 바이트 그대로(10MB 이하), 썸네일은 첫 장면. 해독 전에 gifInspector로 가로·세로·프레임 수를 본다(T075).
  * - 결과에는 원래 파일 이름이 없다(이름 없는 `Blob`).
  */
 import type { ImageContentType, StorageLimits, ThumbContentType } from '../../api/types/images';
+import { checkPickedImage } from './gifInspector';
 import { PROCESSING_FAILED, UPLOAD_MESSAGES } from './uploadMessages';
 
 /** 처리 한도. 서버 `GET /api/me/storage`의 `limits`와 같은 값(T063에서 서버 값으로 바꾼다). */
@@ -21,6 +22,7 @@ export interface ProcessorLimits {
   thumbMaxWidth: number;
   thumbMaxHeight: number;
   gifMaxSide: number;
+  gifMaxFrames: number;
 }
 
 export const DEFAULT_LIMITS: ProcessorLimits = {
@@ -31,6 +33,7 @@ export const DEFAULT_LIMITS: ProcessorLimits = {
   thumbMaxWidth: 640,
   thumbMaxHeight: 4096,
   gifMaxSide: 1920,
+  gifMaxFrames: 300,
 };
 
 /** 서버 한도(`GET /api/me/storage`의 `limits`) → 처리 한도 (헌법 VII: 화면에 숫자를 따로 두지 않는다, T063). */
@@ -43,6 +46,7 @@ export function limitsFrom(limits: StorageLimits | null | undefined): Partial<Pr
     longSide: limits.longSide,
     thumbMaxWidth: limits.thumbMaxWidth,
     gifMaxSide: limits.gifMaxSide,
+    gifMaxFrames: limits.gifMaxFrames,
   };
 }
 
@@ -74,10 +78,16 @@ export interface ProcessedImage {
   thumbContentType: ThumbContentType;
   width: number;
   height: number;
+  /** 처리는 했지만 알릴 것 (움직이는 WebP·APNG → 첫 장면만, FR-038) */
+  notice?: string | null;
 }
 
 export type ProcessFailureCode =
-  'UNSUPPORTED_IMAGE_TYPE' | 'IMAGE_TOO_LARGE' | 'GIF_TOO_LARGE' | 'PROCESSING_FAILED';
+  | 'UNSUPPORTED_IMAGE_TYPE'
+  | 'IMAGE_TOO_LARGE'
+  | 'GIF_TOO_LARGE'
+  | 'GIF_TOO_MANY_FRAMES'
+  | 'PROCESSING_FAILED';
 
 export type ProcessResult =
   { ok: true; image: ProcessedImage } | { ok: false; code: ProcessFailureCode; message: string };
@@ -197,6 +207,12 @@ export async function processImage(
     return fail('IMAGE_TOO_LARGE');
   }
 
+  // 고르는 순간 검사 (T075): GIF 가로·세로·프레임 수, 움직이는 WebP·APNG 안내 — 해독 전에
+  const picked = await checkPickedImage(file, limits);
+  if (!picked.ok) {
+    return fail(picked.code);
+  }
+
   let decoded: DecodedImage;
   try {
     decoded = await deps.decode(file);
@@ -253,6 +269,7 @@ export async function processImage(
         thumbContentType: thumb.type,
         width,
         height,
+        notice: picked.notice,
       },
     };
   } finally {

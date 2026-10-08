@@ -233,18 +233,18 @@ description: "Task list for 003-image-upload (이미지 업로드)"
 
 ### Tests for User Story 6 ⚠️
 
-- [ ] T069 [P] [US6] `T/media/integration/ImageCompleteIT.java`에 GIF 경우를 더한다(T022 다음): `US6_1_정상_GIF` 원본 바이트가 올린 것과 같음(변환 없음), `US6_2_1921px_GIF_거부_삭제`(`GIF_TOO_LARGE`), `US6_3_301프레임_거부_삭제`(`GIF_TOO_MANY_FRAMES`, 파일 전체를 메모리에 올리지 않음 — 스트림 사용)
-- [ ] T070 [P] [US6] 렌더러 테스트 `T/shared/markdown/GifRenderingTest.java`와 자원 `TR/markdown/syntax/13-owned-gif.md`·`.html`: 작성자 GIF(썸네일 있음) → `<a href="{원본}" title="움직이는 이미지 재생" target="_blank" rel="noopener noreferrer nofollow ugc"><img src="{thumb_storage_key 주소}" alt="…" loading="lazy" decoding="async"></a>`, 썸네일 확장자가 `.jpg`여도 그 키 그대로(Q4), 썸네일 없는 옛 GIF는 `<img>` 그대로, 남의 GIF는 링크, 정화 뒤에도 속성 유지, `RenderVersion.CURRENT == 2`
-- [ ] T071 [P] [US6] `F/features/image-upload/gifInspector.test.ts`: GIF 머리말에서 가로·세로, 프레임 수(301에서 멈춤), 1921px이면 "GIF는 가로·세로 1920px까지 올릴 수 있어요", 움직이는 WebP·APNG 안내 문구(FR-038)
-- [ ] T072 [P] [US6] `F/features/post-detail/__tests__/gifPlayer.test.ts`: `a[href$=".gif"] > img`에 `role="button"`·`aria-pressed`·`aria-label`(대체글, 비면 "움직이는 이미지 재생"), 클릭·Enter·Space로 `src`가 원본 ↔ 썸네일, 기본 이동 막음, GIF가 아닌 링크는 건드리지 않음, 두 번 불러도 중복 등록 없음
+- [X] T069 [P] [US6] `T/media/integration/ImageCompleteIT.java`에 GIF 경우를 더한다(T022 다음): `US6_1_정상_GIF` 원본 바이트가 올린 것과 같음(변환 없음), `US6_2_1921px_GIF_거부_삭제`(`GIF_TOO_LARGE`), `US6_3_301프레임_거부_삭제`(`GIF_TOO_MANY_FRAMES`, 파일 전체를 메모리에 올리지 않음 — 스트림 사용)
+- [X] T070 [P] [US6] 렌더러 테스트 `T/shared/markdown/GifRenderingTest.java`와 자원 `TR/markdown/syntax/13-owned-gif.md`·`.html`: 작성자 GIF(썸네일 있음) → `<a href="{원본}" title="움직이는 이미지 재생" target="_blank" rel="noopener noreferrer nofollow ugc"><img src="{thumb_storage_key 주소}" alt="…" loading="lazy" decoding="async"></a>`, 썸네일 확장자가 `.jpg`여도 그 키 그대로(Q4), 썸네일 없는 옛 GIF는 `<img>` 그대로, 남의 GIF는 링크, 정화 뒤에도 속성 유지, `RenderVersion.CURRENT == 2` (구현 메모: 자원 이름은 13번이 이미 13-raw-html이라 14-owned-gif로 두고 ContentRendererSyntaxTest의 코퍼스 수를 14로, 렌더 버전 확인을 2로 바꿨다(002 파일). 정화가 속성 순서를 rel·href·title·target으로 낸다. 이미 링크 안에 있는 GIF는 링크 중첩을 피하려고 감싸지 않는다)
+- [X] T071 [P] [US6] `F/features/image-upload/gifInspector.test.ts`: GIF 머리말에서 가로·세로, 프레임 수(301에서 멈춤), 1921px이면 "GIF는 가로·세로 1920px까지 올릴 수 있어요", 움직이는 WebP·APNG 안내 문구(FR-038)
+- [X] T072 [P] [US6] `F/features/post-detail/__tests__/gifPlayer.test.ts`: `a[href$=".gif"] > img`에 `role="button"`·`aria-pressed`·`aria-label`(대체글, 비면 "움직이는 이미지 재생"), 클릭·Enter·Space로 `src`가 원본 ↔ 썸네일, 기본 이동 막음, GIF가 아닌 링크는 건드리지 않음, 두 번 불러도 중복 등록 없음
 
 ### Implementation for User Story 6
 
-- [ ] T073 [US6] `B/shared/infra/markdown/AstTransformer.java`에 작성자 GIF 변환을 더하고(`OwnedImage.thumbStorageKey()` 사용, research R11), `B/shared/application/markdown/RenderVersion.java`의 `CURRENT`를 2로 올린다. 002 렌더러 회귀(`T/shared/markdown/` 전체)와 T070을 함께 통과시킨다(002 소유 파일 — 002 담당에게 변경 알림)
-- [ ] T074 [US6] 002 `RerenderJob`이 `render_version < 2` 글을 다시 렌더링하는지 `T/post/integration/RerenderJobIT.java`(002 기존)에 GIF 글 경우를 더해 확인한다
-- [ ] T075 [P] [US6] `F/features/image-upload/gifInspector.ts`(T071 통과)를 구현하고 `imageProcessor.ts`의 GIF 갈래에서 고르는 순간 검사한다. 업로드 화면(파일 선택 안내)에 FR-038 문구를 보인다
-- [ ] T076 [US6] `ImageUploadService.complete`에 GIF 검사(원본 `openStream` → `ImageHeaderReader` 프레임 세기, `gif-max-side`·`gif-max-frames`)를 더한다(T069 통과)
-- [ ] T077 [US6] `F/features/post-detail/gifPlayer.ts`의 빈 자리를 채우고(T072 통과), ▶ 표시 CSS `a[href$=".gif"]::after`를 `F/features/post-detail/postDetail.css`에 더한다(class 없이, 정화 허용 목록 변경 없음). 005 `PostDetailPage`가 이미 `playableGifs(container)`를 부르는지 확인한다
+- [X] T073 [US6] `B/shared/infra/markdown/AstTransformer.java`에 작성자 GIF 변환을 더하고(`OwnedImage.thumbStorageKey()` 사용, research R11), `B/shared/application/markdown/RenderVersion.java`의 `CURRENT`를 2로 올린다. 002 렌더러 회귀(`T/shared/markdown/` 전체)와 T070을 함께 통과시킨다(002 소유 파일 — 002 담당에게 변경 알림) (구현 메모: 002 소유 AstTransformer·RenderVersion(1→2)을 고쳤다. 002 PostPersistenceIT의 새 글 render_version 기대값을 RenderVersion.CURRENT로 바꿨다(002 담당 알림 대상))
+- [X] T074 [US6] 002 `RerenderJob`이 `render_version < 2` 글을 다시 렌더링하는지 `T/post/integration/RerenderJobIT.java`(002 기존)에 GIF 글 경우를 더해 확인한다 (구현 메모: 002 RerenderJobIT는 PostTestConfig의 가짜 사진 판별기(공개 주소 cdn.devlog.example)를 써서 정화가 썸네일 src를 지운다. 같은 확인을 기본 통합 설정(새 컨텍스트 없음)의 media/integration/GifRerenderIT로 두었다)
+- [X] T075 [P] [US6] `F/features/image-upload/gifInspector.ts`(T071 통과)를 구현하고 `imageProcessor.ts`의 GIF 갈래에서 고르는 순간 검사한다. 업로드 화면(파일 선택 안내)에 FR-038 문구를 보인다 (구현 메모: 프레임 300 초과 화면 문구는 data-model §7에 없어 'GIF는 프레임 300장까지 올릴 수 있어요'로 정했다(화면 전용, 서버 거부는 IMAGE_REJECTED). FR-038 안내는 [사진] 버튼 title과, 움직이는 WebP·APNG를 고른 순간의 안내 줄로 보인다)
+- [X] T076 [US6] `ImageUploadService.complete`에 GIF 검사(원본 `openStream` → `ImageHeaderReader` 프레임 세기, `gif-max-side`·`gif-max-frames`)를 더한다(T069 통과) (구현 메모: T029 때 함께 구현해 둔 검사를 T069 GIF 경우로 확인했다)
+- [X] T077 [US6] `F/features/post-detail/gifPlayer.ts`의 빈 자리를 채우고(T072 통과), ▶ 표시 CSS `a[href$=".gif"]::after`를 `F/features/post-detail/postDetail.css`에 더한다(class 없이, 정화 허용 목록 변경 없음). 005 `PostDetailPage`가 이미 `playableGifs(container)`를 부르는지 확인한다 (구현 메모: 005 PostDetailPage가 본문을 넣은 뒤 playableGifs(contentRef.current)를 이미 부른다. 원본과 정지 장면이 같은 출처일 때만 붙인다. ▶ 색은 tokens.css 변수)
 
 **Checkpoint**: GIF가 정지 장면으로 보이고 누르면 재생된다
 

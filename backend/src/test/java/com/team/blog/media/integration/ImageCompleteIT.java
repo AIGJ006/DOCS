@@ -234,6 +234,64 @@ class ImageCompleteIT extends StorageIntegrationTestBase {
     }
 
     @Test
+    void US6_1_정상_GIF는_변환_없이_올린_바이트_그대로다() throws Exception {
+        byte[] gif = fixture("frames-300.gif");
+        Ticket ticket = upload("image/gif", gif, "image/webp", fixture("thumb-640.webp"));
+
+        MvcResult result = api.complete(session, ticket.imageId());
+
+        assertThat(result.getResponse().getStatus())
+                .as(result.getResponse().getContentAsString())
+                .isEqualTo(200);
+        JsonNode body = ImageApi.json(result);
+        assertThat(body.path("contentType").asString()).isEqualTo("image/gif");
+        assertThat(body.path("url").asString()).endsWith(".gif");
+        assertThat(body.path("thumbUrl").asString()).endsWith("_thumb.webp");
+        assertThat(body.path("width").asInt()).isEqualTo(40);
+        assertThat(body.path("height").asInt()).isEqualTo(30);
+        assertThat(
+                        StorageHttp.get(MinioContainerSupport.publicBaseUrl() + "/" + ticket.key())
+                                .body())
+                .isEqualTo(gif);
+    }
+
+    @Test
+    void US6_2_1921px_GIF는_GIF_TOO_LARGE이고_지워진다() throws Exception {
+        Ticket ticket =
+                upload(
+                        "image/gif",
+                        fixture("wide-1921.gif"),
+                        "image/webp",
+                        fixture("thumb-640.webp"));
+
+        assertRejected(api.complete(session, ticket.imageId()), ticket, "GIF_TOO_LARGE");
+    }
+
+    @Test
+    void US6_3_301프레임_GIF는_GIF_TOO_MANY_FRAMES이고_지워진다() throws Exception {
+        Ticket ticket =
+                upload(
+                        "image/gif",
+                        fixture("frames-301.gif"),
+                        "image/webp",
+                        fixture("thumb-640.webp"));
+
+        assertRejected(api.complete(session, ticket.imageId()), ticket, "GIF_TOO_MANY_FRAMES");
+    }
+
+    @Test
+    void 잘린_GIF는_CORRUPT() throws Exception {
+        Ticket ticket =
+                upload(
+                        "image/gif",
+                        fixture("truncated.gif"),
+                        "image/webp",
+                        fixture("thumb-640.webp"));
+
+        assertRejected(api.complete(session, ticket.imageId()), ticket, "CORRUPT");
+    }
+
+    @Test
     void 파일을_올리지_않으면_IMAGE_NOT_UPLOADED이고_행이_지워진다() throws Exception {
         Ticket ticket =
                 presign(

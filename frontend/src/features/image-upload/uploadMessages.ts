@@ -20,6 +20,8 @@ export const UPLOAD_MESSAGES = {
   IMAGE_NOT_UPLOADED: '사진이 올라가지 않았어요. 다시 시도해 주세요',
   IMAGE_REJECTED: '올릴 수 없는 사진이에요',
   GIF_TOO_LARGE: 'GIF는 가로·세로 1920px까지 올릴 수 있어요',
+  /** 화면 전용(고르는 순간 검사). 서버 complete 거부는 IMAGE_REJECTED 문구다 */
+  GIF_TOO_MANY_FRAMES: 'GIF는 프레임 300장까지 올릴 수 있어요',
   EMAIL_NOT_VERIFIED: '이메일 인증 후 이용할 수 있어요',
   LOGIN_REQUIRED: '로그인이 필요해요',
 } as const;

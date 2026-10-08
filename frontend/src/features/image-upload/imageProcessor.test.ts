@@ -156,6 +156,39 @@ describe('processImage', () => {
     expect(big).toMatchObject({ ok: false, code: 'IMAGE_TOO_LARGE' });
   });
 
+  it('GIF는 고르는 순간 프레임 수를 보고 301프레임이면 해독 전에 안내한다 (T075)', async () => {
+    const { deps } = fakeDeps({ width: 40, height: 30 });
+    const bytes: number[] = [0x47, 0x49, 0x46, 0x38, 0x39, 0x61, 40, 0, 30, 0, 0, 0, 0];
+    for (let i = 0; i < 301; i++) bytes.push(0x2c, 0, 0, 0, 0, 1, 0, 1, 0, 0, 2, 1, 0, 0);
+    bytes.push(0x3b);
+    const gif = new File([new Uint8Array(bytes)], 'many.gif', { type: 'image/gif' });
+
+    expect(await processImage(gif, { deps })).toEqual({
+      ok: false,
+      code: 'GIF_TOO_MANY_FRAMES',
+      message: 'GIF는 프레임 300장까지 올릴 수 있어요',
+    });
+    expect(deps.decode).not.toHaveBeenCalled();
+    const wide = file([0x47, 0x49, 0x46, 0x38, 0x39, 0x61, 0x81, 0x07, 1, 0, 0, 0], 100, 'w.gif');
+    expect(await processImage(wide, { deps })).toMatchObject({ ok: false, code: 'GIF_TOO_LARGE' });
+    expect(deps.decode).not.toHaveBeenCalled();
+  });
+
+  it('움직이는 WebP는 처리하되 첫 장면만 남는다는 안내를 붙인다 (FR-038)', async () => {
+    const { deps } = fakeDeps({ width: 100, height: 100 });
+    const animated = file([...WEBP_HEAD, 0x56, 0x50, 0x38, 0x58, 10, 0, 0, 0, 0x02], 200, 'a.webp');
+
+    const result = await processImage(animated, { deps });
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.image.notice).toBe(
+      '움직이는 WebP·APNG는 첫 장면만 남아요. 움직이는 사진은 GIF로 올려 주세요',
+    );
+    const still = await processImage(file(WEBP_HEAD, 200), { deps });
+    expect(still.ok && still.image.notice).toBeFalsy();
+  });
+
   it('결과 어디에도 원래 파일 이름이 없다', async () => {
     const { deps } = fakeDeps({ width: 4000, height: 3000 });
     const result = await processImage(file(JPEG_HEAD, 1000, 'IMG_0001_서울.jpg'), { deps });

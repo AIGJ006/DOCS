@@ -19,8 +19,8 @@ import org.springframework.core.io.Resource;
 import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
 
 /**
- * 정상 문법 코퍼스 (docs/12 §9-2의 13개, FR-042~045). 입력 {@code markdown/syntax/NN-이름.md}, 기대 HTML {@code
- * NN-이름.html} (앞뒤 공백만 무시하고 정확히 같아야 한다).
+ * 정상 문법 코퍼스 (docs/12 §9-2의 13개 + 003 US6 작성자 GIF, FR-042~045). 입력 {@code markdown/syntax/NN-이름.md},
+ * 기대 HTML {@code NN-이름.html} (앞뒤 공백만 무시하고 정확히 같아야 한다).
  */
 class ContentRendererSyntaxTest {
 
@@ -46,8 +46,8 @@ class ContentRendererSyntaxTest {
     }
 
     @Test
-    void 코퍼스는_13개다() throws IOException {
-        assertThat(corpus().count()).isEqualTo(13);
+    void 코퍼스는_14개다() throws IOException {
+        assertThat(corpus().count()).isEqualTo(14);
     }
 
     @ParameterizedTest(name = "{0}")
@@ -58,7 +58,7 @@ class ContentRendererSyntaxTest {
         assertThat(rendered.html().strip()).isEqualTo(expected.strip());
         assertThat(rendered.html()).doesNotContain("<h1");
         assertThat(HtmlSafetyChecker.problems(rendered.html())).isEmpty();
-        assertThat(rendered.renderVersion()).isEqualTo(RenderVersion.CURRENT).isEqualTo(1);
+        assertThat(rendered.renderVersion()).isEqualTo(RenderVersion.CURRENT).isEqualTo(2);
     }
 
     @Test

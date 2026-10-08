@@ -25,6 +25,7 @@ import { useImageInsert } from '../features/image-upload/useImageInsert';
 import { uploadImage } from '../features/image-upload/uploadImage';
 import { limitsFrom, processImage } from '../features/image-upload/imageProcessor';
 import { storageHint } from '../features/image-upload/storageHint';
+import { ANIMATION_NOTICE } from '../features/image-upload/uploadMessages';
 import { getStorageUsage, type StorageUsage } from '../api/images';
 import {
   createPendingRetrier,
@@ -296,7 +297,13 @@ export default function EditorPage() {
     onRejected: setImageNotice,
     upload: (file) =>
       uploadImage(file, {
-        process: (f) => processImage(f, { limits: limitsFrom(storageRef.current?.limits) }),
+        process: async (f) => {
+          const result = await processImage(f, {
+            limits: limitsFrom(storageRef.current?.limits),
+          });
+          if (result.ok && result.image.notice) setImageNotice(result.image.notice);
+          return result;
+        },
       }),
     onPending: async (file) => {
       if (memberId === null) return null;
@@ -502,7 +509,7 @@ export default function EditorPage() {
               변경 취소
             </button>
           ) : null}
-          <button type="button" onClick={images.openPicker}>
+          <button type="button" onClick={images.openPicker} title={ANIMATION_NOTICE}>
             사진
           </button>
           {storageHint(storage) ? (
