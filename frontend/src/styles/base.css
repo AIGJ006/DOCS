@@ -1,0 +1,75 @@
+/*
+ * 공통 기본 스타일 (공통 머리말 작업). 기능 화면의 개별 스타일은 건드리지 않도록 요소 기본값만 최소로 정한다.
+ * 색은 tokens.css의 토큰만 쓴다(016 FR-011). 016 T009가 이 파일에 color-scheme 등을 더한다.
+ */
+:root {
+  /* 본문 최대 폭. 005 홈이 이미 이 이름을 쓴다. */
+  --page-max-width: 72rem;
+  --header-height: 3.5rem;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  min-width: 0;
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-family:
+    system-ui,
+    -apple-system,
+    'Segoe UI',
+    'Apple SD Gothic Neo',
+    'Noto Sans KR',
+    'Malgun Gothic',
+    sans-serif;
+  font-size: 1rem;
+  line-height: 1.6;
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+}
+
+a {
+  color: var(--color-brand);
+}
+
+img,
+svg,
+video {
+  max-width: 100%;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+  color: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+button:disabled {
+  cursor: not-allowed;
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
+}
+
+pre,
+code {
+  background: var(--color-code-bg);
+}

@@ -1,3 +1,6 @@
+// 색 토큰 → 공통 기본 스타일 순서로, 다른 CSS보다 먼저 (016 T007·T009)
+import './styles/tokens.css';
+import './styles/base.css';
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
