@@ -132,7 +132,7 @@ export default function App() {
                 />
               }
             />
-            {/* 010 팔로우 목록 — `/:handle`보다 앞에 둔다 */}
+            {/* 010 팔로워·팔로잉 목록 — `/:handle`보다 앞에 둔다 */}
             <Route path="/:handle/followers" element={<FollowListPage mode="followers" />} />
             <Route path="/:handle/following" element={<FollowListPage mode="following" />} />
             <Route path="/:handle" element={<BlogPage />} />

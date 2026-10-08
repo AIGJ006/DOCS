@@ -1,4 +1,4 @@
-/* 010 팔로우·피드 화면 (T022·T037·T038·T045). 375px부터 줄바꿈되고 가로 스크롤이 없다. 누를 자리 44px 이상, 색은 styles/tokens.css 변수만 쓴다. */
+/* 010 화면(팔로우 버튼·피드·목록) (T022·T037·T038·T045). 375px부터 줄바꿈되고 가로 스크롤이 없다. 누를 자리 44px 이상, 색은 styles/tokens.css 변수만 쓴다. */
 
 .follow-area {
   display: inline-flex;

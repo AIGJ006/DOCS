@@ -184,11 +184,11 @@ description: "Task list for 010-follow-feed (팔로우·팔로잉 피드)"
 **Purpose**: 권한 매트릭스, 종단 확인, 정리, 인계
 
 - [X] T043 [P] 권한 매트릭스: `TR/permission/follow.csv`(research R11 표, owner `010`)와 `T/interaction/permission/FollowActions.java`(`follow.put`·`follow.delete`·`follow.followers`·`follow.following`·`feed.read` — 대상 회원은 글 픽스처의 작성자, `AUTHOR` 행위자는 자기 자신), `T/interaction/permission/FollowPermissionMatrixIT.java`(004 `AbstractPermissionMatrixIT` 상속) (구현 메모: 행위자 AUTHOR·SUSPENDED·WITHDRAWN은 하네스에서 글 작성자 본인이라 자기 자신이 대상이다. AUTHOR×AUTHOR_WITHDRAWN 등 본인이 유예가 되는 조합은 WITHDRAWN 행과 같아 뺐다(75행). 거부된 팔로우 요청은 follow 행 수가 그대로인지도 본다)
-- [ ] T044 [P] 종단 확인 `E/follow-feed.spec.ts`(Playwright): quickstart §3의 1~11번(두 회원·비로그인 컨텍스트, 네트워크 끊기는 `page.route`)
-- [ ] T045 [P] 375px·접근성: 피드·목록·머리말 가로 스크롤 없음, 버튼 44px 이상, 포커스 표시, [팔로잉 ✓]↔[언팔로우] 전환이 키보드 초점에서도 동작, 상태가 색만으로 구분되지 않음
-- [ ] T046 `grep -rn "010 팔로우\|TODO(010)\|010이 넘겨받\|010 전까지" backend/src frontend/src`가 0건인지 확인하고 남은 표시를 정리한다(005 `AuthorFollowStatusQuery`·`AuthorCard`·`BlogHeaderView` 주석)
+- [X] T044 [P] 종단 확인 `E/follow-feed.spec.ts`(Playwright): quickstart §3의 1~11번(두 회원·비로그인 컨텍스트, 네트워크 끊기는 `page.route`) (구현 메모: 회원 넷(B·C 작성자, A 독자, D)을 환경 변수 E2E_EMAIL·E2E_AUTHOR2_EMAIL·E2E_READER_EMAIL·E2E_LONELY_EMAIL로 받는다. 12번(375px)까지 한 시험에 담음. 통과)
+- [X] T045 [P] 375px·접근성: 피드·목록·머리말 가로 스크롤 없음, 버튼 44px 이상, 포커스 표시, [팔로잉 ✓]↔[언팔로우] 전환이 키보드 초점에서도 동작, 상태가 색만으로 구분되지 않음 (구현 메모: follow-feed.spec.ts 12번: /feed·목록·블로그 머리말 375px 가로 스크롤 0, 버튼 44px, 키보드 초점에서 [언팔로우]. 상태는 글자(팔로우/팔로잉 ✓)와 aria-pressed로도 구분)
+- [X] T046 `grep -rn "010 팔로우\|TODO(010)\|010이 넘겨받\|010 전까지" backend/src frontend/src`가 0건인지 확인하고 남은 표시를 정리한다(005 `AuthorFollowStatusQuery`·`AuthorCard`·`BlogHeaderView` 주석) (구현 메모: App.tsx·follow.css 주석까지 정리해 0건)
 - [X] T047 [P] 001 `B/shared/security/ActionKind.java` 주석의 `ACCOUNT_WRITE` 설명에 "팔로우"를 더한다(T003 결과가 기본안일 때, 001 담당에게 알림)
-- [ ] T048 [P] 011 인계 확인: `specs/011-notification/tasks.md`가 `MemberFollowed`·`MemberUnfollowed` 필드 이름(contracts/follow-sql.md §5)과 새 글 알림의 `follow` 직접 읽기(25 §4-1)를 쓰는지 확인한다
+- [X] T048 [P] 011 인계 확인: `specs/011-notification/tasks.md`가 `MemberFollowed`·`MemberUnfollowed` 필드 이름(contracts/follow-sql.md §5)과 새 글 알림의 `follow` 직접 읽기(25 §4-1)를 쓰는지 확인한다 (구현 메모: 011 data-model §3 필드(followerId·followeeId·followedAt/unfollowedAt)와 같고, 새 글 알림은 follow 표 직접 INSERT…SELECT, isFollowing(followerId, followeeId)도 있음. 011 문서 수정 불필요)
 - [ ] T049 quickstart.md §1~§4를 처음부터 끝까지 실행하고 결과를 기록한다
 - [ ] T050 전체 회귀: `./mvnw -pl backend verify`(004·005·008 테스트 포함)와 `npm test`·`npm run build`·`npm run lint`
 
