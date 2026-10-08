@@ -291,7 +291,7 @@ export default function EditorPage() {
     onContentRef.current = onContent;
   });
 
-  /** 사진 넣기 (003 US1): 붙여넣기·끌어놓기·[사진] 버튼 → 대기 표시 → 업로드 → `![](주소)`. 자동 저장은 막지 않는다. */
+  /** 사진 넣기 (003 US1): 붙여넣기·끌어놓기·[파일] 버튼 → 대기 표시 → 업로드 → `![](주소)`. 자동 저장은 막지 않는다. */
   const images = useImageInsert({
     textareaRef,
     getContent: () => latest.current.contentMd,
@@ -321,7 +321,7 @@ export default function EditorPage() {
     },
   });
 
-  /** [저장] — 즉시 DB에 반영한다 (FR-009, D-3). */
+  /** [임시저장] — 즉시 DB에 반영한다 (FR-009, D-3). */
   const onSave = async () => {
     const queue = queueRef.current;
     if (!queue || saving || conflictRef.current?.intercept()) {
@@ -343,7 +343,7 @@ export default function EditorPage() {
     } catch (e) {
       const server = serverCopyOf(e);
       if (server) {
-        // 직접 누른 [저장]이 충돌했다 — 바로 비교 창 (US5 #2)
+        // 직접 누른 [임시저장]이 충돌했다 — 바로 비교 창 (US5 #2)
         conflictRef.current?.report(server, { open: true });
       } else {
         setMessage(
@@ -512,17 +512,17 @@ export default function EditorPage() {
             </button>
           ) : null}
           <button type="button" onClick={images.openPicker} title={ANIMATION_NOTICE}>
-            사진
+            파일
           </button>
           {storageHint(storage) ? (
             <span className="storage-hint">{storageHint(storage)}</span>
           ) : null}
           <input {...images.fileInputProps} aria-label="사진 고르기" />
           <button type="button" onClick={onSave} disabled={saving}>
-            저장
+            임시저장
           </button>
           <button type="button" onClick={onPublishClick}>
-            발행하기
+            글 등록
           </button>
         </div>
       </header>

@@ -42,7 +42,7 @@ test.describe('에디터는 375px에서도 가로로 넘치지 않는다', () =>
     await expectNoHorizontalScroll(page, '저장 상태');
 
     // 발행 설정
-    await page.getByRole('button', { name: '발행하기' }).click();
+    await page.getByRole('button', { name: '글 등록' }).click();
     const publish = page.getByRole('dialog', { name: '발행 설정' });
     await expect(publish).toBeVisible();
     await expectNoHorizontalScroll(page, '발행 설정');
