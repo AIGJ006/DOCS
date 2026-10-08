@@ -1,0 +1,350 @@
+openapi: 3.1.0
+info:
+  title: AI 태그 추천 API (013-ai-tag-suggest)
+  version: 0.1.0
+  description: |
+    원문: docs/34-ai-tag-suggest.md §2·§7·§9, docs/51(member_agreement AI), docs/42-permission-matrix.md §3, docs/02-architecture.md §5-1(O8).
+
+    공통 규칙
+    - 현재 사용자는 세션에서만 꺼낸다. 상태를 바꾸는 요청은 `X-XSRF-TOKEN` 헤더(001), 없거나 틀리면 403 CSRF_REJECTED.
+    - 추천 판정 순서(research R4): 401 LOGIN_REQUIRED → 403 계정 상태(CONTENT_WRITE) → 404 내 글 아님 → 503 AI_UNAVAILABLE(DISABLED) → 409 AI_CONSENT_REQUIRED → 400 VALIDATION_FAILED → 422 CONTENT_TOO_SHORT → 재사용 저장소 → 429 TOO_MANY_REQUESTS(맨 끝) → 공급자.
+    - 남의 글·없는 글·휴지통 글·숫자가 아닌 번호는 모두 같은 404 본문이다(34 §9의 403 대신 02 §5).
+    - 서버는 태그를 저장하지 않는다. 추천 칩을 누르면 화면의 태그 입력에만 더해지고, 태그는 발행 때 002·008 규칙으로 확정된다.
+    - 오류 본문은 공통 형식 {code, message, errors, details}. errors는 항상 배열, 메시지 끝에 마침표 없음.
+    - 응답·오류 어디에도 프롬프트·AI 원문 응답·비밀값이 없다.
+servers:
+  - url: http://localhost:8080
+    description: 로컬 Docker Compose
+tags:
+  - name: tag-suggestions
+    description: AI 태그 추천
+  - name: ai-consent
+    description: AI 외부 전송 동의
+paths:
+  /api/posts/{postId}/tag-suggestions:
+    post:
+      tags: [tag-suggestions]
+      operationId: suggestTags
+      summary: 태그 추천 받기
+      description: |
+        에디터의 지금 제목·본문(저장 안 된 것 포함)으로 태그를 최대 5개(남은 자리만큼) 추천한다. 버튼을 누를 때만 부른다.
+        공개 글은 외부 AI(Gemini)를 먼저, 한도가 다 되면 자체 AI(Ollama)로. 비공개 글은 자체 AI로만.
+        재사용 저장소로 답하면 `cached: true`이고 하루 횟수가 줄지 않는다. 남은 자리가 0이면 AI를 부르지 않고 `tags: []`.
+      security:
+        - sessionCookie: []
+      parameters:
+        - $ref: '#/components/parameters/PostId'
+        - $ref: '#/components/parameters/CsrfToken'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/TagSuggestRequest' }
+            example:
+              title: JPA N+1 문제 정리
+              contentMd: "## 문제\n\n`@OneToMany` 관계에서 목록을 읽을 때 …"
+              currentTags: [jpa]
+              refresh: false
+      responses:
+        '200':
+          description: 추천 결과 (0~5개)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/TagSuggestResponse' }
+              examples:
+                fresh:
+                  summary: 외부 AI가 새로 만듦
+                  value: { tags: [spring, hibernate, n-plus-one], provider: GEMINI, cached: false, truncated: false, remainingToday: 17 }
+                cached:
+                  summary: 재사용 (횟수 그대로)
+                  value: { tags: [spring, hibernate], provider: GEMINI, cached: true, truncated: false, remainingToday: 17 }
+                empty:
+                  summary: 다 걸러짐 또는 남은 자리 없음
+                  value: { tags: [], provider: OLLAMA, cached: false, truncated: true, remainingToday: 16 }
+        '400':
+          description: 형식 오류 (제목 100자·본문 100,000자·currentTags 10개 초과 등)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+              example:
+                code: VALIDATION_FAILED
+                message: 입력한 내용을 확인해 주세요
+                errors: [{ field: currentTags, code: TOO_MANY_TAGS, message: 태그가 너무 많아요 }]
+                details: null
+        '401': { $ref: '#/components/responses/LoginRequired' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409':
+          description: AI 동의 없음 또는 동의 문구 버전이 바뀜. 화면은 동의 창을 띄운다
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+              example: { code: AI_CONSENT_REQUIRED, message: AI 태그 추천을 쓰려면 동의가 필요해요, errors: [], details: { version: '2026-10-08' } }
+        '422':
+          description: 정리 후 100자 미만. AI를 부르지 않는다
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+              example: { code: CONTENT_TOO_SHORT, message: 글을 조금 더 쓴 뒤 추천받아 보세요, errors: [], details: { minChars: 100, length: 42 } }
+        '429':
+          description: 하루 20회를 다 씀. 코드는 TOO_MANY_REQUESTS 하나이고 종류는 details.kind로 구분한다(팀 확인 T003)
+          headers:
+            Retry-After: { $ref: '#/components/headers/RetryAfter' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+              example: { code: TOO_MANY_REQUESTS, message: 오늘 추천을 모두 썼어요. 내일 다시 써 보세요, errors: [], details: { kind: AI_DAILY_LIMIT, resetAt: '2026-10-08T15:00:00Z' } }
+        '503': { $ref: '#/components/responses/AiUnavailable' }
+
+  /api/posts/{postId}/tag-suggestions/status:
+    get:
+      tags: [tag-suggestions]
+      operationId: getTagSuggestStatus
+      summary: 추천 버튼 상태
+      description: |
+        발행 창이 열릴 때와 버튼을 누르기 직전에 부른다. `available = false`면 버튼을 숨기고, `consentRequired`면 누를 때 동의 창을 먼저 띄운다.
+        `provider`는 지금 고를 공급자의 예측일 뿐이다(실제 공급자는 추천 응답의 provider). Redis 장애면 `available = false`.
+        판정 순서: 401 → 403 → 404 → 200. 기능이 꺼져 있어도 200(`available = false`).
+      security:
+        - sessionCookie: []
+      parameters:
+        - $ref: '#/components/parameters/PostId'
+      responses:
+        '200':
+          description: 지금 상태
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/TagSuggestStatus' }
+              example: { available: true, consentRequired: false, consentVersion: '2026-10-08', provider: OLLAMA, remainingToday: 12 }
+        '401': { $ref: '#/components/responses/LoginRequired' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /api/me/agreements/ai:
+    get:
+      tags: [ai-consent]
+      operationId: getAiConsent
+      summary: AI 동의 상태
+      description: 설정 화면 "AI 동의" 칸이 부른다. 동의 행이 없으면 agreed false, version·agreedAt null
+      security:
+        - sessionCookie: []
+      responses:
+        '200':
+          description: 동의 상태
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AiConsent' }
+              examples:
+                agreed:
+                  value: { agreed: true, version: '2026-10-08', currentVersion: '2026-10-08', agreedAt: '2026-10-08T03:12:00Z' }
+                outdated:
+                  summary: 동의 문구가 바뀜
+                  value: { agreed: false, version: '2026-09-01', currentVersion: '2026-10-08', agreedAt: '2026-09-02T01:00:00Z' }
+                none:
+                  value: { agreed: false, version: null, currentVersion: '2026-10-08', agreedAt: null }
+        '401': { $ref: '#/components/responses/LoginRequired' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+    put:
+      tags: [ai-consent]
+      operationId: agreeAi
+      summary: AI 동의 (다시 동의 포함)
+      description: |
+        화면이 본 동의 문구 버전을 보낸다. 현재 버전과 다르면 400(화면이 새로 고친 뒤 다시 보여 준다). 같은 행의 버전·시각을 바꾼다(PK member_id, type).
+        인증 전 회원도 동의할 수 있다(001 ACCOUNT_WRITE). 추천 자체는 인증 후에만 된다.
+      security:
+        - sessionCookie: []
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [version]
+              properties:
+                version: { type: string, maxLength: 20 }
+            example: { version: '2026-10-08' }
+      responses:
+        '200':
+          description: 동의함
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AiConsent' }
+              example: { agreed: true, version: '2026-10-08', currentVersion: '2026-10-08', agreedAt: '2026-10-08T03:12:00Z' }
+        '400':
+          description: 버전이 현재와 다름 또는 빈 값
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+              example:
+                code: VALIDATION_FAILED
+                message: 입력한 내용을 확인해 주세요
+                errors: [{ field: version, code: AGREEMENT_VERSION_MISMATCH, message: 약관이 바뀌었어요. 새로 고친 뒤 다시 동의해 주세요 }]
+                details: null
+        '401': { $ref: '#/components/responses/LoginRequired' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+    delete:
+      tags: [ai-consent]
+      operationId: revokeAi
+      summary: AI 동의 취소
+      description: 동의 행을 지운다(51 §4). 없어도 200. 다음 추천 때 다시 동의 창이 뜬다
+      security:
+        - sessionCookie: []
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+      responses:
+        '200':
+          description: 취소됨
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AiConsent' }
+              example: { agreed: false, version: null, currentVersion: '2026-10-08', agreedAt: null }
+        '401': { $ref: '#/components/responses/LoginRequired' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+components:
+  parameters:
+    PostId:
+      name: postId
+      in: path
+      required: true
+      description: 숫자가 아니면 404
+      schema: { type: string, pattern: '^[0-9]+$' }
+    CsrfToken:
+      name: X-XSRF-TOKEN
+      in: header
+      required: true
+      description: CSRF 토큰 (`XSRF-TOKEN` 쿠키 값, 001)
+      schema: { type: string }
+  securitySchemes:
+    sessionCookie:
+      type: apiKey
+      in: cookie
+      name: SESSION
+      description: Spring Session(Redis) 세션 쿠키. HttpOnly, Secure, SameSite=Lax (02 §5).
+
+  headers:
+    RetryAfter:
+      description: 다시 시도할 수 있을 때까지 남은 초
+      schema: { type: integer, minimum: 1 }
+
+  responses:
+    LoginRequired:
+      description: 비회원
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+          example: { code: LOGIN_REQUIRED, message: 로그인이 필요해요, errors: [], details: null }
+    Forbidden:
+      description: |
+        계정 상태 거부(001 `AccountStatusGuard`) 또는 CSRF 거부. 판정 순서상 404보다 먼저다(42 §3).
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+          examples:
+            emailNotVerified:
+              value: { code: EMAIL_NOT_VERIFIED, message: 이메일 인증 후 이용할 수 있어요, errors: [], details: null }
+            withdrawn:
+              value: { code: ACCOUNT_WITHDRAWN, message: 탈퇴 신청한 계정이에요, errors: [], details: null }
+            suspended:
+              value: { code: ACCOUNT_SUSPENDED, message: 정지된 계정이에요, errors: [], details: null }
+            csrfRejected:
+              value: { code: CSRF_REJECTED, message: 요청을 확인하지 못했어요. 페이지를 새로 고친 뒤 다시 시도해 주세요, errors: [], details: null }
+    NotFound:
+      description: 없음·볼 수 없음·남의 것. 본문은 모든 경우 같다(README 2026-10-07).
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+          example: { code: NOT_FOUND, message: 볼 수 없는 페이지예요, errors: [], details: null }
+    TooManyRequests:
+      description: 요청 과다. 판정 순서의 맨 끝(007 Q2). 코드는 `TOO_MANY_REQUESTS` 하나(007 Q3).
+      headers:
+        Retry-After: { $ref: '#/components/headers/RetryAfter' }
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+          example: { code: TOO_MANY_REQUESTS, message: 잠시 후 다시 시도해 주세요, errors: [], details: null }
+    AiUnavailable:
+      description: |
+        추천할 수 없음. details.reason = DISABLED(기능 꺼짐) · FAILED(공급자 시간 초과·서버 오류·형식 깨짐, 비공개 글인데 자체 AI 없음) · BUSY(자체 AI 동시 처리 초과) · STORE_UNAVAILABLE(Redis 장애).
+        글쓰기·자동 저장·발행에는 영향이 없다. 하루 횟수는 줄지 않는다.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+          examples:
+            failed:
+              value: { code: AI_UNAVAILABLE, message: 지금은 추천할 수 없어요, errors: [], details: { reason: FAILED } }
+            busy:
+              value: { code: AI_UNAVAILABLE, message: 잠시 후 다시 시도해 주세요, errors: [], details: { reason: BUSY } }
+            disabled:
+              value: { code: AI_UNAVAILABLE, message: 지금은 추천할 수 없어요, errors: [], details: { reason: DISABLED } }
+
+  schemas:
+    ErrorResponse:
+      type: object
+      description: 공통 오류 본문 (02 §5-1 O8). `errors`는 항상 배열(없으면 []), 메시지 끝에 마침표 없음.
+      required: [code, message, errors, details]
+      properties:
+        code: { type: string, description: 대문자 이유 코드 }
+        message: { type: string }
+        errors:
+          type: array
+          items:
+            type: object
+            required: [field, code, message]
+            properties:
+              field: { type: string }
+              code: { type: string }
+              message: { type: string }
+        details:
+          type: [object, 'null']
+    TagSuggestRequest:
+      type: object
+      required: [title, contentMd, currentTags]
+      properties:
+        title: { type: string, maxLength: 100, description: 에디터의 지금 제목 }
+        contentMd: { type: string, maxLength: 100000, description: 에디터의 지금 본문(Markdown) }
+        currentTags:
+          type: array
+          maxItems: 10
+          items: { type: string }
+          description: 지금 붙인 태그(저장 안 된 것 포함). 서버가 008 정규화로 다시 정리해 추천에서 뺀다
+        refresh: { type: boolean, default: false, description: '[다시 추천]. 비슷한 내용 재사용을 건너뛴다' }
+    TagSuggestResponse:
+      type: object
+      required: [tags, provider, cached, truncated, remainingToday]
+      properties:
+        tags:
+          type: array
+          maxItems: 5
+          items: { type: string, pattern: '^[가-힣a-z0-9._+#-]{1,30}$' }
+          description: 008 정규화·금칙어·이미 붙인 태그 제거 뒤. 남은 자리만큼
+        provider: { $ref: '#/components/schemas/Provider' }
+        cached: { type: boolean }
+        truncated: { type: boolean, description: true면 화면에 "본문 앞부분을 보고 추천했어요" }
+        remainingToday: { type: integer, minimum: 0 }
+    TagSuggestStatus:
+      type: object
+      required: [available, consentRequired, consentVersion, provider, remainingToday]
+      properties:
+        available: { type: boolean }
+        consentRequired: { type: boolean }
+        consentVersion: { type: string }
+        provider:
+          oneOf:
+            - $ref: '#/components/schemas/Provider'
+            - type: 'null'
+        remainingToday: { type: integer, minimum: 0 }
+    AiConsent:
+      type: object
+      required: [agreed, version, currentVersion, agreedAt]
+      properties:
+        agreed: { type: boolean, description: 행이 있고 version이 currentVersion과 같음 }
+        version: { type: [string, 'null'] }
+        currentVersion: { type: string }
+        agreedAt: { type: [string, 'null'], format: date-time }
+    Provider:
+      type: string
+      enum: [GEMINI, OLLAMA]
+      description: GEMINI = 외부 AI(무료 등급), OLLAMA = 자체 서버 AI
