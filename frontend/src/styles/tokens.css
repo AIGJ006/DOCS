@@ -1,0 +1,19 @@
+/*
+ * 색 토큰 (45 §3, 016 FR-011). 화면 코드는 이 이름만 쓰고 색 값을 직접 쓰지 않는다.
+ * 지금은 공통 이름 11개의 라이트 값만 둔다. 다크 값·보조 토큰은 016(T007)이 이 파일에 더한다.
+ * `--color-brand`·`--color-brand-fill`은 016 plan 제안값(흰 글자 4.5:1 이상).
+ */
+:root,
+[data-theme='light'] {
+  --color-bg: #ffffff;
+  --color-surface: #ffffff;
+  --color-text: #212529;
+  --color-text-muted: #6c757d;
+  --color-border: #dee2e6;
+  --color-brand: #1971c2;
+  --color-brand-fill: #1971c2;
+  --color-danger: #c92a2a;
+  --thumb-empty: #f1f3f5;
+  --color-code-bg: #f8f9fa;
+  --color-focus: #1c7ed6;
+}
