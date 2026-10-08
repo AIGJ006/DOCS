@@ -1,6 +1,6 @@
 package com.team.blog.post.web;
 
-import com.team.blog.post.application.PostDetailView;
+import com.team.blog.post.application.PostDetailResponse;
 import com.team.blog.post.application.PostQueryService;
 import com.team.blog.post.infra.PostDetailRow;
 import com.team.blog.shared.security.Viewer;
@@ -19,6 +19,8 @@ import org.springframework.web.bind.annotation.RestController;
  *   <li>보는 사람은 세션에서만 온다(004 {@code CurrentViewerResolver}).
  *   <li>{@code Cache-Control}은 004 {@code CacheControlPolicy.forPost} — 발행·공개·숨김 아님이면 {@code
  *       private, no-cache}, 그 밖(작성자가 보는 비공개·임시·숨김 글)은 {@code private, no-store}.
+ *   <li>작성자 본인의 임시글은 200 + {@code {id, status:"DRAFT", editorPath}}만 준다(005 T056) — 헤더는 {@code
+ *       private, no-store}.
  *   <li>404는 001 {@code GlobalExceptionHandler}가 공통 본문 + {@code private, no-store}로 낸다.
  * </ul>
  */
@@ -32,7 +34,7 @@ public class PostDetailController {
     }
 
     @GetMapping("/api/posts/{postId}")
-    public ResponseEntity<PostDetailView> getPostDetail(
+    public ResponseEntity<PostDetailResponse> getPostDetail(
             @PathVariable String postId, Viewer viewer) {
         PostDetailRow row = postQueryService.requireReadableRow(postId, viewer);
         return ResponseEntity.ok()

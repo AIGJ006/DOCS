@@ -101,7 +101,7 @@ ADMIN,EDITING,read-detail-page,200,,005
 ANONYMOUS,DRAFT,read-detail-page,404,,005
 UNVERIFIED,DRAFT,read-detail-page,404,,005
 MEMBER,DRAFT,read-detail-page,404,,005
-AUTHOR,DRAFT,read-detail-page,200,,005
+AUTHOR,DRAFT,read-detail-page,302,,005
 ADMIN,DRAFT,read-detail-page,404,,005
 ANONYMOUS,TRASHED,read-detail-page,404,,005
 UNVERIFIED,TRASHED,read-detail-page,404,,005

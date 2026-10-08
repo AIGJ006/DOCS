@@ -8,6 +8,7 @@ import com.team.blog.media.application.ImageUrlResolver;
 import com.team.blog.media.application.ProfileImageQuery;
 import com.team.blog.post.application.PostQueryService;
 import com.team.blog.post.domain.PostNotFoundException;
+import com.team.blog.post.domain.Visibility;
 import com.team.blog.post.infra.PostDetailRow;
 import com.team.blog.shared.error.NotFoundException;
 import com.team.blog.shared.security.Viewer;
@@ -37,10 +38,12 @@ import org.springframework.web.bind.annotation.RestController;
  *   <li>① {@code handle}에 대문자가 있으면 소문자 주소로 {@code 301}(쿼리 문자열 유지) — 볼 수 없는 글이어도 먼저 적용한다.
  *   <li>② 글 번호가 숫자가 아니면 공통 404 화면.
  *   <li>③ 상세 API와 같은 조회·판정으로 볼 수 없으면 같은 404 화면.
- *   <li>⑥ 그 밖에는 React 셸 {@code 200}.
+ *   <li>⑤ 작성자 본인의 임시글이면 {@code 302 /write/{postId}}.
+ *   <li>⑥ 그 밖에는 React 셸 {@code 200}. 작성자가 보는 비공개·숨김 글은 공통 문구 + {@code noindex}, {@code private,
+ *       no-store}.
  * </ol>
  *
- * ④(handle 불일치 301)는 US5 T064, ⑤(작성자 임시글 302)는 US4 T057에서 더한다. 이 경로는 조회수를 바꾸지 않는다.
+ * 이 경로는 조회수를 바꾸지 않는다.
  */
 @RestController
 public class PageShellController {
@@ -152,9 +155,24 @@ public class PageShellController {
         } catch (PostNotFoundException e) {
             return notFoundPage.render();
         }
-        return html(
-                shell.render(LinkPreviewMeta.empty()),
-                CacheControlPolicy.forPost(row.status(), row.visibility(), row.isHidden()));
+        // ⑤ 작성자 본인의 임시글 → 에디터 (FR-026 ⑤, 40 R-4)
+        if (PostQueryService.isAuthorDraft(row, viewer)) {
+            return ResponseEntity.status(HttpStatus.FOUND)
+                    .header(HttpHeaders.LOCATION, PostQueryService.editorPath(row.id()))
+                    .header(HttpHeaders.CACHE_CONTROL, CacheControlPolicy.NO_STORE)
+                    .build();
+        }
+        String cacheControl =
+                CacheControlPolicy.forPost(row.status(), row.visibility(), row.isHidden());
+        return html(shell.render(postMeta(row)), cacheControl);
+    }
+
+    /** ⑥의 메타. 작성자가 보는 비공개·숨김 글은 공개 메타 대신 공통 문구 + {@code noindex}(FR-045, research R-18). */
+    private LinkPreviewMeta postMeta(PostDetailRow row) {
+        if (row.visibility() != Visibility.PUBLIC || row.isHidden()) {
+            return LinkPreviewMeta.unavailable();
+        }
+        return LinkPreviewMeta.empty();
     }
 
     /** 원래 쿼리 문자열을 유지한 영구 이동 (research R-32). */
