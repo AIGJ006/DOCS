@@ -169,10 +169,10 @@ description: "Task list for 012-trending-search (트렌딩·검색)"
 
 - [X] T040 [P] 권한 매트릭스 `TR/permission/search.csv`(research R16 표, owner `012`)와 `T/discovery/integration/SearchPermissionMatrixIT.java`(004 하네스) — 006 plan `TrashedPostPermissionMatrixIT`의 검색·sitemap 행과 겹치지 않게 006 행은 006 테스트가 맡는다 (구현 메모: 행위자는 비회원·인증 전·회원·작성자·관리자(정지 세션 행은 정지 작성자의 글 노출 규칙이 이 기능 범위 밖이라 뺐다). 006 TrashedPostPermissionMatrixIT의 검색·sitemap 자리는 'assume 후 기능이 생기면 단언을 더한다(그 기능 몫)' 주석대로 이 작업에서 검색(전체·블로그)·트렌딩·sitemap 단언을 채웠다(006 파일 수정))
 - [ ] T041 [P] Playwright `E/trending-search.spec.ts` — quickstart §3 3·5~13, 375px 폭 가로 스크롤 없음, 탭·정렬 키보드 조작
-- [ ] T042 [P] 화면 접근성: 홈 탭(`aria-selected`), 검색창 이름 "검색"·"이 블로그에서 검색", `<mark>`가 색만이 아니라 굵기로도 구분되는지(대비 4.5:1)
+- [X] T042 [P] 화면 접근성: 홈 탭(`aria-selected`), 검색창 이름 "검색"·"이 블로그에서 검색", `<mark>`가 색만이 아니라 굵기로도 구분되는지(대비 4.5:1) (구현 메모: 홈·검색 탭 role=tab + aria-selected, 정렬 aria-pressed, 검색창 이름 '검색'·'이 블로그에서 검색'(검색 화면 입력은 '검색어'), <mark>는 굵게(700) + --color-mark-bg 토큰(라이트·다크 짝, 016 tokenContrast 짝 목록에 본문색 4.5:1로 더함))
 - [ ] T043 공용 조건 회귀: 004 `VisibilityFilter`를 쓰는 다른 목록(홈·블로그·피드·태그) 테스트를 함께 돌려 `findCardsByIds` 추가가 기존 카드 SQL을 바꾸지 않았는지 확인
-- [ ] T044 [P] 005 `T/discovery/ReadingContractConformanceIntegrationTest.java`처럼 openapi 예시와 실제 응답 모양 비교 테스트를 트렌딩·검색에 더한다(`snippet.marks` 모양 포함)
-- [ ] T045 운영 확인 메모를 quickstart §0에 맞춰 남긴다: 운영 PostgreSQL의 `pg_trgm` 확장 생성 권한, `blog.site.base-url` 운영값, 검색 엔진 콘솔 sitemap 등록
+- [X] T044 [P] 005 `T/discovery/ReadingContractConformanceIntegrationTest.java`처럼 openapi 예시와 실제 응답 모양 비교 테스트를 트렌딩·검색에 더한다(`snippet.marks` 모양 포함) (구현 메모: DiscoveryContractConformanceIT — 005 검증기를 그대로 옮기고 enum(notice) 검사를 더했다. 글 검색(첫·다음 페이지·최신순·빈 결과), 사람 검색, 트렌딩(즉시 계산·스냅샷·이어 보기), 410·400·404 오류 본문)
+- [X] T045 운영 확인 메모를 quickstart §0에 맞춰 남긴다: 운영 PostgreSQL의 `pg_trgm` 확장 생성 권한, `blog.site.base-url` 운영값, 검색 엔진 콘솔 sitemap 등록 (구현 메모: quickstart §0 '운영 확인 메모' 표로 남겼다(pg_trgm 권한, base-url, 검색 엔진 콘솔, ShedLock, 요청 제한 IP). §2 성능 시험 명령을 -Dblog.perf=true로 고쳤다)
 - [ ] T046 성능 결정: T011·T023 측정 결과로 `ix_comment_post_author`(32 ERD 제안)·`blog.search.recent-window` 조정이 필요한지 판단해 기록한다. 인덱스가 필요하면 V3 이후 마이그레이션 작업(`R/db/migration/V{다음}__comment_post_author_index.sql`, `CREATE INDEX CONCURRENTLY`는 Flyway 트랜잭션 밖 설정)을 새로 만든다 — V1/V2는 고치지 않는다
 - [ ] T047 quickstart.md §2 명령 전체 실행, §3 수동 확인, §4 다른 기능 확인(있는 기능만) 결과를 기록한다
 
