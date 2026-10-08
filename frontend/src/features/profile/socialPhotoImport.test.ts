@@ -11,7 +11,7 @@ import {
 } from './socialPhotoImport';
 
 const PHOTO = 'https://lh3.googleusercontent.com/a/abc=s256-c';
-const UPLOAD_URL = 'http://localhost:9000/blog/profile/1.webp';
+const UPLOAD_URL = 'http://localhost:9000/blog/images/2026/10/p.webp';
 
 function deps(overrides: Partial<PhotoImportDeps> = {}): PhotoImportDeps {
   return {
@@ -24,9 +24,21 @@ function deps(overrides: Partial<PhotoImportDeps> = {}): PhotoImportDeps {
 function uploadRoutes() {
   return stubFetch({
     'POST /api/images/presign': () =>
-      json(201, { imageId: 41, uploadUrl: UPLOAD_URL, uploadHeaders: { 'x-amz-acl': 'private' } }),
+      json(201, {
+        imageId: 41,
+        upload: {
+          url: UPLOAD_URL,
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'image/webp',
+            'Cache-Control': 'public, max-age=31536000, immutable',
+          },
+        },
+        thumbUpload: null,
+        expiresAt: '2026-10-08T00:05:00Z',
+      }),
     [`PUT ${UPLOAD_URL}`]: () => new Response(null, { status: 200 }),
-    'POST /api/images/41/complete': () => json(200, { id: 41 }),
+    'POST /api/images/41/complete': () => json(200, { imageId: 41 }),
     'PATCH /api/me/profile': () => json(200, { profileImageId: 41 }),
   });
 }
@@ -64,7 +76,9 @@ describe('importSocialPhoto', () => {
     const [put] = requestsTo(fetchMock, 'PUT', UPLOAD_URL);
     expect(put?.[1]?.body).toBeInstanceOf(Blob);
     expect((put?.[1]?.headers as Record<string, string>)['Content-Type']).toBe('image/webp');
-    expect((put?.[1]?.headers as Record<string, string>)['x-amz-acl']).toBe('private');
+    expect((put?.[1]?.headers as Record<string, string>)['Cache-Control']).toBe(
+      'public, max-age=31536000, immutable',
+    );
     expect(put?.[1]?.credentials).toBe('omit');
     const [patch] = requestsTo(fetchMock, 'PATCH', '/api/me/profile');
     expect(JSON.parse(String(patch?.[1]?.body))).toEqual({ profileImageId: 41 });

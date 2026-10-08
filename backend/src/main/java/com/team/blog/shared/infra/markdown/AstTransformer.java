@@ -10,6 +10,7 @@ import java.util.IdentityHashMap;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -31,6 +32,10 @@ import org.springframework.stereotype.Component;
  *   <li>제목 한 단계 낮춤: 1→2 … 5→6, 6은 6 (본문에 {@code h1} 없음)
  *   <li>이미지: 본문의 우리 저장소 키를 모아 {@link ImageReferenceResolver#findOwned}를 한 번 부르고, 작성자 사진이면 주소를 지금 공개
  *       주소로 바꾸고 키를 본문 순서로 모은다. 외부 이미지·남이 올린 사진은 "[이미지] 대체글"(없으면 주소) 링크로 바꾼다.
+ *   <li>작성자 GIF(003 US6, research R11): 썸네일이 있으면 {@code Link(원본, title="움직이는 이미지 재생")} 안의 {@code
+ *       Image(썸네일)}로 바꾼다 — 처음에는 정지 장면을 보이고 화면의 {@code gifPlayer}가 눌렀을 때 원본으로 바꾼다. 썸네일 주소는 {@link
+ *       OwnedImage#thumbStorageKey()} 그대로(확장자를 가정하지 않음). 썸네일이 없는 옛 GIF와 이미 링크 안에 있는 GIF(링크 중첩 금지)는
+ *       바꾸지 않는다.
  * </ol>
  *
  * 제목 {@code id}는 렌더링 때 {@link HeadingAnchorProvider}가 붙인다(commonmark 노드에 속성을 둘 곳이 없어서). 트리는 재귀 없이
@@ -40,6 +45,9 @@ import org.springframework.stereotype.Component;
 public class AstTransformer {
 
     static final String IMAGE_LINK_PREFIX = "[이미지] ";
+
+    /** 작성자 GIF를 감싼 링크의 title (003 US6, 화면 gifPlayer가 비어 있는 대체글 대신 쓴다). */
+    static final String GIF_PLAY_TITLE = "움직이는 이미지 재생";
 
     private final ImageReferenceResolver images;
     private final int maxNesting;
@@ -107,6 +115,7 @@ public class AstTransformer {
             if (key != null && owned.containsKey(key)) {
                 image.setDestination(images.publicUrlOf(key));
                 ownedKeys.add(key);
+                wrapPlayableGif(image, owned.get(key));
             } else {
                 imageLinks.add(replaceWithLink(image));
             }
@@ -116,6 +125,30 @@ public class AstTransformer {
             ownedInOrder.put(key, owned.get(key));
         }
         return new Result(List.copyOf(ownedKeys), ownedInOrder, imageLinks);
+    }
+
+    /** 작성자 GIF → 정지 장면(썸네일)을 원본 링크로 감싼다. */
+    private void wrapPlayableGif(Image image, OwnedImage owned) {
+        if (owned == null
+                || owned.thumbStorageKey() == null
+                || !owned.storageKey().toLowerCase(Locale.ROOT).endsWith(".gif")
+                || insideLink(image)) {
+            return;
+        }
+        Link link = new Link(image.getDestination(), GIF_PLAY_TITLE);
+        image.insertBefore(link);
+        image.unlink();
+        image.setDestination(images.publicUrlOf(owned.thumbStorageKey()));
+        link.appendChild(image);
+    }
+
+    private static boolean insideLink(Node node) {
+        for (Node parent = node.getParent(); parent != null; parent = parent.getParent()) {
+            if (parent instanceof Link) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private static Link replaceWithLink(Image image) {

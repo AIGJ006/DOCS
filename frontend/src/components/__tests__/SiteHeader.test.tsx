@@ -41,7 +41,7 @@ describe('공통 머리말 (SiteHeader)', () => {
     renderHeader('/somebody');
 
     const header = screen.getByRole('banner');
-    expect(within(header).getByRole('link', { name: '블로그' })).toHaveAttribute('href', '/');
+    expect(within(header).getByRole('link', { name: 'BuildLOG' })).toHaveAttribute('href', '/');
     const login = await within(header).findByRole('link', { name: '로그인' });
     // 지금 보던 화면으로 돌아오게 returnTo를 붙인다
     expect(login).toHaveAttribute('href', '/login?returnTo=%2Fsomebody');
@@ -153,7 +153,7 @@ describe('공통 머리말 (SiteHeader)', () => {
     stubFetch({ 'GET /api/me': () => new Promise<Response>(() => undefined) });
     renderHeader('/');
     const header = screen.getByRole('banner');
-    expect(within(header).getByRole('link', { name: '블로그' })).toBeInTheDocument();
+    expect(within(header).getByRole('link', { name: 'BuildLOG' })).toBeInTheDocument();
     expect(within(header).queryByRole('link', { name: '로그인' })).toBeNull();
     expect(within(header).queryByRole('button', { name: /계정 메뉴/ })).toBeNull();
   });

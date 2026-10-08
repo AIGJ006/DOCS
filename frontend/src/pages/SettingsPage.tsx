@@ -22,6 +22,7 @@ import { uploadProfileImage } from '../features/profile/uploadProfileImage';
 import PasswordChangeForm from '../features/settings/PasswordChangeForm';
 import { formatDate } from '../features/time/dateFormat';
 import VisibilitySelect from '../features/visibility/VisibilitySelect';
+import StorageUsageBar from '../components/StorageUsageBar';
 import '../features/auth/auth.css';
 import '../features/settings/settings.css';
 
@@ -115,6 +116,10 @@ export default function SettingsPage() {
         }}
       />
       <AccountSection settings={settings} onChange={setSettings} />
+      <section aria-labelledby="storage-title">
+        <h2 id="storage-title">사진 저장 공간</h2>
+        <StorageUsageBar />
+      </section>
       <FriendLists />
       <section aria-labelledby="withdraw-title">
         <h2 id="withdraw-title">회원 탈퇴</h2>

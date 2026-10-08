@@ -32,6 +32,19 @@ final class TestRenderers {
     /** {@link #OTHER}가 올린 사진. */
     static final String OTHERS_KEY = "images/2026/09/99999999-8888-4777-8666-555555555555.jpg";
 
+    /** {@link #AUTHOR}가 올린 GIF (썸네일은 사파리 대체로 {@code .jpg}, 003 US6). */
+    static final String OWNED_GIF_KEY = "images/2026/10/a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d.gif";
+
+    static final String OWNED_GIF_THUMB_KEY =
+            "images/2026/10/a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d_thumb.jpg";
+
+    /** {@link #AUTHOR}가 올린 옛 GIF (썸네일 없음). */
+    static final String OWNED_GIF_NO_THUMB_KEY =
+            "images/2025/03/22222222-3333-4444-8555-666666666666.gif";
+
+    /** {@link #OTHER}가 올린 GIF. */
+    static final String OTHERS_GIF_KEY = "images/2026/09/77777777-6666-4555-8444-333333333333.gif";
+
     static final ExecutorService EXECUTOR =
             Executors.newFixedThreadPool(
                     4,
@@ -47,7 +60,13 @@ final class TestRenderers {
         return new StubImageReferenceResolver()
                 .own(AUTHOR, OWNED_KEY, OWNED_THUMB_KEY)
                 .own(AUTHOR, OWNED_NO_THUMB_KEY, null)
-                .own(OTHER, OTHERS_KEY, null);
+                .own(OTHER, OTHERS_KEY, null)
+                .own(AUTHOR, OWNED_GIF_KEY, OWNED_GIF_THUMB_KEY)
+                .own(AUTHOR, OWNED_GIF_NO_THUMB_KEY, null)
+                .own(
+                        OTHER,
+                        OTHERS_GIF_KEY,
+                        "images/2026/09/77777777-6666-4555-8444-333333333333_thumb.webp");
     }
 
     static DefaultContentRenderer create() {

@@ -10,6 +10,7 @@ import com.team.blog.post.domain.Visibility;
 import com.team.blog.post.infra.PostDraftRepository;
 import com.team.blog.post.infra.PostRepository;
 import com.team.blog.post.support.AuthoringFixtures;
+import com.team.blog.shared.application.markdown.RenderVersion;
 import com.team.blog.support.IntegrationTestBase;
 import com.team.blog.support.SqlCounter;
 import com.team.blog.support.fixture.PostFixtures;
@@ -49,7 +50,8 @@ class PostPersistenceIT extends IntegrationTestBase {
         Map<String, Object> row = jdbc.queryForMap("SELECT * FROM post WHERE id = ?", saved.id());
         assertThat(row.get("edit_version")).isEqualTo(0L);
         assertThat(row.get("status")).isEqualTo("DRAFT");
-        assertThat(row.get("render_version")).isEqualTo(1);
+        // 003 US6에서 규칙이 2로 올랐다 — 새 글은 지금 규칙 버전으로 저장된다
+        assertThat(row.get("render_version")).isEqualTo(RenderVersion.CURRENT);
         assertThat(row.get("content_html")).isEqualTo("");
         assertThat(row.get("visibility")).isEqualTo("PRIVATE");
         assertThat(row.get("title")).isEqualTo("제목");

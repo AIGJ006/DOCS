@@ -9,8 +9,9 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
 /**
- * 저장한 본문의 작성자 사진 찾기·연결 (003 FR-022: 수동 저장·1분 반영·DB 직접 저장 때 {@code post_image} 연결). 사진 판별은 발행과 같은
- * 렌더러 규칙을 쓴다. 렌더링이 실패해도(너무 복잡한 글) 저장은 막지 않고 연결만 건너뛴다. 렌더링은 트랜잭션 밖에서 한다.
+ * 저장한 본문의 작성자 사진 찾기·연결 (수동 저장·1분 반영·DB 직접 저장 때 {@code post_image} 연결). 사진 판별은 발행과 같은 렌더러 규칙을 쓴다 —
+ * 003 최종 규칙: 작성자가 올린 완료된 글 사진만 연결하고, 남의 사진·완료 전 사진은 링크로 바뀌어 연결되지 않는다 ({@link ImageService} 주석의 회귀
+ * 테스트 목록). 렌더링이 실패해도(너무 복잡한 글) 저장은 막지 않고 연결만 건너뛴다. 렌더링은 트랜잭션 밖에서 한다.
  */
 @Component
 public class SavedContentImages {

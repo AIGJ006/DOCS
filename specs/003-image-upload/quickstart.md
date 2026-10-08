@@ -42,11 +42,14 @@ S3_ENDPOINT=https://<NHN 엔드포인트> APP_KEY=… APP_SECRET=… BUCKET=blog
 ## 2. 자동 테스트 (기본 검증 경로)
 
 ```bash
-./mvnw -pl backend verify -Dit.test='ImagePresignIT,ImageCompleteIT,ImageLinkIT,ImageCleanupJobIT,StorageUsageApiIT,PublicBaseUrlChangeIT,ImagePermissionMatrixIT,ImageReferenceResolverAdapterIT,PublishIT,ManualSaveIT,AutosaveFlushJobIT,PublishQueryCountIT'
-./mvnw -pl backend test -Dtest='ImageHeaderReaderTest,StorageKeysTest,ImageUrlsTest'
+cd backend && ./mvnw verify -Dtest=none -Dsurefire.failIfNoSpecifiedTests=false \
+  -Dit.test='ImagePresignIT,ImageCompleteIT,ImageLinkIT,ProfileImageServiceIT,ImageCleanupJobIT,ImageCleanupLockIT,ImagePurgeServiceIT,StorageUsageApiIT,PublicBaseUrlChangeIT,ThumbnailUrlRebaseIT,GifRerenderIT,ImageRedisOomIT,ImageUploadPerformanceIT,ImagePermissionMatrixIT,ImageReferenceResolverAdapterIT,PublishIT,ManualSaveIT,AutosaveFlushJobIT,PublishQueryCountIT,RerenderJobIT'
+cd backend && ./mvnw test -Dtest='ImageHeaderReaderTest,StorageKeysTest,ImageUrlsTest,GifRenderingTest,AltRenderingTest,ContentRendererSyntaxTest'
 (cd frontend && npm test -- image-upload gifPlayer AltTextPanel StorageUsageBar)
-(cd frontend && npx playwright test image-upload.spec.ts --project=chromium --project=webkit)
+(cd frontend && npx playwright test e2e/image-upload.spec.ts --workers=1)   # 저장소·앱을 띄운 뒤 (웹킷은 설치된 경우만 --project 추가)
 ```
+
+성능 측정(`ImageUploadPerformanceIT`, 2026-10-08, 로컬 Testcontainers PostgreSQL·Redis·silo, 각 100회): presign p95 30ms(목표 200ms), complete p95 26ms(목표 1초, 1920px WebP + 640px 썸네일).
 
 | 테스트 | 확인하는 것 | 근거 |
 |---|---|---|
@@ -65,6 +68,7 @@ S3_ENDPOINT=https://<NHN 엔드포인트> APP_KEY=… APP_SECRET=… BUCKET=blog
 1. 인증 회원으로 `/write` → GPS 정보가 든 5MB JPEG를 붙여넣는다.
    - 기대: 본문에 `![](http://localhost:9000/blog/images/2026/10/{uuid}.webp)`, 사진이 보인다.
    - `curl -s {주소} | exiftool -` 결과에 GPS 항목이 없다(SC-002). 개발자 도구 Network에서 PUT 크기가 약 300~500KB(SC-001).
+   - 측정 결과(2026-10-08, 크로미엄 141·로컬 MinIO, `e2e/image-upload.spec.ts`의 `E2E_SC001_FILE` 측정): 4,032×3,024 JPEG 4.69MB(잡음이 많은 최악 질감) → 원본 WebP 1920×1440 575KB, 썸네일 77KB. 일반 사진 질감이면 300~500KB 안이고, 잡음이 많은 사진은 조금 넘을 수 있다. 같은 시험에서 GPS EXIF가 든 JPEG의 결과 파일에 `Exif`·`GPS`·`XMP` 표식이 없음을 확인했다(SC-002).
 2. 사파리(맥 또는 아이폰)에서 같은 사진을 넣는다. 기대: 주소가 `.jpg`, 썸네일도 `_thumb.jpg`, 카드·본문에 정상 표시(Q4).
 3. 개발자 도구에서 오프라인으로 바꾸고 사진을 붙여넣는다. 기대: 사진이 보이고 본문에 `local:` 표시, 자동 저장 성공, [발행]은 "업로드가 끝나지 않은 사진이 있어요". 온라인으로 바꾸면 주소로 바뀐다(US3).
 4. 다른 회원의 사진 주소를 내 글에 넣고 발행한다. 기대: 내 글에서는 링크, 원래 글에서는 이미지(US2 #1).
@@ -78,6 +82,8 @@ S3_ENDPOINT=https://<NHN 엔드포인트> APP_KEY=… APP_SECRET=… BUCKET=blog
 1. 사진 있는 공개 글 9개를 만든다(원본 약 400KB, 썸네일 약 40KB).
 2. 홈(`/`)을 캐시 비우고 연다. Network 필터 `images/` → 썸네일 9장의 전송량 합계가 약 0.4MB(원본 사용 시 약 3.6MB)인지 확인한다.
 3. 결과를 005 quickstart의 SC-005 표와 이 문서에 적는다.
+
+측정 결과(2026-10-08, 크로미엄·로컬 silo, `e2e/image-upload.spec.ts` "홈 카드 9장" + `E2E_SC001_FILE` 잡음 많은 4.69MB JPEG 9장): 캐시를 비운 홈에서 썸네일 9장 690,174B(장당 약 77KB), 같은 9장의 원본이면 5,178,456B — 비율 0.133(약 1/7.5). 홈은 원본을 하나도 받지 않았다. 일반 사진(썸네일 약 40KB)이면 목표 약 0.4MB에 가깝다. 005 quickstart SC-005 표에는 005 담당이 옮겨 적는다(다른 기능 문서는 고치지 않음).
 
 ## 5. 정리 배치 수동 실행
 
@@ -95,6 +101,6 @@ psql … -c "UPDATE image SET detached_at = now() - interval '8 days' WHERE id =
 1. 새 주소가 같은 파일을 내주는지 확인(`curl -I {새 주소}/images/…`). 옛 주소도 계속 열려 있어야 한다.
 2. `BLOG_IMAGE_PUBLIC_BASE_URL`을 새 주소로, 옛 주소를 `blog.image.legacy-base-urls`에 추가하고 재기동(CSP·정화 허용 목록은 같은 설정을 읽음).
 3. 발행 글 전체 다시 렌더링(002 `RerenderJob` 운영 실행).
-4. `UPDATE post SET thumbnail_url = :new || substr(thumbnail_url, length(:old) + 1) WHERE thumbnail_url LIKE :old || '/%';`
+4. 글 썸네일 주소 바꾸기: `psql "$DATABASE_URL" -v old={옛 주소} -v new={새 주소} -f scripts/sql/rebase-image-urls.sql` (한 트랜잭션, 바뀐 행 수 출력, `ThumbnailUrlRebaseIT`가 확인). 조건은 `LIKE` 대신 "옛 주소 + `/`로 시작"을 그대로 비교한다(주소의 `_`가 LIKE 와일드카드로 읽히지 않게)
 5. 다시 렌더링이 끝나면 CSP에서 옛 출처를 뺀다. 옛 주소 목록에서는 지우지 않는다.
 6. 확인: 옛 주소로 쓴 글이 이미지로 보이고(링크 아님), 원문 Markdown은 그대로다(US8).

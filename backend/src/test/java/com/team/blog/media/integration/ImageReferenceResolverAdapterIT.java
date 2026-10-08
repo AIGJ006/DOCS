@@ -10,7 +10,10 @@ import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 
-/** 사진 판별 임시 어댑터 (002 T025, 12 §6, 23 §2-4). 공개 주소는 테스트 기본값 {@code http://localhost:9000/blog}. */
+/**
+ * 사진 판별 어댑터 (002 T025 → 003 T017·T045, 12 §6, 23 §2-4). 공개 주소는 테스트 기본값 {@code
+ * http://localhost:9000/blog}. 주소 판별의 세부 경우는 {@code ImageUrlsTest}로 옮겼고 여기서는 위임이 같은 결과를 주는지만 본다.
+ */
 class ImageReferenceResolverAdapterIT extends IntegrationTestBase {
 
     private static final String BASE = "http://localhost:9000/blog";
@@ -29,14 +32,8 @@ class ImageReferenceResolverAdapterIT extends IntegrationTestBase {
         assertThat(adapter.keyOf("https://other.example/blog/" + KEY)).isEmpty();
         assertThat(adapter.keyOf(BASE + "/files/" + KEY)).isEmpty();
         assertThat(adapter.keyOf(BASE + "/" + KEY + "?x=1")).isEmpty();
-        assertThat(
-                        adapter.keyOf(
-                                BASE + "/images/2026/13/0b6e1f5c-2a3d-4f7e-9c1a-5d8e7f6a1b2c.webp"))
-                .isEmpty();
-        assertThat(adapter.keyOf(BASE + "/images/2026/10/not-a-uuid.webp")).isEmpty();
-        assertThat(adapter.keyOf(BASE + "/" + KEY.replace(".webp", ".svg"))).isEmpty();
-        assertThat(adapter.keyOf(BASE + "blog/" + KEY)).isEmpty();
         assertThat(adapter.keyOf(null)).isEmpty();
+        // 그 밖의 판별 경우(월 13, uuid 아님, svg, 대소문자, 끝 슬래시)는 ImageUrlsTest (003 T045)
     }
 
     @Test
@@ -69,6 +66,18 @@ class ImageReferenceResolverAdapterIT extends IntegrationTestBase {
     }
 
     @Test
+    void 완료_전_사진은_작성자_사진이_아니다() {
+        long author = members().member().create();
+        jdbc.update(
+                "INSERT INTO image (uploader_id, storage_key, content_type, size_bytes)"
+                        + " VALUES (?, ?, 'image/webp', 1000)",
+                author,
+                KEY);
+
+        assertThat(adapter.findOwned(List.of(KEY), author)).isEmpty();
+    }
+
+    @Test
     void 공개_주소는_지금_설정값으로_만든다() {
         assertThat(adapter.publicUrlOf(KEY)).isEqualTo(BASE + "/" + KEY);
     }
@@ -76,7 +85,7 @@ class ImageReferenceResolverAdapterIT extends IntegrationTestBase {
     private void insertImage(long uploader, String key, String thumb) {
         jdbc.update(
                 "INSERT INTO image (uploader_id, storage_key, thumb_storage_key, content_type,"
-                        + " size_bytes) VALUES (?, ?, ?, 'image/webp', 1000)",
+                        + " size_bytes, width, height) VALUES (?, ?, ?, 'image/webp', 1000, 640, 480)",
                 uploader,
                 key,
                 thumb);

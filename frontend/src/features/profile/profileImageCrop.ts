@@ -47,7 +47,7 @@ export function cropRect(
 
 type CanvasFactory = () => HTMLCanvasElement;
 
-/** 256×256 WebP(못 만드는 브라우저는 PNG) Blob. */
+/** 256×256 WebP Blob. WebP를 못 만드는 브라우저(사파리 — PNG를 돌려줌)는 JPEG로 다시 만든다(003 Q4·R14). */
 export function renderSquare(
   image: HTMLImageElement,
   crop: CropState,
@@ -65,11 +65,15 @@ export function renderSquare(
   }
   context.imageSmoothingQuality = 'high';
   context.drawImage(image, sx, sy, size, size, 0, 0, PROFILE_OUTPUT_SIZE, PROFILE_OUTPUT_SIZE);
-  return new Promise((resolve, reject) => {
-    canvas.toBlob(
-      (blob) => (blob ? resolve(blob) : reject(new Error('toBlob failed'))),
-      'image/webp',
-      0.9,
-    );
-  });
+  const encode = (type: string) =>
+    new Promise<Blob>((resolve, reject) => {
+      canvas.toBlob(
+        (blob) => (blob ? resolve(blob) : reject(new Error('toBlob failed'))),
+        type,
+        0.9,
+      );
+    });
+  return encode('image/webp').then((blob) =>
+    blob.type === 'image/webp' ? blob : encode('image/jpeg'),
+  );
 }

@@ -33,7 +33,8 @@ export interface AutosaveDeps {
   /** 서버가 `initial.baseVersion`에 가진 내용. 없으면 `initial`과 같다(보낼 것 없음). */
   server?: { title: string; contentMd: string };
   send: (body: SaveRequest) => Promise<SaveResponse>;
-  saveLocal: (draft: LocalDraft) => Promise<void>;
+  /** 대기 사진(`pendingImages`)은 넘기지 않는다 — 저장소가 그대로 둔다(003 US3). */
+  saveLocal: (draft: Omit<LocalDraft, 'pendingImages'>) => Promise<void>;
   onStatus: (status: AutosaveStatus) => void;
   onConflict?: (error: ApiError) => void;
   onSaved?: (response: SaveResponse) => void;
@@ -280,7 +281,6 @@ export class AutosaveQueue {
         contentMd: this.contentMd,
         baseVersion: this.version,
         dirty: this.hasUnsent(),
-        pendingImages: [],
         updatedAt: Date.now(),
       })
       .catch(() => undefined);

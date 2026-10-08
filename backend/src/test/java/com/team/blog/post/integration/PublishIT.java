@@ -48,7 +48,7 @@ class PublishIT extends IntegrationTestBase {
     private long image(long uploader, String key, String thumb) {
         return jdbc.queryForObject(
                 "INSERT INTO image (uploader_id, storage_key, thumb_storage_key, content_type,"
-                        + " size_bytes) VALUES (?, ?, ?, 'image/webp', 1000) RETURNING id",
+                        + " size_bytes, width, height) VALUES (?, ?, ?, 'image/webp', 1000, 640, 480) RETURNING id",
                 Long.class,
                 uploader,
                 key,

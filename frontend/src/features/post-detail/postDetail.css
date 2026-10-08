@@ -23,3 +23,44 @@
   max-width: 100%;
   height: auto;
 }
+
+/*
+ * 움직이는 GIF (003 T077, FR-039): 서버가 정지 장면을 원본 링크로 감싼다. class 없이 링크 모양으로 찾아 ▶를 얹고,
+ * 재생 중(aria-pressed="true")이면 감춘다. 누르기 전에는 움직이지 않으므로 prefers-reduced-motion 처리는 따로 없다.
+ */
+.post-detail-content a[href$='.gif'] {
+  position: relative;
+  display: inline-block;
+  max-width: 100%;
+}
+
+.post-detail-content a[href$='.gif'] > img[role='button'] {
+  cursor: pointer;
+}
+
+.post-detail-content a[href$='.gif'] > img[role='button']:focus-visible {
+  outline: 3px solid var(--color-focus);
+  outline-offset: 2px;
+}
+
+.post-detail-content a[href$='.gif']::after {
+  content: '▶';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 3rem;
+  height: 3rem;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.25rem;
+  color: var(--color-surface);
+  background: color-mix(in srgb, var(--color-text) 65%, transparent);
+  pointer-events: none;
+}
+
+.post-detail-content a[href$='.gif']:has(> img[aria-pressed='true'])::after {
+  display: none;
+}

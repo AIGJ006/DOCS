@@ -108,8 +108,8 @@ class ManualSaveIT extends IntegrationTestBase {
         long me = members().member().create();
         long imageId =
                 jdbc.queryForObject(
-                        "INSERT INTO image (uploader_id, storage_key, content_type, size_bytes)"
-                                + " VALUES (?, ?, 'image/webp', 1000) RETURNING id",
+                        "INSERT INTO image (uploader_id, storage_key, content_type, size_bytes, width, height)"
+                                + " VALUES (?, ?, 'image/webp', 1000, 640, 480) RETURNING id",
                         Long.class,
                         me,
                         KEY);

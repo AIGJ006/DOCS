@@ -27,8 +27,8 @@ import org.springframework.web.filter.OncePerRequestFilter;
  *       strict-origin-when-cross-origin}.
  * </ul>
  *
- * {@link CspContributor} Bean이 맞는 요청에만 {@code img-src}를 더한다. 002 plan의 {@code
- * SecurityHeadersConfig}는 이 필터를 가리킨다.
+ * {@link CspContributor} Bean이 맞는 요청에만 {@code img-src}·{@code connect-src}를 더한다(중복은 한 번만). 002
+ * plan의 {@code SecurityHeadersConfig}는 이 필터를 가리킨다.
  */
 @Component
 @Order(Ordered.HIGHEST_PRECEDENCE)
@@ -43,7 +43,7 @@ public class SecurityHeadersFilter extends OncePerRequestFilter {
     public SecurityHeadersFilter(CoreProperties properties, List<CspContributor> contributors) {
         this.storageOrigin = properties.image().publicOrigin();
         this.contributors = List.copyOf(contributors);
-        this.defaultPolicy = policy(List.of());
+        this.defaultPolicy = policy(List.of(), List.of());
     }
 
     @Override
@@ -65,23 +65,29 @@ public class SecurityHeadersFilter extends OncePerRequestFilter {
         if (contributors.isEmpty()) {
             return defaultPolicy;
         }
-        List<String> extra = new ArrayList<>();
+        List<String> extraImg = new ArrayList<>();
+        List<String> extraConnect = new ArrayList<>();
         for (CspContributor contributor : contributors) {
             if (contributor.appliesTo(request)) {
-                extra.addAll(contributor.extraImgSrc());
+                extraImg.addAll(contributor.extraImgSrc());
+                extraConnect.addAll(contributor.extraConnectSrc());
             }
         }
-        return extra.isEmpty() ? defaultPolicy : policy(extra);
+        return extraImg.isEmpty() && extraConnect.isEmpty()
+                ? defaultPolicy
+                : policy(extraImg, extraConnect);
     }
 
-    private String policy(List<String> extraImgSrc) {
+    private String policy(List<String> extraImgSrc, List<String> extraConnectSrc) {
         Set<String> img = new LinkedHashSet<>(List.of("'self'", storageOrigin, "data:", "blob:"));
         img.addAll(extraImgSrc);
+        Set<String> connect = new LinkedHashSet<>(List.of("'self'", storageOrigin));
+        connect.addAll(extraConnectSrc);
         return String.join(
                 "; ",
                 "default-src 'self'",
                 "script-src 'self'",
-                "connect-src 'self' " + storageOrigin,
+                "connect-src " + String.join(" ", connect),
                 "img-src " + String.join(" ", img),
                 "style-src 'self' 'unsafe-inline'",
                 "object-src 'none'",
