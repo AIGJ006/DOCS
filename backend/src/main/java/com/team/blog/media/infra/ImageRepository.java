@@ -138,6 +138,13 @@ public class ImageRepository {
                 .update();
     }
 
+    /** 검사에 떨어진 완료 전 행을 지운다 (이미 완료된 행은 건드리지 않는다). */
+    public int deleteIncomplete(long id) {
+        return jdbc.sql("DELETE FROM image WHERE id = :id AND width IS NULL")
+                .param("id", id)
+                .update();
+    }
+
     public int deleteById(long id) {
         return jdbc.sql("DELETE FROM image WHERE id = :id").param("id", id).update();
     }

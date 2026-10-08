@@ -39,12 +39,12 @@ public class StorageClientConfig {
                 .httpClient(
                         UrlConnectionHttpClient.builder()
                                 .connectionTimeout(Duration.ofSeconds(2))
-                                .socketTimeout(Duration.ofSeconds(10))
+                                .socketTimeout(Duration.ofSeconds(5))
                                 .build())
                 .overrideConfiguration(
                         o ->
-                                o.apiCallTimeout(Duration.ofSeconds(20))
-                                        .apiCallAttemptTimeout(Duration.ofSeconds(10)))
+                                o.apiCallTimeout(Duration.ofSeconds(10))
+                                        .apiCallAttemptTimeout(Duration.ofSeconds(5)))
                 .build();
     }
 
