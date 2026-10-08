@@ -5,6 +5,7 @@ import { logout } from '../features/auth/logout';
 import { useSession } from '../features/auth/useSession';
 import NotificationBell from '../features/notification/NotificationBell';
 import type { MeSummary } from '../api/me';
+import ThemeToggle from '../features/theme/ThemeToggle';
 import DefaultAvatar from './DefaultAvatar';
 import './siteHeader.css';
 
@@ -23,7 +24,7 @@ function loginHref(pathname: string, search: string): string {
  * - 비로그인: [로그인] [회원 가입]
  * - 로그인: [글쓰기] · 피드(010) · 내 블로그 · 알림 종(011) · 계정 메뉴(내 글 관리 · 설정 · 로그아웃)
  * - 글쓰기 화면(`/write/*`)에서는 [글쓰기]만 숨긴다. 머리말 자체는 남긴다 — 016 테마 버튼이 "어느 페이지에서나 같은 자리"(45 T-4).
- * - 맨 오른쪽은 016 테마 전환 버튼 자리다. 010 [피드]·011 알림 🔔도 이 줄의 `site-header-actions`에 더한다.
+ * - 맨 오른쪽은 016 테마 전환 버튼(`ThemeToggle`)이다. 010 [피드]·011 알림 🔔도 이 줄의 `site-header-actions`에 더하되 테마 버튼보다 앞에 둔다.
  */
 export default function SiteHeader() {
   const { loading, me } = useSession();
@@ -50,8 +51,9 @@ export default function SiteHeader() {
               <Link to={`/@${me.handle}`} className="site-header-link site-header-wide-only">
                 내 블로그
               </Link>
-              <NotificationBell />
               <AccountMenu me={me} />
+              {/* 011: 계정 메뉴 옆, 테마 버튼 바로 앞 */}
+              <NotificationBell />
             </>
           ) : (
             <>
@@ -63,6 +65,8 @@ export default function SiteHeader() {
               </Link>
             </>
           )}
+          {/* 016: 모든 페이지 같은 자리(맨 오른쪽), 비회원·불러오는 중에도 */}
+          <ThemeToggle />
         </nav>
       </div>
     </header>

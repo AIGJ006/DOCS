@@ -19,7 +19,7 @@
   border: 1px solid var(--color-brand-fill);
   border-radius: 22px;
   background: var(--color-brand-fill);
-  color: var(--color-bg);
+  color: var(--color-on-fill);
   font: inherit;
   font-weight: 600;
   cursor: pointer;

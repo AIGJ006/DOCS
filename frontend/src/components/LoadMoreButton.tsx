@@ -20,7 +20,7 @@ export interface LoadMoreButtonProps {
 export default function LoadMoreButton({ status, done, onLoadMore, onRetry }: LoadMoreButtonProps) {
   if (done) {
     return (
-      <p data-testid="all-seen" style={{ textAlign: 'center', color: 'var(--muted, #868e96)' }}>
+      <p data-testid="all-seen" style={{ textAlign: 'center', color: 'var(--color-text-muted)' }}>
         {ALL_SEEN_TEXT}
       </p>
     );

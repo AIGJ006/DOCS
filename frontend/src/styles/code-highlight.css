@@ -1,0 +1,99 @@
+/*
+ * 코드 강조 색 (016 FR-017, research R9, data-model §2-4). 002 `highlightCode.ts`가 붙인 highlight.js 클래스를 토큰으로 칠한다.
+ * 라이트(github)·다크(github-dark) 값은 `tokens.css`의 `--hljs-*`에 있고, 테마가 바뀌면 이 규칙은 그대로 값만 바뀐다.
+ * (두 CSS 파일을 함께 불러오면 같은 선택자라 뒤의 것이 이기므로 하나로 합쳤다.)
+ *
+ * 선택자 묶음 출처: highlight.js 11 `styles/github.css`·`styles/github-dark.css`
+ * Copyright (c) 2006, Ivan Sagalaev. BSD-3-Clause License (https://github.com/highlightjs/highlight.js/blob/main/LICENSE)
+ */
+.hljs {
+  color: var(--hljs-text);
+  background: var(--color-code-bg);
+}
+
+.hljs-doctag,
+.hljs-keyword,
+.hljs-meta .hljs-keyword,
+.hljs-template-tag,
+.hljs-template-variable,
+.hljs-type,
+.hljs-variable.language_ {
+  color: var(--hljs-keyword);
+}
+
+.hljs-title,
+.hljs-title.class_,
+.hljs-title.class_.inherited__,
+.hljs-title.function_ {
+  color: var(--hljs-title);
+}
+
+.hljs-attr,
+.hljs-attribute,
+.hljs-literal,
+.hljs-meta,
+.hljs-number,
+.hljs-operator,
+.hljs-variable,
+.hljs-selector-attr,
+.hljs-selector-class,
+.hljs-selector-id {
+  color: var(--hljs-attr);
+}
+
+.hljs-regexp,
+.hljs-string,
+.hljs-meta .hljs-string {
+  color: var(--hljs-string);
+}
+
+.hljs-built_in,
+.hljs-symbol {
+  color: var(--hljs-built-in);
+}
+
+.hljs-comment,
+.hljs-code,
+.hljs-formula {
+  color: var(--hljs-comment);
+}
+
+.hljs-name,
+.hljs-quote,
+.hljs-selector-tag,
+.hljs-selector-pseudo {
+  color: var(--hljs-name);
+}
+
+.hljs-subst {
+  color: var(--hljs-text);
+}
+
+.hljs-section {
+  color: var(--hljs-section);
+  font-weight: bold;
+}
+
+.hljs-bullet {
+  color: var(--hljs-bullet);
+}
+
+.hljs-emphasis {
+  color: var(--hljs-text);
+  font-style: italic;
+}
+
+.hljs-strong {
+  color: var(--hljs-text);
+  font-weight: bold;
+}
+
+.hljs-addition {
+  color: var(--hljs-addition);
+  background-color: var(--hljs-addition-bg);
+}
+
+.hljs-deletion {
+  color: var(--hljs-deletion);
+  background-color: var(--hljs-deletion-bg);
+}

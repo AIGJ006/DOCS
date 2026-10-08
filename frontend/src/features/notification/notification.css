@@ -30,7 +30,7 @@
   padding: 0 0.3rem;
   border-radius: 999px;
   background: var(--color-danger);
-  color: var(--color-on-danger);
+  color: var(--color-on-fill);
   font-size: 0.7rem;
   font-weight: 700;
   line-height: 1.15rem;
@@ -48,7 +48,7 @@
   background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: 0.5rem;
-  box-shadow: 0 4px 16px rgb(0 0 0 / 12%); /* raw-color-ok: 그림자 */
+  box-shadow: 0 4px 16px var(--color-shadow);
 }
 
 /* 좁은 화면: 종 위치와 관계없이 화면 안에 들어오게 고정 */

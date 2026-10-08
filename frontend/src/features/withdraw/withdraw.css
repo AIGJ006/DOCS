@@ -87,7 +87,7 @@
 .withdraw-actions .primary-action {
   border-color: var(--color-brand-fill);
   background: var(--color-brand-fill);
-  color: var(--color-bg);
+  color: var(--color-on-fill);
 }
 
 .withdraw-actions button:disabled {
