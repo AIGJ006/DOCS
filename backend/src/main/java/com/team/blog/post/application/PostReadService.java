@@ -49,6 +49,14 @@ public class PostReadService {
     }
 
     /**
+     * 그 글을 볼 수 있는가 — {@link #requireReadable}과 같은 판정을 예외 없이 돌려준다 (011 알림 처리 시점 확인, data-model §4).
+     * 없는 글은 {@code false}.
+     */
+    public boolean isReadable(long postId, Viewer viewer) {
+        return posts.findPostView(postId).map(post -> policy.canRead(post, viewer)).orElse(false);
+    }
+
+    /**
      * 읽기 판정 없이 그 글의 작성자 번호 (007 댓글 삭제 이벤트용 — 내 댓글은 글을 볼 수 없어도 지울 수 있다, 007 research R9). 없는 글은 빈 값.
      */
     public java.util.Optional<Long> findAuthorId(long postId) {

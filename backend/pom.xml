@@ -211,6 +211,12 @@
             <artifactId>testcontainers-junit-jupiter</artifactId>
             <scope>test</scope>
         </dependency>
+        <!-- 011: 비동기 알림 리스너 결과 기다리기 (고정 sleep 금지). 버전은 Spring Boot가 관리 -->
+        <dependency>
+            <groupId>org.awaitility</groupId>
+            <artifactId>awaitility</artifactId>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
 
     <build>
