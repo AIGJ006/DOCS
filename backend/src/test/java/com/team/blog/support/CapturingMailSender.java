@@ -32,9 +32,16 @@ public class CapturingMailSender extends JavaMailSenderImpl {
 
     private final Map<String, List<MimeMessage>> byRecipient = new ConcurrentHashMap<>();
 
+    /** 다음 발송 한 번을 실패시킨다 (015 메일 실패 시험). {@link #clear()}가 되돌린다. */
+    private final java.util.concurrent.atomic.AtomicBoolean failNext =
+            new java.util.concurrent.atomic.AtomicBoolean();
+
     @Override
     protected void doSend(MimeMessage[] mimeMessages, Object[] originalMessages)
             throws MailException {
+        if (failNext.getAndSet(false)) {
+            throw new org.springframework.mail.MailSendException("시험용 발송 실패");
+        }
         for (MimeMessage message : mimeMessages) {
             try {
                 Address[] recipients = message.getRecipients(Message.RecipientType.TO);
@@ -78,7 +85,13 @@ public class CapturingMailSender extends JavaMailSenderImpl {
         return lastTextFor(email).map(TOKEN::matcher).filter(Matcher::find).map(m -> m.group(1));
     }
 
+    /** 다음 발송 한 번을 {@code MailSendException}으로 실패시킨다. */
+    public void failNext() {
+        failNext.set(true);
+    }
+
     public void clear() {
+        failNext.set(false);
         byRecipient.clear();
     }
 
