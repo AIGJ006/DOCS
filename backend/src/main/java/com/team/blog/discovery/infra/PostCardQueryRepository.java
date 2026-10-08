@@ -72,6 +72,24 @@ public class PostCardQueryRepository {
     }
 
     /**
+     * 번호로 카드 읽기 (012 T005, research R2·R5·R8). 홈과 같은 SELECT + 비회원 기준 공용 조건({@link
+     * VisibilityFilter#forViewer}) + {@code p.id = ANY(:ids)} — 트렌딩 스냅샷·검색 결과의 글 중 <b>지금</b> 볼 수 있는
+     * 것만 돌려준다(FR-012). 순서는 보장하지 않으므로 부른 쪽이 번호 순서대로 맞춘다. 빈 목록이면 SQL 없이 빈 목록.
+     */
+    public List<PostCardRow> findCardsByIds(List<Long> ids) {
+        if (ids == null || ids.isEmpty()) {
+            return List.of();
+        }
+        SqlCondition condition = visibilityFilter.forViewer(Viewer.anonymous(), null);
+        Map<String, Object> params = new LinkedHashMap<>(condition.params());
+        params.put("ids", ids.toArray(Long[]::new));
+        return jdbc.sql(SELECT + condition.sql() + " AND p.id = ANY(:ids)")
+                .params(params)
+                .query(PostCardQueryRepository::toRow)
+                .list();
+    }
+
+    /**
      * {@link #findCards}가 실행하는 SQL과 매개변수 (005 T072 — 인덱스 사용을 {@code EXPLAIN}으로 확인할 때 같은 문장을 쓴다).
      */
     public CardQuery cardQuery(Viewer viewer, CardFilter filter, CursorKey after, int limit) {

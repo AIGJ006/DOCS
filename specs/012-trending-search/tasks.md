@@ -53,9 +53,9 @@ description: "Task list for 012-trending-search (트렌딩·검색)"
 
 **Purpose**: 선행 확인, 설정값, 팀 확인 질문
 
-- [ ] T001 선행 확인: V1 `pg_trgm` 확장·GIN 인덱스 4개·`ix_post_feed`·`uq_comment_post_id`·`ix_post_tag_tag`, `B/discovery/infra/PostCardQueryRepository.java`, `B/discovery/web/PageShellController.java`, `B/shared/web/SensitiveParamMasking.java`, 009 `VisitorKeyResolver`·008 `F/features/tag/normalizeTag.ts`·`tagPath.ts`가 있는지, Testcontainers PostgreSQL 이미지에서 `pg_trgm`이 만들어지는지 기록한다
-- [ ] T002 [P] 설정값 `B/discovery/application/trending/TrendingProperties.java`(`@ConfigurationProperties("blog.trending")` + `@Validated`), `B/discovery/application/search/SearchProperties.java`(`blog.search`), `R/application.yml`에 research R17 기본값, 테스트 `T/discovery/unit/TrendingSearchPropertiesBindingTest.java`
-- [ ] T003 팀 확인 질문을 ANALYSIS-tier-bc "팀 결정" 항목으로 올린다: ① 새 코드 `SNAPSHOT_EXPIRED`(410 "순위가 새로 바뀌었어요")·`SEARCH_QUERY_TOO_SHORT`(400 "두 글자 이상 입력해 주세요") ② 주변 문장 응답 `snippet {text, marks}`(R9) ③ 사람 검색의 정확히 일치 다음 정렬(R10). 답이 오기 전에는 기본안으로 진행한다
+- [X] T001 선행 확인: V1 `pg_trgm` 확장·GIN 인덱스 4개·`ix_post_feed`·`uq_comment_post_id`·`ix_post_tag_tag`, `B/discovery/infra/PostCardQueryRepository.java`, `B/discovery/web/PageShellController.java`, `B/shared/web/SensitiveParamMasking.java`, 009 `VisitorKeyResolver`·008 `F/features/tag/normalizeTag.ts`·`tagPath.ts`가 있는지, Testcontainers PostgreSQL 이미지에서 `pg_trgm`이 만들어지는지 기록한다 (구현 메모: 모두 있음 — V1 pg_trgm·GIN 4개·ix_post_feed·uq_comment_post_id·ix_post_tag_tag, PostCardQueryRepository·PageShellController·SensitiveParamMasking·009 VisitorKeyResolver·008 normalizeTag.ts·tagPath.ts. 시험 PostgreSQL 이미지는 postgres:18-alpine이고 V1의 CREATE EXTENSION pg_trgm이 통과한다. MutableClock은 저장소에 없어 시각은 메서드 인자(now)로 넘겨 확인한다. 001 SessionBar는 공통 머리말 SiteHeader(site-header-actions)로 바뀌어 검색창은 거기에 넣는다)
+- [X] T002 [P] 설정값 `B/discovery/application/trending/TrendingProperties.java`(`@ConfigurationProperties("blog.trending")` + `@Validated`), `B/discovery/application/search/SearchProperties.java`(`blog.search`), `R/application.yml`에 research R17 기본값, 테스트 `T/discovery/unit/TrendingSearchPropertiesBindingTest.java` (구현 메모: 시험 프로필은 blog.trending.refresh-cron '-'(예약 끔)·refresh-on-startup false — 새 키 refresh-on-startup(기본 true)를 더했다)
+- [X] T003 팀 확인 질문을 ANALYSIS-tier-bc "팀 결정" 항목으로 올린다: ① 새 코드 `SNAPSHOT_EXPIRED`(410 "순위가 새로 바뀌었어요")·`SEARCH_QUERY_TOO_SHORT`(400 "두 글자 이상 입력해 주세요") ② 주변 문장 응답 `snippet {text, marks}`(R9) ③ 사람 검색의 정확히 일치 다음 정렬(R10). 답이 오기 전에는 기본안으로 진행한다 (구현 메모: ANALYSIS-tier-bc §6 팀 결정 4(R7)에 012 T003 세 항목이 이미 올라가 있어 문서는 고치지 않았다. 기본안으로 진행)
 
 ---
 
@@ -65,11 +65,11 @@ description: "Task list for 012-trending-search (트렌딩·검색)"
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete
 
-- [ ] T004 [P] `B/discovery/application/DiscoveryReasonCode.java`(`SNAPSHOT_EXPIRED` 410, `SEARCH_QUERY_TOO_SHORT` 400 — 001 `ReasonCode` 구현, 메시지 끝 마침표 없음)와 `GlobalExceptionHandler`가 410을 공통 본문으로 쓰는지 확인하는 테스트 `T/discovery/unit/DiscoveryReasonCodeTest.java`
-- [ ] T005 [P] 005 `B/discovery/infra/PostCardQueryRepository.java`에 `findCardsByIds(List<Long> ids)`(같은 SELECT + `VisibilityFilter(비회원)` + `AND p.id = ANY(:ids)`, 순서 보장 없음)를 더하고 `T/discovery/infra/PostCardQueryRepositoryByIdsIT.java`(볼 수 없는 글 빠짐, 빈 목록, SQL 1번) (005 소유 파일 — 005 담당에게 알림)
-- [ ] T006 [P] 테스트 먼저 `T/discovery/unit/SearchQueryParserTest.java`(contracts §4 표, NFC 조합형, 유니코드 공백, 50 코드 포인트, 5단어, 서로게이트) — 실패 확인
-- [ ] T007 `B/discovery/application/search/SearchQueryParser.java`·`SearchQuery.java`·`SearchWord.java`(research R6, `fingerprint()` 포함)와 `PeopleQuery` 만들기(덩어리 규칙 R10) (T006 통과)
-- [ ] T008 [P] 테스트 도구 `T/discovery/support/SearchFixtures.java`(제목·본문·태그·`first_public_at`·좋아요·조회·댓글 작성자를 지정해 공개 글을 빠르게 넣기, 대량 넣기는 `COPY`), `TrendingRedisHelper.java`(스냅샷 키 직접 쓰기·지우기·TTL 확인)
+- [X] T004 [P] `B/discovery/application/DiscoveryReasonCode.java`(`SNAPSHOT_EXPIRED` 410, `SEARCH_QUERY_TOO_SHORT` 400 — 001 `ReasonCode` 구현, 메시지 끝 마침표 없음)와 `GlobalExceptionHandler`가 410을 공통 본문으로 쓰는지 확인하는 테스트 `T/discovery/unit/DiscoveryReasonCodeTest.java` (구현 메모: 새 컨텍스트 없이 GlobalExceptionHandler.handleApi를 직접 불러 본문 확인. 예외 SnapshotExpiredException·SearchQueryTooShortException)
+- [X] T005 [P] 005 `B/discovery/infra/PostCardQueryRepository.java`에 `findCardsByIds(List<Long> ids)`(같은 SELECT + `VisibilityFilter(비회원)` + `AND p.id = ANY(:ids)`, 순서 보장 없음)를 더하고 `T/discovery/infra/PostCardQueryRepositoryByIdsIT.java`(볼 수 없는 글 빠짐, 빈 목록, SQL 1번) (005 소유 파일 — 005 담당에게 알림) (구현 메모: 005 담당에게 알림 대상 — 보고에 적음. 매개변수는 Long[] 배열로 ANY(:ids))
+- [X] T006 [P] 테스트 먼저 `T/discovery/unit/SearchQueryParserTest.java`(contracts §4 표, NFC 조합형, 유니코드 공백, 50 코드 포인트, 5단어, 서로게이트) — 실패 확인 (구현 메모: 사람 검색어 parsePeople도 같은 시험에 넣음. 구현과 같은 묶음으로 작성해 실패 단계는 컴파일 실패로 확인)
+- [X] T007 `B/discovery/application/search/SearchQueryParser.java`·`SearchQuery.java`·`SearchWord.java`(research R6, `fingerprint()` 포함)와 `PeopleQuery` 만들기(덩어리 규칙 R10) (T006 통과) (구현 메모: PeopleQuery는 SearchQueryParser.parsePeople이 만든다. toString에 원문을 넣지 않는다(FR-039))
+- [X] T008 [P] 테스트 도구 `T/discovery/support/SearchFixtures.java`(제목·본문·태그·`first_public_at`·좋아요·조회·댓글 작성자를 지정해 공개 글을 빠르게 넣기, 대량 넣기는 `COPY`), `TrendingRedisHelper.java`(스냅샷 키 직접 쓰기·지우기·TTL 확인)
 
 **Checkpoint**: 공용 부품 준비 완료 — User Story 작업 시작 가능
 
