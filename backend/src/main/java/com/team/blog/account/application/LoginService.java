@@ -1,13 +1,11 @@
 package com.team.blog.account.application;
 
-import com.team.blog.account.domain.AuthIdentity;
-import com.team.blog.account.domain.Member;
-import com.team.blog.account.infra.AuthIdentityRepository;
-import com.team.blog.account.infra.MemberRepository;
+import com.team.blog.account.infra.LoginStampRepository;
+import com.team.blog.account.infra.LoginStampRepository.LoginStamp;
 import com.team.blog.shared.error.ApiException;
 import com.team.blog.shared.error.CommonReasonCode;
+import jakarta.persistence.EntityManager;
 import java.time.Clock;
-import java.time.Instant;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -18,24 +16,26 @@ import org.springframework.transaction.annotation.Transactional;
  * <p>정지 확인·만료 해제({@link SuspensionService#requireNotSuspended}), 재동의 판정({@link
  * AgreementService#needsReagreement})도 여기서 한다. 세션 {@code reagreementRequired} 표시와 실패 카운터 초기화(Redis
  * 쓰기 — 트랜잭션 밖)는 호출한 보안 처리기가 한다. 이메일 로그인·소셜 로그인 둘 다 이 메서드를 거친다.
+ *
+ * <p>SQL은 평소 3번이다: 열린 정지 1 + {@code last_login_at} 갱신(갱신 전 값·회원 상태를 함께 돌려받음) 1 + 동의 1(T145).
  */
 @Service
 public class LoginService {
 
-    private final AuthIdentityRepository authIdentities;
-    private final MemberRepository members;
+    private final LoginStampRepository loginStamps;
+    private final EntityManager entityManager;
     private final AgreementService agreementService;
     private final SuspensionService suspensionService;
     private final Clock clock;
 
     public LoginService(
-            AuthIdentityRepository authIdentities,
-            MemberRepository members,
+            LoginStampRepository loginStamps,
+            EntityManager entityManager,
             AgreementService agreementService,
             SuspensionService suspensionService,
             Clock clock) {
-        this.authIdentities = authIdentities;
-        this.members = members;
+        this.loginStamps = loginStamps;
+        this.entityManager = entityManager;
         this.agreementService = agreementService;
         this.suspensionService = suspensionService;
         this.clock = clock;
@@ -48,15 +48,13 @@ public class LoginService {
     @Transactional
     public LoginOutcome onSuccess(long memberId) {
         suspensionService.requireNotSuspended(memberId);
-        AuthIdentity identity =
-                authIdentities
-                        .findByMemberId(memberId)
+        // 기한 지난 정지를 방금 해제했으면(회원 상태 ACTIVE) 그 변경을 먼저 내보내야 아래 문장이 바뀐 상태를 읽는다. 바뀐 것이 없으면 SQL 없음.
+        entityManager.flush();
+        LoginStamp stamp =
+                loginStamps
+                        .record(memberId, clock.instant())
                         .orElseThrow(() -> new ApiException(CommonReasonCode.LOGIN_REQUIRED));
-        Member member =
-                members.findById(memberId)
-                        .orElseThrow(() -> new ApiException(CommonReasonCode.LOGIN_REQUIRED));
-        Instant previous = identity.recordLogin(clock.instant());
         boolean reagreement = !agreementService.needsReagreement(memberId).isEmpty();
-        return new LoginOutcome(previous, member.getStatus(), reagreement);
+        return new LoginOutcome(stamp.previousLoginAt(), stamp.status(), reagreement);
     }
 }

@@ -75,11 +75,20 @@ public class SuspensionService {
     @Transactional
     public void requireNotSuspended(long memberId) {
         Instant now = clock.instant();
-        liftIfExpired(memberId, now);
-        Optional<OpenSuspension> open = findOpen(memberId);
-        if (open.isPresent()) {
-            throw suspendedError(open.get());
+        Optional<MemberSuspension> open = suspensions.findOpenByMemberId(memberId);
+        if (open.isEmpty()) {
+            return;
         }
+        if (open.get().isExpiredAt(now)) {
+            // 드문 경로: 기한 지난 정지를 해제한 뒤 남은 열린 정지가 있는지 다시 본다(평소 로그인은 위 조회 1번으로 끝난다).
+            liftIfExpired(memberId, now);
+            Optional<OpenSuspension> remaining = findOpen(memberId);
+            if (remaining.isPresent()) {
+                throw suspendedError(remaining.get());
+            }
+            return;
+        }
+        throw suspendedError(toView(open.get()));
     }
 
     /** 정지 거부 오류 본문. */
