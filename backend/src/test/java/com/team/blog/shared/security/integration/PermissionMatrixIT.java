@@ -59,8 +59,8 @@ class PermissionMatrixIT extends AbstractPermissionMatrixIT {
         verifyWithForeignOwner(actor, target, action, status, code, owner);
     }
 
-    /** 아직 착수하지 않은 Tier B·C 기능 — 이 owner의 행만 대기로 남아도 된다 (014 숨김). 007 댓글 행은 comment.csv로 옮겼다. */
-    private static final Set<String> NOT_STARTED = Set.of("014");
+    /** 아직 착수하지 않은 Tier B·C 기능 — 이 owner의 행만 대기로 남아도 된다. 014가 post.hide·post.unhide 실행기를 등록해 비었다. */
+    private static final Set<String> NOT_STARTED = Set.of();
 
     /**
      * 004 T075 (SC-001): Tier A 행(저장·발행·변경 취소·삭제·복구·영구 삭제·공개 범위·읽기)은 건너뜀 0건. 실행 후 대기 행이 착수 전 기능

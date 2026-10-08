@@ -7,7 +7,7 @@ import type { ReasonCode } from '../../features/moderation/reasonLabels';
 export type ReportReason = ReasonCode;
 export type TargetType = 'POST' | 'COMMENT';
 export type CaseStatus = 'PENDING' | 'HIDDEN' | 'REJECTED' | 'CLOSED_NO_TARGET';
-export type CaseTab = 'pending' | 'handled';
+export type CaseTab = 'PENDING' | 'HANDLED';
 
 /** 처리 화면의 "현재: …" 상태. 글은 앞 6개, 댓글은 VISIBLE·HIDDEN·DELETED·POST_NOT_VISIBLE·AUTHOR_WITHDRAWN·GONE. */
 export type TargetState =

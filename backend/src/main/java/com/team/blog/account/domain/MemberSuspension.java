@@ -43,6 +43,18 @@ public class MemberSuspension {
 
     protected MemberSuspension() {}
 
+    /** 새 정지 (014 T052). {@code endsAt} null = 영구. */
+    public static MemberSuspension start(
+            long memberId, String reason, Instant startedAt, Instant endsAt, long suspendedBy) {
+        MemberSuspension s = new MemberSuspension();
+        s.memberId = memberId;
+        s.reason = reason;
+        s.startedAt = startedAt;
+        s.endsAt = endsAt;
+        s.suspendedBy = suspendedBy;
+        return s;
+    }
+
     public Long getId() {
         return id;
     }

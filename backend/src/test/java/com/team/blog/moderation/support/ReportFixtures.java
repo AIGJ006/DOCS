@@ -5,7 +5,7 @@ import java.time.Instant;
 import org.springframework.jdbc.core.JdbcTemplate;
 
 /**
- * 신고 사건·신고 테스트 데이터. API를 거치지 않고 {@code report_case}·{@code report}를 직접 넣는다.
+ * 신고 사건·신고 테스트 데이터. API를 거치지 않고 {@code report_case}·{@code report}를 직접 넣는다. 스냅샷은 지금 글·댓글 내용을 복사한다.
  *
  * <pre>{@code
  * long caseId = reports().pendingPost(postId, authorId);
@@ -42,6 +42,20 @@ public final class ReportFixtures {
             Long handledBy,
             Instant handledAt,
             Instant createdAt) {
+        String title = null;
+        String content = "스냅샷 내용";
+        if (postId != null) {
+            java.util.Map<String, Object> post =
+                    jdbc.queryForMap(
+                            "SELECT title, left(content_md, 2000) AS head FROM post WHERE id = ?",
+                            postId);
+            title = (String) post.get("title");
+            content = (String) post.get("head");
+        } else if (commentId != null) {
+            content =
+                    jdbc.queryForObject(
+                            "SELECT content FROM comment WHERE id = ?", String.class, commentId);
+        }
         return jdbc.queryForObject(
                 "INSERT INTO report_case (target_type, post_id, comment_id, target_author_id,"
                         + " snapshot_title, snapshot_content, status, handled_by, handled_at,"
@@ -51,8 +65,8 @@ public final class ReportFixtures {
                 postId,
                 commentId,
                 authorId,
-                "POST".equals(type) ? "스냅샷 제목" : null,
-                "스냅샷 내용",
+                title,
+                content,
                 status,
                 handledBy,
                 handledAt == null ? null : Timestamp.from(handledAt),

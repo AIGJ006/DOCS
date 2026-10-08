@@ -38,7 +38,13 @@ public class CaseListQueryRepository {
                         """
                         WITH c AS (
                           SELECT rc.id, rc.target_type, rc.snapshot_title, rc.snapshot_content,
-                                 rc.target_author_id, count(r.id) AS cnt, max(r.created_at) AS last_reported_at
+                                 rc.target_author_id, count(r.id) AS cnt, max(r.created_at) AS last_reported_at,
+                                 count(*) FILTER (WHERE r.reason = 'SPAM') AS n_spam,
+                                 count(*) FILTER (WHERE r.reason = 'ABUSE') AS n_abuse,
+                                 count(*) FILTER (WHERE r.reason = 'SEXUAL') AS n_sexual,
+                                 count(*) FILTER (WHERE r.reason = 'PRIVACY') AS n_privacy,
+                                 count(*) FILTER (WHERE r.reason = 'COPYRIGHT') AS n_copyright,
+                                 count(*) FILTER (WHERE r.reason = 'OTHER') AS n_other
                             FROM report_case rc
                             JOIN report r ON r.case_id = rc.id
                            WHERE rc.status = 'PENDING'
@@ -64,7 +70,8 @@ public class CaseListQueryRepository {
                                         rs.getString("snapshot_content"),
                                         rs.getLong("target_author_id"),
                                         rs.getInt("cnt"),
-                                        rs.getTimestamp("last_reported_at").toInstant()))
+                                        rs.getTimestamp("last_reported_at").toInstant(),
+                                        reasonCounts(rs)))
                 .list();
     }
 
@@ -120,7 +127,21 @@ public class CaseListQueryRepository {
             String snapshotContent,
             long targetAuthorId,
             int count,
-            Instant lastReportedAt) {}
+            Instant lastReportedAt,
+            Map<ReportReason, Integer> reasonCounts) {}
+
+    /** 대기 목록 한 줄의 사유별 수 (0인 사유는 빠짐) — 목록 SQL 한 번에 함께 센다. */
+    private static Map<ReportReason, Integer> reasonCounts(java.sql.ResultSet rs)
+            throws java.sql.SQLException {
+        Map<ReportReason, Integer> counts = new java.util.EnumMap<>(ReportReason.class);
+        for (ReportReason reason : ReportReason.values()) {
+            int n = rs.getInt("n_" + reason.name().toLowerCase(java.util.Locale.ROOT));
+            if (n > 0) {
+                counts.put(reason, n);
+            }
+        }
+        return counts;
+    }
 
     public record PendingKey(long count, Instant lastReportedAt, long id) {}
 

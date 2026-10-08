@@ -135,6 +135,7 @@ class ReportCaseRepositoryIT extends IntegrationTestBase {
                                 "SELECT snapshot_content FROM report_case WHERE id = ?",
                                 String.class,
                                 orphan))
-                .isEqualTo("스냅샷 내용");
+                .as("대상이 사라져도 스냅샷은 남는다")
+                .isNotNull();
     }
 }

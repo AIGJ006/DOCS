@@ -190,6 +190,12 @@ public class Member {
         }
     }
 
+    /** 관리자 정지 (014 T052). 열린 정지 이력은 {@code SuspensionService}가 함께 만든다. */
+    public void suspend(Instant now) {
+        this.status = MemberStatus.SUSPENDED;
+        this.updatedAt = now;
+    }
+
     /** 익명 처리(015)되어 더 이상 사람으로 보이지 않는 회원. */
     public boolean isDeleted() {
         return deletedAt != null;
