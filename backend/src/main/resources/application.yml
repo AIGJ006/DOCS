@@ -94,7 +94,8 @@ blog:
     event:
       core-size: 2
       max-size: 4
-      queue-capacity: 500
+      queue-capacity: 1000         # 011 research R5 (FR-003): 알림 리스너가 늘어 500 → 1,000
+      await-termination: 20s       # 종료 때 남은 이벤트 처리를 기다리는 시간 (메일은 기본 10s)
     mail:
       core-size: 1
       max-size: 2
@@ -248,6 +249,19 @@ blog:
       edit:
         limit: 20
         window: 1m
+  # 알림 (011 research R17, data-model §6). 시간대는 공통 blog.time-zone
+  notification:
+    retention: 90d               # FR-037 — updated_at 기준
+    max-per-member: 1000
+    cleanup:
+      cron: "0 30 4 * * *"      # ShedLock notificationCleanup
+      batch-size: 1000
+      recent-window: 1d          # 1,000개 정리 대상 고르기 (그날 받은 사람만)
+    follow-dedup-window: 7d      # FR-014
+    preview-length: 50           # FR-021 (코드 포인트)
+    preview-scan: 400            # 목록 SQL이 댓글 앞부분만 읽는 길이
+    dropdown-size: 10
+    page-size: 20
   # 회원 탈퇴·복구 (015 data-model §9, research R16). 비밀번호 잠금 수치는 blog.auth.password-change.* 그대로
   withdraw:
     grace-period: 30d               # 복구 기한 = 정리 대상 경계 (FR-021a)
