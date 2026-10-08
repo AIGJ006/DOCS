@@ -138,8 +138,10 @@ describe('PostDetailPage', () => {
     renderDetail();
 
     const bar = await screen.findByTestId('reaction-bar');
-    expect(bar.firstElementChild).toHaveAttribute('data-testid', 'like-count');
+    // 009: 남의 글이면 맨 앞이 좋아요 버튼(♡/♥ + 수)이다
+    expect(bar.firstElementChild).toHaveAttribute('data-testid', 'like-area');
     expect(screen.getByTestId('like-count')).toHaveTextContent('12');
+    expect(screen.getByRole('button', { name: '좋아요 (12)' })).toBeInTheDocument();
     expect(screen.getByTestId('view-count')).toHaveTextContent('조회 1,234');
     expect(screen.getByTitle('같은 사람은 하루에 한 번만 세요')).toBeInTheDocument();
   });

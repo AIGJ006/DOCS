@@ -97,16 +97,16 @@ description: "Task list for 009-like-view (좋아요와 조회수)"
 
 ### Tests for User Story 1 ⚠️
 
-- [ ] T012 [P] [US1] 통합 테스트 `T/interaction/integration/LikeApiIT.java`: `좋아요하면_200_liked_true와_수_+1`(US1 #1), `좋아요_취소_다시_요청은_변화_없음`(US1 #2, 이벤트 없음), `취소하면_수_−1`, `응답_수는_다른_사람_변화까지_반영`, `글을_수정_발행해도_좋아요_그대로`(FR-020), `상세의_likedByMe가_눌린_상태`(US1 #7, `PostLikeStatusQuery` 교체 확인)
-- [ ] T013 [P] [US1] 동시성 통합 테스트 `T/interaction/integration/LikeConcurrencyIT.java`: `같은_회원_동시_20번은_1건_이벤트_1번`(SC-001, 이벤트 캡처 리스너), `50명_동시는_50`, `좋아요_취소_섞기_3회_모두_수가_건수와_같다`(SC-002, 같은 회원 좋아요 20 + 취소 20 섞기 × 3회, 매번 `like_count = count(*)`)
-- [ ] T014 [P] [US1] 화면 테스트 `F/features/like/__tests__/useLikeToggle.test.ts`(가짜 타이머): 누르면 즉시 상태·수 변화(SC-005), 0.3초 안 연타는 마지막 상태만 1번 전송(US1 #5), 홀수·짝수 연타(짝수면 요청 없음), 응답 수로 맞춤, 실패면 되돌림 + 안내(US1 #6). `F/components/__tests__/LikeButton.test.tsx`: ♡/♥ 모양, `aria-pressed`, `aria-label` "좋아요 (N)"/"좋아요 취소 (N)", Enter·Space(FR-017)
+- [X] T012 [P] [US1] 통합 테스트 `T/interaction/integration/LikeApiIT.java`: `좋아요하면_200_liked_true와_수_+1`(US1 #1), `좋아요_취소_다시_요청은_변화_없음`(US1 #2, 이벤트 없음), `취소하면_수_−1`, `응답_수는_다른_사람_변화까지_반영`, `글을_수정_발행해도_좋아요_그대로`(FR-020), `상세의_likedByMe가_눌린_상태`(US1 #7, `PostLikeStatusQuery` 교체 확인) (구현 메모: 숫자가_아닌_글_번호는_404도 더했다)
+- [X] T013 [P] [US1] 동시성 통합 테스트 `T/interaction/integration/LikeConcurrencyIT.java`: `같은_회원_동시_20번은_1건_이벤트_1번`(SC-001, 이벤트 캡처 리스너), `50명_동시는_50`, `좋아요_취소_섞기_3회_모두_수가_건수와_같다`(SC-002, 같은 회원 좋아요 20 + 취소 20 섞기 × 3회, 매번 `like_count = count(*)`) (구현 메모: 섞기 3회는 회차마다 ratelimit:like:{회원} 키를 비운다(회차당 40번 × 3 = 120번이 1분 60번 제한에 걸리므로). 이벤트는 테스트 소스 @Profile("test") @Component LikeEventProbe(AFTER_COMMIT)로 센다)
+- [X] T014 [P] [US1] 화면 테스트 `F/features/like/__tests__/useLikeToggle.test.ts`(가짜 타이머): 누르면 즉시 상태·수 변화(SC-005), 0.3초 안 연타는 마지막 상태만 1번 전송(US1 #5), 홀수·짝수 연타(짝수면 요청 없음), 응답 수로 맞춤, 실패면 되돌림 + 안내(US1 #6). `F/components/__tests__/LikeButton.test.tsx`: ♡/♥ 모양, `aria-pressed`, `aria-label` "좋아요 (N)"/"좋아요 취소 (N)", Enter·Space(FR-017)
 
 ### Implementation for User Story 1
 
-- [ ] T015 [US1] `B/interaction/application/LikeService.java`의 `like`/`unlike`(research R1·R3: 계정 상태 → 글 → 자기 글 → 요청 제한(트랜잭션 밖) → 트랜잭션 { insert/delete → 카운터 → 수 읽기 → 이벤트 })를 구현한다(T012·T013 통과)
-- [ ] T016 [US1] `B/interaction/web/LikeController.java`의 `@LoginRequired PUT·DELETE /api/posts/{postId}/like`(숫자 아니면 404)를 구현한다
-- [ ] T017 [US1] `B/interaction/application/LikeStatusQueryAdapter.java`(`@Component implements PostLikeStatusQuery`, `LikeRepository.exists`)를 등록해 005 기본 구현을 물리고 `B/post/application/port/PostLikeStatusQuery.java` 주석의 "009가 넘겨받는다"를 고친다. 005 `PostDetailApiIT`의 `likedByMe` 단언을 함께 돌린다
-- [ ] T018 [US1] 화면 `F/features/like/useLikeToggle.ts`와 `F/components/LikeButton.tsx`를 만들고, `F/pages/PostDetailPage.tsx`가 `ReactionBar`의 `likeButton`에 `LikeButton`(처음 상태 `viewer.likedByMe`·`likeCount`)을 넘기게 한다(T014 통과, 005 소유 파일)
+- [X] T015 [US1] `B/interaction/application/LikeService.java`의 `like`/`unlike`(research R1·R3: 계정 상태 → 글 → 자기 글 → 요청 제한(트랜잭션 밖) → 트랜잭션 { insert/delete → 카운터 → 수 읽기 → 이벤트 })를 구현한다(T012·T013 통과) (구현 메모: 트랜잭션은 TransactionTemplate으로 요청 제한 뒤에만 연다. 판정 뒤 글이 완전 삭제돼 FK 위반이면 404로 바꾼다)
+- [X] T016 [US1] `B/interaction/web/LikeController.java`의 `@LoginRequired PUT·DELETE /api/posts/{postId}/like`(숫자 아니면 404)를 구현한다 (구현 메모: 응답 Cache-Control: private, no-store(004 공개 범위 API와 같음))
+- [X] T017 [US1] `B/interaction/application/LikeStatusQueryAdapter.java`(`@Component implements PostLikeStatusQuery`, `LikeRepository.exists`)를 등록해 005 기본 구현을 물리고 `B/post/application/port/PostLikeStatusQuery.java` 주석의 "009가 넘겨받는다"를 고친다. 005 `PostDetailApiIT`의 `likedByMe` 단언을 함께 돌린다 (구현 메모: 005 PostReadingPorts의 좋아요 기본 Bean을 지웠다(008 태그와 같은 이유 — @ConditionalOnMissingBean 판정이 스캔 순서에 흔들림). 005 PostDetailIntegrationTest·PostDetailFallbackIntegrationTest·PostDetailAuthorViewIntegrationTest 통과)
+- [X] T018 [US1] 화면 `F/features/like/useLikeToggle.ts`와 `F/components/LikeButton.tsx`를 만들고, `F/pages/PostDetailPage.tsx`가 `ReactionBar`의 `likeButton`에 `LikeButton`(처음 상태 `viewer.likedByMe`·`likeCount`)을 넘기게 한다(T014 통과, 005 소유 파일) (구현 메모: LikeButton 루트는 like-area(버튼 + role=status 안내). 005 PostDetailPage.test의 '맨 앞은 like-count' 단언을 'like-area 안의 like-count'로 고쳤다)
 
 **Checkpoint**: 좋아요가 독립적으로 동작한다
 
