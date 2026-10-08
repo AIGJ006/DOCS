@@ -3,8 +3,10 @@ package com.team.blog.post.integration;
 import static com.team.blog.post.support.TrashApi.read;
 import static com.team.blog.post.support.TrashApi.status;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 
 import com.team.blog.discovery.support.ReadingApi;
+import com.team.blog.discovery.support.SearchApi;
 import com.team.blog.interaction.support.CommentApi;
 import com.team.blog.interaction.support.LikeApi;
 import com.team.blog.post.support.TrashApi;
@@ -15,6 +17,7 @@ import com.team.blog.support.fixture.PostFixtures;
 import com.team.blog.tag.support.TagApi;
 import com.team.blog.tag.support.TagFixtures;
 import jakarta.servlet.http.Cookie;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -32,8 +35,8 @@ import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandl
  * "휴지통 글" 목록 누출 확인 (006 T019 ②, US1-1, FR-021·039, SC-001, 42 §5-1). 상세 판정 행 자체는 004 {@code
  * post-read.csv}의 {@code TRASHED} 행이 다루므로 여기서는 지운 뒤 목록·글 수·다른 기능 진입점에서 빠지는지를 행위자별로 본다.
  *
- * <p>태그(008)는 태그별 목록·글 수·전체 태그·블로그 태그 줄을 확인한다. 검색·sitemap·댓글·좋아요(012·005 sitemap·007·009)는 아직 없어
- * {@link Assumptions}로 건너뛴다(quickstart §0).
+ * <p>태그(008)는 태그별 목록·글 수·전체 태그·블로그 태그 줄을 확인한다. 검색·트렌딩·sitemap은 012 T040이 채웠다. 아직 없는 기능은 {@link
+ * Assumptions}로 건너뛴다(quickstart §0).
  */
 class TrashedPostPermissionMatrixIT extends IntegrationTestBase {
 
@@ -153,14 +156,50 @@ class TrashedPostPermissionMatrixIT extends IntegrationTestBase {
         }
     }
 
+    /** 012 T040: 글 검색(전체·블로그 안)에서 휴지통 글이 빠진다 — 작성자·관리자도. */
     @Test
-    void 검색에_없다() {
-        assumeHandler("GET", "/api/search", "012 검색");
+    void 검색에_없다() throws Exception {
+        jdbc.update("UPDATE post SET title = '휴지통검색 확인' WHERE author_id = ?", author);
+        SearchApi api = new SearchApi(mockMvc);
+        for (Map.Entry<String, Cookie> viewer : viewers.entrySet()) {
+            SearchApi as = viewer.getValue() == null ? api : api.as(viewer.getValue());
+            for (String blog : new String[] {null, handle}) {
+                List<Integer> ids = read(as.posts("휴지통검색", null, null, blog), "$.items[*].id");
+                assertThat(ids)
+                        .as(viewer.getKey() + " 검색 blog=" + blog)
+                        .doesNotContainAnyElementsOf(asInts(trashed))
+                        .contains((int) remaining);
+            }
+        }
     }
 
+    /** 012 T040: 트렌딩(즉시 계산)에서 휴지통 글이 빠진다. */
     @Test
-    void sitemap에_없다() {
-        assumeHandler("GET", "/sitemap.xml", "005 sitemap");
+    void 트렌딩에_없다() throws Exception {
+        jdbc.update("UPDATE post SET like_count = 5 WHERE author_id = ?", author);
+        SearchApi api = new SearchApi(mockMvc);
+        for (Map.Entry<String, Cookie> viewer : viewers.entrySet()) {
+            SearchApi as = viewer.getValue() == null ? api : api.as(viewer.getValue());
+            List<Integer> ids = read(as.trending(null), "$.items[*].id");
+            assertThat(ids)
+                    .as(viewer.getKey() + " 트렌딩")
+                    .doesNotContainAnyElementsOf(asInts(trashed))
+                    .contains((int) remaining);
+        }
+    }
+
+    /** 012 T040: sitemap에 휴지통 글 주소가 없다. */
+    @Test
+    void sitemap에_없다() throws Exception {
+        String xml =
+                mockMvc.perform(get("/sitemap.xml"))
+                        .andReturn()
+                        .getResponse()
+                        .getContentAsString(StandardCharsets.UTF_8);
+        for (long id : trashed) {
+            assertThat(xml).doesNotContain("/posts/" + id + "</loc>");
+        }
+        assertThat(xml).contains("/posts/" + remaining + "</loc>");
     }
 
     /** 007 T061: 휴지통 글의 댓글 목록은 누구에게나 같은 404다(작성자 포함). */

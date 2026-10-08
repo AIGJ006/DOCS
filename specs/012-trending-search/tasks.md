@@ -167,7 +167,7 @@ description: "Task list for 012-trending-search (트렌딩·검색)"
 
 **Purpose**: 권한 매트릭스, 종단 확인, 성능 결정, 인계
 
-- [ ] T040 [P] 권한 매트릭스 `TR/permission/search.csv`(research R16 표, owner `012`)와 `T/discovery/integration/SearchPermissionMatrixIT.java`(004 하네스) — 006 plan `TrashedPostPermissionMatrixIT`의 검색·sitemap 행과 겹치지 않게 006 행은 006 테스트가 맡는다
+- [X] T040 [P] 권한 매트릭스 `TR/permission/search.csv`(research R16 표, owner `012`)와 `T/discovery/integration/SearchPermissionMatrixIT.java`(004 하네스) — 006 plan `TrashedPostPermissionMatrixIT`의 검색·sitemap 행과 겹치지 않게 006 행은 006 테스트가 맡는다 (구현 메모: 행위자는 비회원·인증 전·회원·작성자·관리자(정지 세션 행은 정지 작성자의 글 노출 규칙이 이 기능 범위 밖이라 뺐다). 006 TrashedPostPermissionMatrixIT의 검색·sitemap 자리는 'assume 후 기능이 생기면 단언을 더한다(그 기능 몫)' 주석대로 이 작업에서 검색(전체·블로그)·트렌딩·sitemap 단언을 채웠다(006 파일 수정))
 - [ ] T041 [P] Playwright `E/trending-search.spec.ts` — quickstart §3 3·5~13, 375px 폭 가로 스크롤 없음, 탭·정렬 키보드 조작
 - [ ] T042 [P] 화면 접근성: 홈 탭(`aria-selected`), 검색창 이름 "검색"·"이 블로그에서 검색", `<mark>`가 색만이 아니라 굵기로도 구분되는지(대비 4.5:1)
 - [ ] T043 공용 조건 회귀: 004 `VisibilityFilter`를 쓰는 다른 목록(홈·블로그·피드·태그) 테스트를 함께 돌려 `findCardsByIds` 추가가 기존 카드 SQL을 바꾸지 않았는지 확인
