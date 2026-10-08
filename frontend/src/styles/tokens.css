@@ -16,4 +16,6 @@
   --thumb-empty: #f1f3f5;
   --color-code-bg: #f8f9fa;
   --color-focus: #1c7ed6;
+  /* 011 알림 배지: --color-danger 위 글자 */
+  --color-on-danger: #ffffff;
 }

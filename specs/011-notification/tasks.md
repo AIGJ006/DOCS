@@ -120,8 +120,8 @@ description: "Task list for 011-notification (도메인 이벤트·인앱 알림
 
 - [X] T023 [P] [US2] `T/notification/integration/NotificationApiIT.java` — US2 #1·#4~#8: `unread-count` `{count}` + `Cache-Control: private, no-store`, 목록 정렬(`updated_at` 최신 → 번호 큰 순)·`size` 10/20·기본 20·`size=15` 400 `VALIDATION_FAILED`·커서로 25개 끝까지 중복·누락 0·다른 목록 커서 400 `INVALID_CURSOR`, 목록 SQL 1번(`SqlCounter`), 읽음 204·다시 204, 모두 읽음 12개 `{updated: 12}` 뒤 수 0, 삭제 204·다시 404, 숫자가 아닌 번호 404, 인증 전 회원 모두 가능, 비회원 401, 유예 403 `ACCOUNT_WITHDRAWN`, CSRF 없음 403 (구현 메모: SQL 1번은 HTTP 요청의 필터 SQL(세션 회원 상태 확인 등)을 빼려고 NotificationQueryService.page를 SqlCounter 안에서 직접 불러 확인)
 - [X] T024 [P] [US2] 권한 매트릭스 `TR/permission/notification.csv`(research R15 표, owner `011`)와 `T/notification/integration/NotificationPermissionMatrixIT.java`(004 하네스, 남의 알림 대상 픽스처는 `NotificationFixtures`) — SC-007 (구현 메모: 54행(행동 9 × 행위자 6, targetState NONE). 남의 알림은 notification.read.others·notification.delete.others 행동으로 나눔. 행위자 번호는 테스트 로그인이 남기는 Redis 키 member:active-touch:{id}로 찾음)
-- [ ] T025 [P] [US2] 화면 테스트 `F/features/notification/__tests__/useUnreadCount.test.ts`(가짜 타이머: 마운트 즉시 1번, 30초마다, `hidden`이면 멈춤·`visible`이면 즉시 1번, 실패하면 마지막 값 유지, 로그아웃이면 부르지 않음), `NotificationBell.test.tsx`(배지 0 숨김·3·100 → "99+", 이름 "안 읽은 알림 3개"·0개 "알림"), `NotificationDropdown.test.tsx`(열 때마다 요청, "불러오는 중…"·빈 "새 알림이 없어요"·실패 "알림을 불러오지 못했어요 [다시 시도]" + 배지 그대로, Esc로 닫고 초점 복귀), `NotificationItem.test.tsx`(안 읽음 ● + `<strong>`, 누르면 읽음 요청 후 `url`로 이동, `url` null이면 이동 없이 읽음 표시)
-- [ ] T026 [P] [US2] `F/pages/__tests__/NotificationsPage.test.tsx` — 20개씩 [더 보기], 같은 번호 건너뜀(FR-029), [×] 누르면 목록에서 빠짐, [모두 읽음], 비회원은 로그인 화면으로
+- [X] T025 [P] [US2] 화면 테스트 `F/features/notification/__tests__/useUnreadCount.test.ts`(가짜 타이머: 마운트 즉시 1번, 30초마다, `hidden`이면 멈춤·`visible`이면 즉시 1번, 실패하면 마지막 값 유지, 로그아웃이면 부르지 않음), `NotificationBell.test.tsx`(배지 0 숨김·3·100 → "99+", 이름 "안 읽은 알림 3개"·0개 "알림"), `NotificationDropdown.test.tsx`(열 때마다 요청, "불러오는 중…"·빈 "새 알림이 없어요"·실패 "알림을 불러오지 못했어요 [다시 시도]" + 배지 그대로, Esc로 닫고 초점 복귀), `NotificationItem.test.tsx`(안 읽음 ● + `<strong>`, 누르면 읽음 요청 후 `url`로 이동, `url` null이면 이동 없이 읽음 표시) (구현 메모: unread-count·목록 요청은 notFoundScreen:false — 공통 404 화면으로 바꾸지 않음)
+- [X] T026 [P] [US2] `F/pages/__tests__/NotificationsPage.test.tsx` — 20개씩 [더 보기], 같은 번호 건너뜀(FR-029), [×] 누르면 목록에서 빠짐, [모두 읽음], 비회원은 로그인 화면으로
 
 ### Implementation for User Story 2
 
@@ -129,8 +129,8 @@ description: "Task list for 011-notification (도메인 이벤트·인앱 알림
 - [X] T028 [US2] `B/notification/infra/NotificationListQueryRepository.java` — research R10 SQL 1번(커서가 있을 때만 조건, `size + 1`개), 행 record `NotificationRow`. 클래스 주석에 plan Complexity Tracking 1행(원칙 II 읽기 예외)을 적는다 (T027 다음) (구현 메모: NotificationRow에 comment_deleted_at·last_actor_id도 읽음)
 - [X] T029 [US2] `B/notification/application/NotificationItemAssembler.java`(행 → data-model §5 `NotificationItem`: 행동자, `othersCount`, `PostView` + `PostAccessPolicy.canRead`로 `post`·`url`, 종류별 이동 주소 FR-024, 프로필 주소는 media `ImageUrlResolver`)와 `NotificationQueryService.java`(`unreadCount`, `page(viewer, cursor, size)` — `size`는 `dropdown-size`·`page-size`만 허용) (T028 다음) (구현 메모: 표시 규칙(US4 T041 범위: 탈퇴 행동자·미리보기·읽을 수 없는 글·숨김)까지 이 단계에서 함께 구현. 응답 모델은 NotificationItem 안 중첩 record(ActorMember/ActorWithdrawn{withdrawn:true}, PostReadable/PostUnavailable{unavailable:true}))
 - [X] T030 [US2] `B/notification/application/NotificationCommandService.java`(`markRead`·`markAllRead`·`delete` — contracts §9, 0행이면 `NotFoundException`, `AccountStatusGuard.requireActive(me, ACCOUNT_WRITE)`)와 `B/notification/web/NotificationController.java`(5개 API, `@LoginRequired`, 경로 변수 숫자가 아니면 404, 목록·수 응답에 `CacheControlPolicy.NO_STORE`) (T023·T024 통과) (구현 메모: size는 문자열로 받아 숫자가 아니어도 400 VALIDATION_FAILED(INVALID_SIZE). 모두 읽음 응답도 no-store)
-- [ ] T031 [P] [US2] `F/api/notifications.ts`(`getUnreadCount`, `listNotifications({size, cursor})`, `markRead(id)`, `markAllRead()`, `deleteNotification(id)`, 001 `client` + CSRF)와 타입 `F/api/types/notification.ts`(openapi `NotificationItem`과 같은 모양)
-- [ ] T032 [US2] (**006 머지 후** — `App.tsx`) 화면 `F/features/notification/useUnreadCount.ts`, `NotificationBell.tsx`, `NotificationDropdown.tsx`, `NotificationItem.tsx`, `notificationText.ts`(research R16 문구 — 이 단계는 댓글·답글·좋아요·팔로우·새 글 하나짜리 문장), `F/pages/NotificationsPage.tsx`(005 `useCursorList`·`LoadMoreButton`, [×] `aria-label="알림 삭제"`), `F/App.tsx` `/notifications` 경로, 001 `F/features/auth/SessionBar.tsx`에 로그인했을 때만 `NotificationBell`(001 담당에게 알림). 시각은 005 `relativeText` + `<time dateTime>` (T025·T026 통과)
+- [X] T031 [P] [US2] `F/api/notifications.ts`(`getUnreadCount`, `listNotifications({size, cursor})`, `markRead(id)`, `markAllRead()`, `deleteNotification(id)`, 001 `client` + CSRF)와 타입 `F/api/types/notification.ts`(openapi `NotificationItem`과 같은 모양)
+- [X] T032 [US2] (**006 머지 후** — `App.tsx`) 화면 `F/features/notification/useUnreadCount.ts`, `NotificationBell.tsx`, `NotificationDropdown.tsx`, `NotificationItem.tsx`, `notificationText.ts`(research R16 문구 — 이 단계는 댓글·답글·좋아요·팔로우·새 글 하나짜리 문장), `F/pages/NotificationsPage.tsx`(005 `useCursorList`·`LoadMoreButton`, [×] `aria-label="알림 삭제"`), `F/App.tsx` `/notifications` 경로, 001 `F/features/auth/SessionBar.tsx`에 로그인했을 때만 `NotificationBell`(001 담당에게 알림). 시각은 005 `relativeText` + `<time dateTime>` (T025·T026 통과) (구현 메모: 001 SessionBar는 main에서 SiteHeader로 바뀌어 site-header-actions의 계정 메뉴 앞에 종을 둠. 005 useCursorList는 글 카드 전용 타입이라 같은 규칙(번호 중복 건너뜀·커서 그대로)을 NotificationsPage 안에 작게 씀. 배지 글자색은 tokens.css에 --color-on-danger 추가. 알림 화면의 읽음·삭제는 창 이벤트로 종에게 즉시 재확인을 알림)
 
 **Checkpoint**: 알림을 보고 읽고 지울 수 있다 — US1과 함께 MVP
 
@@ -146,12 +146,12 @@ description: "Task list for 011-notification (도메인 이벤트·인앱 알림
 
 - [X] T033 [P] [US3] `T/notification/integration/LikeGroupingIT.java` — SC-002, US3 #1~#4·#6: 10명 동시(`ExecutorService` + `CountDownLatch`로 이벤트 10개 동시 처리) → 안 읽은 `LIKE` 1개·`actor_count 10`·`notification_actor` 10행, 한 사람 취소·재클릭 5번 → 알림 1·인원 그대로, B·C 묶음에서 B 취소 → 인원 1·`last_actor_id = C`·`updated_at` 그대로, 남은 사람 0 → 행 삭제, 읽은 묶음에서 취소 → 그대로, 읽은 뒤 새 사람 → 새 묶음, 사람이 더해지면 목록 맨 위 (009 머지 후) (구현 메모: 10명 동시는 NotificationWriter.addLike를 ExecutorService+CountDownLatch로 동시에 직접 부름)
 - [X] T034 [P] [US3] `T/notification/integration/FollowGroupingIT.java` — SC-003, US3 #5: 7일 안 언팔로우 → 팔로우 반복 3번 → 새 팔로워 알림 1·인원 1, `MutableClock`으로 8일 뒤 다시 팔로우 → 인원 +1(또는 새 묶음), 언팔로우만으로는 알림 0, 안 읽은 묶음에서 언팔로우하면 빠짐 (010 머지 후) (구현 메모: MutableClock이 없어 '8일 뒤'는 notification_actor.created_at을 8일 전으로 옮겨 확인. 팔로우·언팔로우는 010 API)
-- [ ] T035 [P] [US3] 화면 테스트 `F/features/notification/__tests__/notificationText.test.ts` — 묶음 문장 "**김민서**님 외 3명이 「제목」을 좋아해요"·"…외 N명이 회원님을 팔로우해요", `othersCount 0`이면 하나짜리 문장
+- [X] T035 [P] [US3] 화면 테스트 `F/features/notification/__tests__/notificationText.test.ts` — 묶음 문장 "**김민서**님 외 3명이 「제목」을 좋아해요"·"…외 N명이 회원님을 팔로우해요", `othersCount 0`이면 하나짜리 문장
 
 ### Implementation for User Story 3
 
 - [X] T036 [US3] `NotificationRepository.removeFromUnreadGroup(receiverId, groupKey, actorId)`(contracts §5 네 문장, 잠금 순서 알림 → 사람)와 `NotificationWriter`의 FOLLOW 중복 기간(`follow-dedup-window` 7일, §4 ①), `removeLike`·`removeFollow` (T033·T034 실패 확인) (구현 메모: removeLike·removeFollow는 처리 시점에 다시 좋아요·팔로우 상태면 빼지 않음(취소 뒤 재클릭 순서 뒤바뀜 대비). 다시 계산 UPDATE는 recount(ids)로 묶어 탈퇴 정리와 함께 씀)
-- [ ] T037 [US3] `LikeNotificationListener`에 `PostUnliked`, `FollowNotificationListener`에 `MemberUnfollowed` 처리를 더하고, `notificationText.ts`에 묶음 문장 (T033~T035 통과)
+- [X] T037 [US3] `LikeNotificationListener`에 `PostUnliked`, `FollowNotificationListener`에 `MemberUnfollowed` 처리를 더하고, `notificationText.ts`에 묶음 문장 (T033~T035 통과)
 
 **Checkpoint**: 묶음·중복 방지·취소 반영 완료
 
@@ -167,12 +167,12 @@ description: "Task list for 011-notification (도메인 이벤트·인앱 알림
 
 - [X] T038 [P] [US4] `T/notification/integration/NotificationDisplayIT.java` — US4 #1~#4, SC-004: 비공개·휴지통·숨김·작성자 유예 각각 `post: {unavailable: true}`·`comment null`·`url null`, 다시 공개 → 지금 제목, 행동자 닉네임 변경 반영, 행동자 유예·익명 처리 `actor: {withdrawn: true}`, 댓글 수정 → 새 미리보기(공백 한 칸, 앞 50자 + "…", 이모지·한글 코드 포인트 경계), 마크다운 기호 그대로, 받는 사람이 작성자면 자기 비공개 글 제목이 보임 (구현 메모: 행동자 익명 처리는 member.deleted_at을 직접 넣어 확인. 이모지 경계·공백 한 칸·마크다운 기호 그대로 확인)
 - [X] T039 [P] [US4] `CommentNotificationIT`에 US4 #5 더하기: 댓글 삭제(답글이 있어 자리로 남는 경우 포함) → 그 댓글 `COMMENT`·`REPLY` 0, 다른 댓글 알림은 그대로, 글 완전 삭제 → 그 글 알림 0(CASCADE, 006 머지 후 `PostPurgeService`로) (구현 메모: 006이 main에 있어 글 완전 삭제는 PostPurgeService.purge를 트랜잭션 안에서 직접 불러 CASCADE 확인)
-- [ ] T040 [P] [US4] 화면 테스트 `notificationText.test.ts`에 "볼 수 없는 글이에요"(미리보기 없음)·"탈퇴한 사용자"(굵게 하지 않음)를 더한다
+- [X] T040 [P] [US4] 화면 테스트 `notificationText.test.ts`에 "볼 수 없는 글이에요"(미리보기 없음)·"탈퇴한 사용자"(굵게 하지 않음)를 더한다 (구현 메모: 탈퇴한 사람은 '탈퇴한 사용자가 …'(묶음 '탈퇴한 사용자 외 N명이 …'), 볼 수 없는 글은 동사 뒤에 ' · 볼 수 없는 글이에요'로 정함)
 
 ### Implementation for User Story 4
 
 - [X] T041 [US4] `NotificationItemAssembler`에 표시 규칙(research R10 — 행동자 탈퇴, 미리보기 자르기 `preview-length`, 읽을 수 없으면 `post.unavailable`·`url null`)을 마무리한다 (T038 실패 확인) (구현 메모: T029에서 함께 구현해 T038이 처음부터 통과(실패 확인 단계 없음))
-- [ ] T042 [US4] `CommentNotificationListener`에 `CommentDeleted` → `NotificationWriter.removeCommentNotifications(commentId)`(§7-1)를 더하고, `notificationText.ts`·`NotificationItem.tsx`에 볼 수 없는 글·탈퇴한 사용자 표시 (T038~T040 통과)
+- [X] T042 [US4] `CommentNotificationListener`에 `CommentDeleted` → `NotificationWriter.removeCommentNotifications(commentId)`(§7-1)를 더하고, `notificationText.ts`·`NotificationItem.tsx`에 볼 수 없는 글·탈퇴한 사용자 표시 (T038~T040 통과)
 
 **Checkpoint**: 볼 수 없게 된 글의 제목·내용이 알림에 남지 않는다
 
@@ -187,13 +187,13 @@ description: "Task list for 011-notification (도메인 이벤트·인앱 알림
 ### Tests for User Story 5 ⚠️
 
 - [X] T043 [P] [US5] `T/notification/integration/ModerationNotificationIT.java` — US5 #1~#6, SC-010 (`EventPublisherHelper`로 `ReportResolved`·`ContentHidden` 직접 발행): 신고 결과 두 가지(`report.result`, `actor`·`post`·`url` null), 글 숨김 → 작성자 `CONTENT_HIDDEN`·제목·`hidden {POST, stillHidden true, reason SPAM}`, 댓글 숨김 → `post null`·댓글 위치 `url`·그 댓글의 `COMMENT`·`REPLY` 삭제, 해제 뒤 `stillHidden false`·`reason null`, 응답 JSON 어디에도 신고자·관리자 번호 없음, 5종 모두 끈 회원도 받음, 받는 사람 유예면 0, 신고 행 삭제 → `report_id` NULL·알림 남음 (구현 메모: 014가 없어 이벤트 직접 발행, 숨김 상태·신고 행은 SQL로 직접 넣음)
-- [ ] T044 [P] [US5] 화면 테스트 `notificationText.test.ts`에 신고 결과 두 문장, 글 숨김 "회원님의 글「제목」이(가) 운영 정책에 따라 숨겨졌어요 (사유: 스팸·광고)", 해제 "…숨겨졌었어요 (지금은 다시 보여요)", 댓글 숨김(제목 없음)
+- [X] T044 [P] [US5] 화면 테스트 `notificationText.test.ts`에 신고 결과 두 문장, 글 숨김 "회원님의 글「제목」이(가) 운영 정책에 따라 숨겨졌어요 (사유: 스팸·광고)", 해제 "…숨겨졌었어요 (지금은 다시 보여요)", 댓글 숨김(제목 없음)
 
 ### Implementation for User Story 5
 
 - [X] T045 [US5] 이벤트 record `B/shared/event/ReportResolved.java`(`reportId, reporterId, targetType, targetId, result, resolvedAt`)·`ContentHidden.java`(`targetType, targetId, ownerId, postId, hiddenAt`)와 enum(`ReportTargetType` POST·COMMENT, `ReportResult` ACTION_TAKEN·NO_VIOLATION) — 014가 먼저 만들었으면 그대로 쓴다(먼저 하는 쪽이 만듦, 014 spec Implementation Notes 필드). `DomainEventShapeTest` 통과 확인 (구현 메모: 014보다 먼저 만듦: shared.event에 ReportResolved·ContentHidden record와 enum ReportTargetType·ReportResult(014 data-model §6 필드 그대로). ContentUnhidden·MemberSuspended는 알림이 구독하지 않아 만들지 않음(014 몫))
 - [X] T046 [US5] `NotificationWriter.addReportResolved`·`addContentHidden`(받는 사람 유예만 확인, 댓글이면 §7-1 먼저)과 `B/notification/application/listener/ModerationNotificationListener.java`, `NotificationItemAssembler`의 `report`·`hidden`(대상의 지금 `hidden_at`·`hidden_reason`) (T043 실패 확인, T045 다음) (구현 메모: 숨김 표시(hidden.stillHidden·reason)는 T029 NotificationItemAssembler에 이미 있음)
-- [ ] T047 [US5] `F/features/moderation/reasonLabels.ts`(014 Clarifications 6개 코드 → 이름, 014와 공유 — 먼저 하는 쪽이 만듦)와 `notificationText.ts` 운영 알림 문장 (T043·T044 통과)
+- [X] T047 [US5] `F/features/moderation/reasonLabels.ts`(014 Clarifications 6개 코드 → 이름, 014와 공유 — 먼저 하는 쪽이 만듦)와 `notificationText.ts` 운영 알림 문장 (T043·T044 통과) (구현 메모: 014보다 먼저라 011이 만듦. 모르는 코드는 '기타')
 
 **Checkpoint**: 운영 알림 2종 동작(014 연결은 014 머지 후 quickstart §4로 확인)
 
@@ -208,12 +208,12 @@ description: "Task list for 011-notification (도메인 이벤트·인앱 알림
 ### Tests for User Story 6 ⚠️
 
 - [X] T048 [P] [US6] `T/notification/integration/NotificationSettingsIT.java` — US6 #1·#2: 새 회원 5종 true, `LIKE: false` 저장 뒤 새 좋아요 알림 0·기존 알림 그대로·다른 종류는 생김, 다시 켜면 생김, 키 빠짐·문자열 값 400 `VALIDATION_FAILED`, 모르는 키 400, 인증 전 회원 가능, 남은 세션의 정지 `PUT` 403
-- [ ] T049 [P] [US6] 화면 테스트 `F/features/notification/__tests__/NotificationSettingsSection.test.tsx` — 스위치 5개(`role="switch"`, 이름), 바꾸면 `PUT`(빠르게 두 번 바꾸면 마지막 상태), 실패하면 되돌림 + "잠시 후 다시 시도해 주세요", 안내 "운영 알림(신고 결과·숨김)은 끌 수 없어요"
+- [X] T049 [P] [US6] 화면 테스트 `F/features/notification/__tests__/NotificationSettingsSection.test.tsx` — 스위치 5개(`role="switch"`, 이름), 바꾸면 `PUT`(빠르게 두 번 바꾸면 마지막 상태), 실패하면 되돌림 + "잠시 후 다시 시도해 주세요", 안내 "운영 알림(신고 결과·숨김)은 끌 수 없어요" (구현 메모: 스위치 이름은 FR-035 문구(내 글에 달린 댓글·내 댓글에 달린 답글·좋아요·새 팔로워·팔로우한 사람의 새 글))
 
 ### Implementation for User Story 6
 
 - [X] T050 [US6] `B/notification/application/NotificationSettingsService.java`(`get`·`put`, `ACCOUNT_WRITE`)와 `B/notification/web/NotificationSettingsController.java`(`GET`·`PUT /api/me/notification-settings`, 본문 record 5개 `@NotNull Boolean`, 모르는 키 거부 — `@JsonIgnoreProperties(ignoreUnknown = false)`) (T048 통과) (구현 메모: @JsonIgnoreProperties 대신 본문을 Map으로 받아 Service가 5개 키·boolean·모르는 키를 칸별 오류로 모아 400(빠짐 REQUIRED, 타입 INVALID_VALUE, 모르는 키 UNKNOWN_FIELD). 응답·GET도 no-store)
-- [ ] T051 [US6] `F/api/notifications.ts`에 `getNotificationSettings`·`putNotificationSettings`, `F/features/notification/NotificationSettingsSection.tsx`, 001 설정 화면에 "알림" 칸 붙이기(001 T122가 없으면 `/settings` 자리에 칸만 — 001 T122 머지 후 옮김, 001 담당에게 알림) (T049 통과)
+- [X] T051 [US6] `F/api/notifications.ts`에 `getNotificationSettings`·`putNotificationSettings`, `F/features/notification/NotificationSettingsSection.tsx`, 001 설정 화면에 "알림" 칸 붙이기(001 T122가 없으면 `/settings` 자리에 칸만 — 001 T122 머지 후 옮김, 001 담당에게 알림) (T049 통과) (구현 메모: 001 설정 화면(T122)이 main에 있어 FriendLists 앞에 '알림' 칸을 붙임. 빠른 연속 변경은 요청 번호로 마지막 응답만 반영)
 
 **Checkpoint**: 알림 종류 끄기 완료
 

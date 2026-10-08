@@ -17,6 +17,7 @@ import DefaultAvatar from '../components/DefaultAvatar';
 import ProfileImageCropper from '../components/ProfileImageCropper';
 import { groupFieldErrors } from '../features/auth/fieldErrors';
 import FriendLists from '../features/friends/FriendLists';
+import NotificationSettingsSection from '../features/notification/NotificationSettingsSection';
 import { useSession } from '../features/auth/useSession';
 import { uploadProfileImage } from '../features/profile/uploadProfileImage';
 import PasswordChangeForm from '../features/settings/PasswordChangeForm';
@@ -120,6 +121,7 @@ export default function SettingsPage() {
         <h2 id="storage-title">사진 저장 공간</h2>
         <StorageUsageBar />
       </section>
+      <NotificationSettingsSection />
       <FriendLists />
       <section aria-labelledby="withdraw-title">
         <h2 id="withdraw-title">회원 탈퇴</h2>

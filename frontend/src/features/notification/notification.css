@@ -1,0 +1,249 @@
+/* 011 알림 종·펼침 목록·알림 화면. 색은 토큰만 쓴다(016 FR-011). 종·[×]는 누르는 자리 44px 이상. */
+.notification-bell {
+  position: relative;
+}
+
+.notification-bell-button {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--color-text);
+}
+
+.notification-bell-button:hover,
+.notification-bell-button[aria-expanded='true'] {
+  background: var(--thumb-empty);
+}
+
+.notification-badge {
+  position: absolute;
+  top: 4px;
+  right: 2px;
+  min-width: 1.15rem;
+  padding: 0 0.3rem;
+  border-radius: 999px;
+  background: var(--color-danger);
+  color: var(--color-on-danger);
+  font-size: 0.7rem;
+  font-weight: 700;
+  line-height: 1.15rem;
+  text-align: center;
+}
+
+.notification-panel {
+  position: absolute;
+  top: calc(100% + 0.4rem);
+  right: 0;
+  z-index: 5;
+  width: min(24rem, calc(100vw - 2rem));
+  max-height: min(32rem, 70vh);
+  overflow-y: auto;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 0.5rem;
+  box-shadow: 0 4px 16px rgb(0 0 0 / 12%); /* raw-color-ok: 그림자 */
+}
+
+/* 좁은 화면: 종 위치와 관계없이 화면 안에 들어오게 고정 */
+@media (max-width: 599px) {
+  .notification-panel {
+    position: fixed;
+    top: calc(var(--header-height, 3.5rem) + 0.25rem);
+    right: 1rem;
+    left: 1rem;
+    width: auto;
+  }
+}
+
+.notification-panel-status,
+.notification-panel-error {
+  margin: 0;
+  padding: 1rem;
+  color: var(--color-text-muted);
+  text-align: center;
+}
+
+.notification-panel-error {
+  color: var(--color-danger);
+}
+
+.notification-panel-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  border-top: 1px solid var(--color-border);
+}
+
+.notification-panel-footer button,
+.notification-page-toolbar button {
+  min-height: 44px;
+  border: 0;
+  background: transparent;
+  color: var(--color-brand);
+}
+
+.notification-panel-footer a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  color: var(--color-brand);
+}
+
+.notification-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.notification-item {
+  display: flex;
+  align-items: stretch;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.notification-item-unread {
+  background: var(--thumb-empty);
+}
+
+.notification-item-main {
+  display: flex;
+  flex: 1 1 auto;
+  gap: 0.5rem;
+  min-width: 0;
+  min-height: 44px;
+  padding: 0.65rem 1rem;
+  border: 0;
+  background: transparent;
+  color: var(--color-text);
+  text-align: left;
+}
+
+.notification-dot {
+  flex: 0 0 auto;
+  color: var(--color-brand);
+  font-size: 0.6rem;
+  line-height: 1.6rem;
+}
+
+.notification-item-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.notification-text {
+  font-weight: 400;
+}
+
+strong.notification-text {
+  font-weight: 700;
+}
+
+.notification-time {
+  color: var(--color-text-muted);
+  font-size: 0.8rem;
+}
+
+.notification-delete {
+  flex: 0 0 auto;
+  min-width: 44px;
+  min-height: 44px;
+  border: 0;
+  background: transparent;
+  color: var(--color-text-muted);
+  font-size: 1.25rem;
+}
+
+.notification-delete:hover {
+  color: var(--color-danger);
+}
+
+.notification-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+.notification-page {
+  width: 100%;
+  max-width: 48rem;
+  margin: 0 auto;
+  padding: 1.5rem 1rem;
+}
+
+.notification-page-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.notification-page-toolbar h1 {
+  margin: 0;
+  font-size: 1.25rem;
+}
+
+.notification-page .notification-list {
+  border-top: 1px solid var(--color-border);
+}
+
+.notification-settings-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.notification-settings-list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 44px;
+}
+
+.notification-switch {
+  position: relative;
+  width: 2.75rem;
+  height: 1.5rem;
+  padding: 0;
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  background: var(--thumb-empty);
+}
+
+.notification-switch::after {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: calc(1.5rem - 6px);
+  height: calc(1.5rem - 6px);
+  border-radius: 50%;
+  background: var(--color-text-muted);
+  content: '';
+  transition: left 0.15s;
+}
+
+.notification-switch[aria-checked='true'] {
+  border-color: var(--color-brand-fill);
+  background: var(--color-brand-fill);
+}
+
+.notification-switch[aria-checked='true']::after {
+  left: calc(100% - 1.5rem + 4px);
+  background: var(--color-surface);
+}
