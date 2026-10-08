@@ -212,14 +212,14 @@ description: "Task list for 003-image-upload (이미지 업로드)"
 
 ### Tests for User Story 5 ⚠️
 
-- [ ] T064 [P] [US5] `F/features/image-upload/altText.test.ts`: 본문에서 우리 사진(지금 공개 주소로 시작) 중 alt가 공백뿐인 것만 찾기, 코드 블록·인라인 코드 안 제외, 외부·`local:` 사진 제외, `setAlt(index, text)`가 그 위치만 바꾸고 `]`·`\`를 이스케이프
-- [ ] T065 [P] [US5] `F/components/editor/__tests__/AltTextPanel.test.tsx`: "대체글이 없는 사진이 2장 있어요 [대체글 넣기]" → 사진별 미리보기 + 입력칸 + 도움말 문구(FR-033), 125자 초과 안내(거부 안 함, FR-034), 입력하면 본문 반영, 0장이면 패널 없음, [발행] 버튼은 항상 활성
-- [ ] T066 [P] [US5] 렌더러 회귀 `T/shared/markdown/AltRenderingTest.java`: `![](우리 사진)` → `alt=""` 속성이 있음(빠지지 않음), 카드 썸네일 alt는 글 제목(005 `PostCard` 확인), 프로필 사진 alt 빈 값(FR-035)
+- [X] T064 [P] [US5] `F/features/image-upload/altText.test.ts`: 본문에서 우리 사진(지금 공개 주소로 시작) 중 alt가 공백뿐인 것만 찾기, 코드 블록·인라인 코드 안 제외, 외부·`local:` 사진 제외, `setAlt(index, text)`가 그 위치만 바꾸고 `]`·`\`를 이스케이프 (구현 메모: 우리 사진은 주소 모양(/images/yyyy/mm/uuid(_thumb).확장자)으로 알아본다 — 화면은 공개 주소를 모른다. 대체글 줄바꿈은 공백으로 바꾼다)
+- [X] T065 [P] [US5] `F/components/editor/__tests__/AltTextPanel.test.tsx`: "대체글이 없는 사진이 2장 있어요 [대체글 넣기]" → 사진별 미리보기 + 입력칸 + 도움말 문구(FR-033), 125자 초과 안내(거부 안 함, FR-034), 입력하면 본문 반영, 0장이면 패널 없음, [발행] 버튼은 항상 활성
+- [X] T066 [P] [US5] 렌더러 회귀 `T/shared/markdown/AltRenderingTest.java`: `![](우리 사진)` → `alt=""` 속성이 있음(빠지지 않음), 카드 썸네일 alt는 글 제목(005 `PostCard` 확인), 프로필 사진 alt 빈 값(FR-035) (구현 메모: 카드 썸네일 alt=제목은 005 PostCard.test.tsx가 이미 확인한다. 대체글 안의 인라인 HTML(<b> 등)은 CommonMark 규칙대로 alt에서 빠진다(정화와 같은 방향이라 그대로 둠))
 
 ### Implementation for User Story 5
 
-- [ ] T067 [US5] `F/features/image-upload/altText.ts`(T064 통과)와 `F/components/editor/AltTextPanel.tsx`(T065 통과)를 구현하고 002 `F/components/editor/PublishDialog.tsx`에 넣는다(발행 설정 창 위쪽, 접힌 상태 기본)
-- [ ] T068 [US5] T066이 실패하면 002 렌더러(`B/shared/infra/markdown/`)의 alt 출력을 고친다(002에 알림). 통과하면 코드 변경 없음
+- [X] T067 [US5] `F/features/image-upload/altText.ts`(T064 통과)와 `F/components/editor/AltTextPanel.tsx`(T065 통과)를 구현하고 002 `F/components/editor/PublishDialog.tsx`에 넣는다(발행 설정 창 위쪽, 접힌 상태 기본)
+- [X] T068 [US5] T066이 실패하면 002 렌더러(`B/shared/infra/markdown/`)의 alt 출력을 고친다(002에 알림). 통과하면 코드 변경 없음 (구현 메모: T066이 통과해 렌더러 변경 없음)
 
 **Checkpoint**: 대체글 권유가 보이고 발행은 막히지 않는다
 

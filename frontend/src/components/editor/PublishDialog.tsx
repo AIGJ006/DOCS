@@ -4,6 +4,7 @@ import type { PublishResponse, ServerCopy, Visibility } from '../../api/posts';
 import { EDITOR_CONFIG } from '../../features/editor/editorConfig';
 import { PUBLISH_FAILED, publishOnce } from '../../features/editor/publish';
 import VisibilitySelect from '../../features/visibility/VisibilitySelect';
+import AltTextPanel from './AltTextPanel';
 
 /**
  * 발행 설정 창 (002 T055, FR-026·038, US1 #2·#3).
@@ -33,6 +34,9 @@ interface Props {
   onClose: () => void;
   /** 발행 시도가 끝났다 (성공·실패 모두) — 에디터가 자동 저장을 다시 켠다. */
   onSettled?: () => void;
+  /** 지금 본문과 본문 바꾸기 — 주면 대체글 권유(003 US5)를 창 위쪽에 보인다. */
+  contentMd?: string;
+  onContentChange?: (contentMd: string) => void;
 }
 
 export default function PublishDialog({
@@ -45,6 +49,8 @@ export default function PublishDialog({
   onConflict,
   onClose,
   onSettled,
+  contentMd,
+  onContentChange,
 }: Props) {
   const [tags, setTags] = useState<string[]>(initialTags);
   const [tagInput, setTagInput] = useState('');
@@ -135,6 +141,10 @@ export default function PublishDialog({
     >
       <form onSubmit={publish}>
         <h2 id="publish-dialog-title">발행 설정</h2>
+
+        {contentMd !== undefined && onContentChange ? (
+          <AltTextPanel contentMd={contentMd} onChange={onContentChange} />
+        ) : null}
 
         <fieldset>
           <legend>태그</legend>

@@ -607,6 +607,8 @@ export default function EditorPage() {
           onConflict={onPublishConflict}
           onSettled={() => queueRef.current?.resume()}
           onClose={() => setPublishing(false)}
+          contentMd={contentMd}
+          onContentChange={onContent}
         />
       ) : null}
     </main>
