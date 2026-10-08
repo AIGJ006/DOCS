@@ -30,7 +30,7 @@
   padding: 0 0.3rem;
   border-radius: 999px;
   background: var(--color-danger);
-  color: var(--color-on-fill);
+  color: var(--color-bg); /* 016 대비 표: --color-danger 위 글자는 --color-bg */
   font-size: 0.7rem;
   font-weight: 700;
   line-height: 1.15rem;
@@ -108,10 +108,6 @@
   display: flex;
   align-items: stretch;
   border-bottom: 1px solid var(--color-border);
-}
-
-.notification-item-unread {
-  background: var(--thumb-empty);
 }
 
 .notification-item-main {
