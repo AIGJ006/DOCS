@@ -291,7 +291,7 @@ export default function EditorPage() {
     onContentRef.current = onContent;
   });
 
-  /** 사진 넣기 (003 US1): 붙여넣기·끌어놓기·[사진] 버튼 → 대기 표시 → 업로드 → `![](주소)`. 자동 저장은 막지 않는다. */
+  /** 사진 넣기 (003 US1): 붙여넣기·끌어놓기·[파일] 버튼 → 대기 표시 → 업로드 → `![](주소)`. 자동 저장은 막지 않는다. */
   const images = useImageInsert({
     textareaRef,
     getContent: () => latest.current.contentMd,
@@ -321,7 +321,11 @@ export default function EditorPage() {
     },
   });
 
-  /** [저장] — 즉시 DB에 반영한다 (FR-009, D-3). */
+  /**
+   * [임시저장] — 즉시 DB에 반영한 뒤 내 글 관리로 나간다 (FR-009, D-3).
+   * 임시글은 "임시" 탭, 발행 글을 고치던 중이면 "발행" 탭으로 간다(발행본은 그대로, 고친 내용은 작업본으로 남음).
+   * 실패하면 나가지 않고 이 화면에 안내를 보인다.
+   */
   const onSave = async () => {
     const queue = queueRef.current;
     if (!queue || saving || conflictRef.current?.intercept()) {
@@ -331,19 +335,26 @@ export default function EditorPage() {
     setMessage(null);
     await queue.pause();
     const snapshot = { ...latest.current };
+    let leaving = false;
     try {
       const response = await saveWorkingCopy(postId, {
         ...snapshot,
         baseVersion: queue.baseVersion,
       });
       queue.markSaved(response, snapshot);
-      if (opened?.server.status === 'PUBLISHED') {
-        setEditing(true);
+      leaving = true;
+      queue.dispose();
+      if (memberId !== null) {
+        // 서버에 저장됐으니 이 기기 초안은 필요 없다(다시 열 때 복구 안내가 뜨지 않게).
+        await removeDraft(memberId, postId).catch(() => undefined);
       }
+      const tab = opened?.server.status === 'PUBLISHED' ? 'published' : 'drafts';
+      navigate(`/manage/posts?tab=${tab}`, { state: { draftSaved: true } });
+      return;
     } catch (e) {
       const server = serverCopyOf(e);
       if (server) {
-        // 직접 누른 [저장]이 충돌했다 — 바로 비교 창 (US5 #2)
+        // 직접 누른 [임시저장]이 충돌했다 — 바로 비교 창 (US5 #2)
         conflictRef.current?.report(server, { open: true });
       } else {
         setMessage(
@@ -353,8 +364,10 @@ export default function EditorPage() {
         );
       }
     } finally {
-      queue.resume();
-      setSaving(false);
+      if (!leaving) {
+        queue.resume();
+        setSaving(false);
+      }
     }
   };
 
@@ -512,17 +525,17 @@ export default function EditorPage() {
             </button>
           ) : null}
           <button type="button" onClick={images.openPicker} title={ANIMATION_NOTICE}>
-            사진
+            파일
           </button>
           {storageHint(storage) ? (
             <span className="storage-hint">{storageHint(storage)}</span>
           ) : null}
           <input {...images.fileInputProps} aria-label="사진 고르기" />
           <button type="button" onClick={onSave} disabled={saving}>
-            저장
+            임시저장
           </button>
           <button type="button" onClick={onPublishClick}>
-            발행하기
+            글 등록
           </button>
         </div>
       </header>

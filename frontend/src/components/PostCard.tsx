@@ -32,9 +32,9 @@ export default function PostCard({ card, showAuthor = true, preview }: PostCardP
         height: '100%',
         boxSizing: 'border-box',
         minWidth: 0,
-        border: '1px solid var(--card-border, #e9ecef)',
+        border: '1px solid var(--color-border)',
         borderRadius: 'var(--card-radius, 0.5rem)',
-        background: 'var(--card-bg, #fff)',
+        background: 'var(--color-surface)',
         overflow: 'hidden',
       }}
     >
@@ -49,7 +49,7 @@ export default function PostCard({ card, showAuthor = true, preview }: PostCardP
             display: 'block',
             width: '100%',
             aspectRatio: 'var(--card-thumb-ratio, 16 / 9)',
-            background: 'var(--card-thumb-empty-bg, #f1f3f5)',
+            background: 'var(--thumb-empty)',
           }}
         >
           {card.thumbnailUrl ? (
@@ -83,7 +83,7 @@ export default function PostCard({ card, showAuthor = true, preview }: PostCardP
             margin: '0 0.75rem 0.5rem',
             fontSize: 'var(--card-excerpt-size, 0.875rem)',
             lineHeight: 1.5,
-            color: 'var(--card-excerpt-color, #495057)',
+            color: 'var(--color-text-muted)',
           }}
         >
           {preview ?? card.excerpt ?? ''}
@@ -98,7 +98,7 @@ export default function PostCard({ card, showAuthor = true, preview }: PostCardP
           gap: '0.5rem',
           flexWrap: 'wrap',
           fontSize: 'var(--card-meta-size, 0.8125rem)',
-          color: 'var(--card-meta-color, #868e96)',
+          color: 'var(--color-text-muted)',
           minWidth: 0,
         }}
       >

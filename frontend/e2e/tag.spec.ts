@@ -50,7 +50,7 @@ test.describe('태그 (008)', () => {
     await login(page);
     const postId = await createPost(page, { title: `태그 E2E ${stamp}`, contentMd: '본문' });
     await page.goto(`/write/${postId}`);
-    await page.getByRole('button', { name: '발행하기' }).click();
+    await page.getByRole('button', { name: '글 등록' }).click();
     const dialog = page.getByRole('dialog', { name: '발행 설정' });
     const input = dialog.getByRole('combobox', { name: '태그 입력' });
 
@@ -176,7 +176,7 @@ test.describe('태그 (008)', () => {
     await login(page);
     const postId = await createPost(page, { title: '조합 확인', contentMd: '본문' });
     await page.goto(`/write/${postId}`);
-    await page.getByRole('button', { name: '발행하기' }).click();
+    await page.getByRole('button', { name: '글 등록' }).click();
     const input = page
       .getByRole('dialog', { name: '발행 설정' })
       .getByRole('combobox', { name: '태그 입력' });

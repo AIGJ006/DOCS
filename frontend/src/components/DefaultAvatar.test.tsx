@@ -29,11 +29,9 @@ describe('DefaultAvatar', () => {
     expect(avatarInitial(null)).toBe('');
   });
 
-  it('8색 모두 흰 글자와 대비 4.5:1 이상 (라이트·다크 공통)', () => {
+  it('8색은 토큰 --avatar-1..8 (값·흰 글자 대비는 styles/__tests__/tokenContrast.test.ts)', () => {
     expect(AVATAR_COLORS).toHaveLength(8);
-    for (const color of AVATAR_COLORS) {
-      expect(contrastWithWhite(color)).toBeGreaterThanOrEqual(4.5);
-    }
+    AVATAR_COLORS.forEach((color, i) => expect(color).toBe(`var(--avatar-${i + 1})`));
   });
 
   it('SVG로 그리고 파일을 요청하지 않는다', () => {
@@ -43,7 +41,7 @@ describe('DefaultAvatar', () => {
     const svg = container.querySelector('svg');
     expect(svg).not.toBeNull();
     expect(svg).toHaveAttribute('width', '48');
-    expect(svg?.querySelector('circle')).toHaveAttribute('fill', AVATAR_COLORS[2]);
+    expect(svg?.querySelector('circle')?.style.fill).toBe(AVATAR_COLORS[2]);
     expect(svg?.querySelector('text')?.textContent).toBe('K');
     expect(container.querySelector('img')).toBeNull();
     expect(screen.getByTestId('default-avatar')).toHaveAttribute('aria-hidden', 'true');
@@ -57,11 +55,3 @@ describe('DefaultAvatar', () => {
     expect(container.querySelector('circle')).toBeInTheDocument();
   });
 });
-
-function contrastWithWhite(hex: string): number {
-  const channels = [1, 3, 5]
-    .map((i) => parseInt(hex.slice(i, i + 2), 16) / 255)
-    .map((v) => (v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4));
-  const luminance = 0.2126 * channels[0] + 0.7152 * channels[1] + 0.0722 * channels[2];
-  return 1.05 / (luminance + 0.05);
-}

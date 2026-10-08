@@ -30,14 +30,15 @@ export default function DefaultAvatar({ nickname, handle, size = 24 }: DefaultAv
       viewBox="0 0 100 100"
       style={{ display: 'inline-block', flex: `0 0 ${size}px` }}
     >
-      <circle cx="50" cy="50" r="50" fill={fill} />
+      {/* SVG fill 속성은 var()를 못 읽어 style로 칠한다 */}
+      <circle cx="50" cy="50" r="50" style={{ fill }} />
       {initial && (
         <text
           x="50"
           y="50"
           dy="0.35em"
           textAnchor="middle"
-          fill="#FFFFFF"
+          style={{ fill: 'var(--color-on-fill)' }}
           fontSize="46"
           fontWeight="600"
           fontFamily="system-ui, -apple-system, 'Segoe UI', sans-serif"

@@ -39,6 +39,19 @@ class NotFoundPageRendererTest {
     }
 
     @Test
+    void 테마_결정_태그는_404_셸에도_고정_메타보다_앞에_남는다() {
+        // 016 T023: 404 화면도 같은 테마로 첫 그리기(theme-init.js·color-scheme 메타는 빌드 셸 그대로).
+        NotFoundPageRenderer renderer =
+                new NotFoundPageRenderer(new ClassPathResource("static/index.html"));
+        String html = new String(renderer.render().getBody(), StandardCharsets.UTF_8);
+
+        int script = html.indexOf("<script src=\"/js/theme-init.js\"></script>");
+        assertThat(html.indexOf("<meta name=\"color-scheme\" content=\"light dark\" />"))
+                .isBetween(html.indexOf("<meta charset"), script);
+        assertThat(script).isLessThan(html.indexOf(OG_TITLE));
+    }
+
+    @Test
     void 셸의_app_head_자리에_넣고_셸_내용은_그대로_둔다() {
         String shell =
                 "<!doctype html><html><head><meta charset=\"UTF-8\"><!--app-head--></head>"
