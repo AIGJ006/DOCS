@@ -121,13 +121,13 @@ description: "Task list for 010-follow-feed (팔로우·팔로잉 피드)"
 
 ### Tests for User Story 2 ⚠️
 
-- [ ] T025 [P] [US2] 통합 테스트 `T/discovery/integration/FeedApiIT.java`: `US2_1_팔로우한_사람_공개글만_최신순`(같은 `first_public_at`이면 글 번호 큰 순, 카드 칸은 005 카드와 같음) · `US2_2_비공개_임시_휴지통_숨김_유예작성자_제외`(SC-003, 친구 공개 값이 있으면 그것도 제외) · `US2_3_끝까지_넘기기_중복누락_0`(30개, SC-004) · `US2_4_언팔로우_직후_빠짐`(SC-005) · `US2_5_팔로우_없음_hasFollowing_false` · `US2_6_글_없음_hasFollowing_true` · `US2_7_비회원_401` · 유예 회원 403 · 다른 목록 커서 400 `INVALID_CURSOR` · 카드 SQL 1번 + 사진 조회(`SqlCounter`) · 글 1만 건·팔로우 300명에서 `EXPLAIN (ANALYZE)` 200ms 이내 · `Cache-Control: private, no-cache` · 클라이언트 `size` 무시
+- [X] T025 [P] [US2] 통합 테스트 `T/discovery/integration/FeedApiIT.java`: `US2_1_팔로우한_사람_공개글만_최신순`(같은 `first_public_at`이면 글 번호 큰 순, 카드 칸은 005 카드와 같음) · `US2_2_비공개_임시_휴지통_숨김_유예작성자_제외`(SC-003, 친구 공개 값이 있으면 그것도 제외) · `US2_3_끝까지_넘기기_중복누락_0`(30개, SC-004) · `US2_4_언팔로우_직후_빠짐`(SC-005) · `US2_5_팔로우_없음_hasFollowing_false` · `US2_6_글_없음_hasFollowing_true` · `US2_7_비회원_401` · 유예 회원 403 · 다른 목록 커서 400 `INVALID_CURSOR` · 카드 SQL 1번 + 사진 조회(`SqlCounter`) · 글 1만 건·팔로우 300명에서 `EXPLAIN (ANALYZE)` 200ms 이내 · `Cache-Control: private, no-cache` · 클라이언트 `size` 무시 (구현 메모: SQL 수는 MockMvc 대신 FeedQueryService를 직접 불러 셌다(카드 1번, 빈 첫 페이지만 +1 — 세션 확인 SQL을 빼려고). 친구 공개 값은 V1 ck_post_visibility에 없어(PUBLIC·PRIVATE만) 해당 경우는 없다)
 - [ ] T026 [P] [US2] 화면 테스트 `F/pages/__tests__/FeedPage.test.tsx`: 9개 카드·[더 보기]·이미 있는 글 건너뛰기, 빈 상태 두 문구(`hasFollowing`), 비로그인이면 `/login?returnTo=/feed`, 뒤로 가기 복원(`listKey: 'feed'`, 30분), 로딩·실패 표시는 홈과 같음, 머리말 [피드]는 로그인했을 때만(`SessionBar`)
 
 ### Implementation for User Story 2
 
-- [ ] T027 [US2] `B/discovery/application/FeedQueryService.java`: `page(me, cursor)` → `PostListService.page(ListScope.feed(), CardFilter(followerId = me), cursor, Viewer.anonymous())` + 첫 페이지가 비었을 때만 `FollowQueryService.hasFollowing(me)`(interaction 공개 메서드를 더함) → `FeedPage`
-- [ ] T028 [US2] `B/discovery/web/FeedController.java`(`GET /api/feed`, `@LoginRequired`, `Cache-Control: private, no-cache` — 005 `CacheControlPolicy.NO_CACHE`) (T025 통과)
+- [X] T027 [US2] `B/discovery/application/FeedQueryService.java`: `page(me, cursor)` → `PostListService.page(ListScope.feed(), CardFilter(followerId = me), cursor, Viewer.anonymous())` + 첫 페이지가 비었을 때만 `FollowQueryService.hasFollowing(me)`(interaction 공개 메서드를 더함) → `FeedPage`
+- [X] T028 [US2] `B/discovery/web/FeedController.java`(`GET /api/feed`, `@LoginRequired`, `Cache-Control: private, no-cache` — 005 `CacheControlPolicy.NO_CACHE`) (T025 통과)
 - [ ] T029 [US2] (**006 머지 후** — `App.tsx`) `F/pages/FeedPage.tsx`(005 `PostCardGrid`·`LoadMoreButton`·`useCursorList({listKey: 'feed', restore: true})`)와 `F/App.tsx` `/feed` 경로, 001 `F/features/auth/SessionBar.tsx`에 로그인했을 때만 [피드] 링크(001 담당에게 알림) (T026 통과)
 
 **Checkpoint**: 팔로우와 피드가 모두 동작한다(US1 + US2 = 권장 MVP)
@@ -142,16 +142,16 @@ description: "Task list for 010-follow-feed (팔로우·팔로잉 피드)"
 
 ### Tests for User Story 3 ⚠️
 
-- [ ] T030 [P] [US3] 통합 테스트 `T/interaction/integration/FollowListApiIT.java`: `US3_1_비회원도_수와_목록` · `US3_2_항목_칸과_정렬`(`handle`·`nickname`·`profileImageUrl`·`bio`·`followedByMe`·`isMe`, 최근 팔로우 순·같은 `created_at`이면 회원 번호 큰 순, 45명 → 20·20·5 중복·누락 0) · `US3_3_유예회원_빠졌다가_복구하면_돌아옴`(수와 목록 모두) · `US3_4_빈_목록` · `US3_5_없는_유예_주소_404` · 다른 목록(`following:` ↔ `followers:`, 다른 주소) 커서 400 · SQL 2번(로그인)·1번(비회원) · 클라이언트 `size` 무시 · `Cache-Control: private, no-cache` · 탈퇴 유예 회원이 로그인해 목록을 보면 403(게이트)
-- [ ] T031 [P] [US3] 성능 통합 테스트 `T/interaction/integration/FollowCountPerformanceIT.java`(SC-007): 팔로워 1만 명(유예 50명) → 수 9,950, `EXPLAIN (ANALYZE, BUFFERS)`에 `ix_follow_followee`, 실행 10ms 이내(넘으면 실패 메시지에 "24 §5 카운터 검토"). 팔로잉 수도 `ix_follow_follower`
-- [ ] T032 [P] [US3] 페이지 셸 통합 테스트 `T/discovery/integration/FollowListPageShellIT.java`: `/@{handle}/followers`·`/following` — 대문자 → 301 소문자(쿼리 유지), 없는 주소·유예·익명 처리 → 404 + 공통 404 HTML(005 `NotFoundPageRenderer`), 정상 → 200 SPA 셸
+- [X] T030 [P] [US3] 통합 테스트 `T/interaction/integration/FollowListApiIT.java`: `US3_1_비회원도_수와_목록` · `US3_2_항목_칸과_정렬`(`handle`·`nickname`·`profileImageUrl`·`bio`·`followedByMe`·`isMe`, 최근 팔로우 순·같은 `created_at`이면 회원 번호 큰 순, 45명 → 20·20·5 중복·누락 0) · `US3_3_유예회원_빠졌다가_복구하면_돌아옴`(수와 목록 모두) · `US3_4_빈_목록` · `US3_5_없는_유예_주소_404` · 다른 목록(`following:` ↔ `followers:`, 다른 주소) 커서 400 · SQL 2번(로그인)·1번(비회원) · 클라이언트 `size` 무시 · `Cache-Control: private, no-cache` · 탈퇴 유예 회원이 로그인해 목록을 보면 403(게이트) (구현 메모: SQL 수는 서비스 직접 호출로 셌다: 주인 확인(001 findReadableBlogOwner) 1번이 더해져 비회원 2번·로그인 3번)
+- [X] T031 [P] [US3] 성능 통합 테스트 `T/interaction/integration/FollowCountPerformanceIT.java`(SC-007): 팔로워 1만 명(유예 50명) → 수 9,950, `EXPLAIN (ANALYZE, BUFFERS)`에 `ix_follow_followee`, 실행 10ms 이내(넘으면 실패 메시지에 "24 §5 카운터 검토"). 팔로잉 수도 `ix_follow_follower` (구현 메모: follow 12만 행(팬 1만 명이 star 양방향 + 팬끼리 10명씩)으로 플래너가 인덱스를 고르게 했다 — star 관계가 테이블의 1/3이면 순차 스캔이 더 싸서 고른다)
+- [X] T032 [P] [US3] 페이지 셸 통합 테스트 `T/discovery/integration/FollowListPageShellIT.java`: `/@{handle}/followers`·`/following` — 대문자 → 301 소문자(쿼리 유지), 없는 주소·유예·익명 처리 → 404 + 공통 404 HTML(005 `NotFoundPageRenderer`), 정상 → 200 SPA 셸
 - [ ] T033 [P] [US3] 화면 테스트 `F/pages/__tests__/FollowListPage.test.tsx`·`F/features/follow/__tests__/FollowCounts.test.tsx`: "공개 글 24 · 팔로워 12 · 팔로잉 30"(숫자 `toLocaleString`, 팔로워·팔로잉은 목록 링크), 목록 제목·항목(소개 첫 줄만, 텍스트 노드), `isMe` 항목 버튼 없음, 20개 [더 보기], 빈 문구 두 가지, 404면 공통 404 화면
 
 ### Implementation for User Story 3
 
-- [ ] T034 [US3] `FollowQueryService`에 `followers(handle, cursor, viewer)`·`following(handle, cursor, viewer)`(대상 확인 → `FollowRepository.page*` → `followedAmong` → 사진 주소 `ImageUrlResolver`) (T030·T031 통과)
-- [ ] T035 [US3] `B/interaction/web/FollowListController.java`(`GET /api/members/{handle}/followers|following`, 로그인 불필요, `Cache-Control: private, no-cache`)
-- [ ] T036 [US3] 005 `B/discovery/web/PageShellController.java`에 `/@{handle}/followers`·`/@{handle}/following` 매핑을 블로그 셸과 같은 규칙으로 더한다(005 소유 파일 — 005 셸 테스트 함께 실행) (T032 통과)
+- [X] T034 [US3] `FollowQueryService`에 `followers(handle, cursor, viewer)`·`following(handle, cursor, viewer)`(대상 확인 → `FollowRepository.page*` → `followedAmong` → 사진 주소 `ImageUrlResolver`) (T030·T031 통과)
+- [X] T035 [US3] `B/interaction/web/FollowListController.java`(`GET /api/members/{handle}/followers|following`, 로그인 불필요, `Cache-Control: private, no-cache`)
+- [X] T036 [US3] 005 `B/discovery/web/PageShellController.java`에 `/@{handle}/followers`·`/@{handle}/following` 매핑을 블로그 셸과 같은 규칙으로 더한다(005 소유 파일 — 005 셸 테스트 함께 실행) (T032 통과) (구현 메모: 목록 주소의 미리보기 메타는 블로그 메타(metaFactory.forBlog)를 그대로 쓴다)
 - [ ] T037 [P] [US3] `F/features/follow/FollowCounts.tsx`와 005 `F/pages/BlogPage.tsx` 머리말의 "공개 글 N" 줄 교체(팔로우 버튼 변화가 팔로워 수에 반영)
 - [ ] T038 [US3] (**006 머지 후** — `App.tsx`) `F/features/follow/FollowListItem.tsx`와 `F/pages/FollowListPage.tsx`(`mode: 'followers' | 'following'`, 005 `useCursorList`·`LoadMoreButton`, 복원 없음) + `F/App.tsx`에 `/:handle/followers`·`/:handle/following` 경로(`/:handle`보다 먼저) (T033 통과)
 
