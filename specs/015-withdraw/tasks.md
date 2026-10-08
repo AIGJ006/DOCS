@@ -212,7 +212,7 @@ description: "Task list for 015-withdraw (회원 탈퇴·복구)"
 
 **Purpose**: 권한 매트릭스, 종단 확인, 문서·인계, 회귀
 
-- [ ] T059 [P] 권한 매트릭스: `TR/permission/withdraw.csv`(research R15 표 18행, owner `015`)와 `T/account/permission/WithdrawalActions.java`(`me.withdrawal`·`me.withdraw`(픽스처 기본 비밀번호 또는 "탈퇴")·`me.restore`), `T/account/permission/WithdrawPermissionMatrixIT.java`(004 `AbstractPermissionMatrixIT` 상속)
+- [X] T059 [P] 권한 매트릭스: `TR/permission/withdraw.csv`(research R15 표 18행, owner `015`)와 `T/account/permission/WithdrawalActions.java`(`me.withdrawal`·`me.withdraw`(픽스처 기본 비밀번호 또는 "탈퇴")·`me.restore`), `T/account/permission/WithdrawPermissionMatrixIT.java`(004 `AbstractPermissionMatrixIT` 상속) (구현 메모: 하네스가 행마다 새 행위자를 만들어 me.withdraw 성공 행이 다른 행에 영향 없음. 18행 모두 R15 표대로 통과)
 - [ ] T060 [P] 종단 확인 `E/withdraw.spec.ts`(Playwright): quickstart §3의 1~8·10~12번(정리 작업 9번은 통합 테스트로 대신)
 - [ ] T061 [P] 375px·접근성: 세 화면 가로 스크롤 없음, 버튼 44px 이상, 체크박스·본인 확인 칸 `label`, 오류 `role="alert"`, [탈퇴하기]가 탭 순서상 마지막
 - [ ] T062 [P] 문서 반영: 001 `contracts/openapi.yaml` `MeSummary`에 두 칸·가입 email 칸 오류 `EMAIL_WITHDRAWAL_PENDING`, 001 data-model §2-1에 "탈퇴 전이는 015", 004 tasks T051 경로(T041가 문서 수정만 한 경우 확인)
