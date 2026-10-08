@@ -1,4 +1,4 @@
-/* 008 태그 화면 공용 (발행 창 태그 입력·태그 페이지·전체 태그·블로그 태그 줄). 375px부터 줄바꿈되고 가로 스크롤이 없다. */
+/* 008 태그 화면 공용 (발행 창 태그 입력·태그 페이지·전체 태그·블로그 태그 줄). 375px부터 줄바꿈되고 가로 스크롤이 없다. 색은 styles/tokens.css 변수만 쓴다. */
 
 .tag-input {
   display: flex;
@@ -24,24 +24,25 @@
   gap: 0.25rem;
   max-width: 100%;
   min-width: 0;
-  border: 1px solid var(--color-border, #999);
+  border: 1px solid var(--color-border);
   border-radius: 1rem;
   padding: 0.125rem 0.25rem 0.125rem 0.625rem;
-  background: var(--color-surface, #fff);
+  background: var(--color-surface);
   cursor: grab;
 }
 
 .tag-input__chip:focus-visible {
-  outline: 2px solid var(--color-focus, #1a5fb4);
+  outline: 2px solid var(--color-focus);
   outline-offset: 2px;
 }
 
 .tag-input__chip[data-flash='true'] {
-  background: var(--color-highlight, #fff3bf);
+  outline: 2px dashed var(--color-brand);
+  outline-offset: 1px;
 }
 
 .tag-input__chip[aria-invalid='true'] {
-  border: 2px solid var(--color-danger, #b00020);
+  border: 2px solid var(--color-danger);
 }
 
 .tag-input__name {
@@ -62,7 +63,7 @@
 
 .tag-input__chip-error {
   flex-basis: 100%;
-  color: var(--color-danger, #b00020);
+  color: var(--color-danger);
   font-size: 0.8125rem;
   overflow-wrap: anywhere;
 }
@@ -84,12 +85,12 @@
 .tag-input__count {
   flex: none;
   font-size: 0.8125rem;
-  color: var(--color-text-muted, #555);
+  color: var(--color-text-muted);
 }
 
 .tag-input__error {
   margin: 0;
-  color: var(--color-danger, #b00020);
+  color: var(--color-danger);
   font-size: 0.8125rem;
 }
 
@@ -104,9 +105,9 @@
   list-style: none;
   max-height: 16rem;
   overflow-y: auto;
-  border: 1px solid var(--color-border, #999);
+  border: 1px solid var(--color-border);
   border-radius: 0.375rem;
-  background: var(--color-surface, #fff);
+  background: var(--color-surface);
 }
 
 .tag-input__suggestion {
@@ -116,7 +117,8 @@
 }
 
 .tag-input__suggestion[aria-selected='true'] {
-  background: var(--color-highlight, #e7f0fb);
+  background: var(--color-code-bg);
+  box-shadow: inset 3px 0 0 var(--color-brand);
 }
 
 .visually-hidden {
@@ -137,7 +139,8 @@
   max-width: 100%;
   padding: 0.125rem 0.5rem;
   border-radius: 999px;
-  background: var(--tag-bg, #f1f3f5);
+  border: 1px solid var(--color-border);
+  background: var(--color-code-bg);
   color: inherit;
   text-decoration: none;
   font-size: 0.875rem;
@@ -145,7 +148,7 @@
 }
 
 .tag-link[aria-current='true'] {
-  outline: 2px solid var(--color-focus, #1a5fb4);
+  outline: 2px solid var(--color-focus);
 }
 
 /* 전체 태그 목록 */
@@ -160,7 +163,7 @@
 
 .tag-index__count {
   margin-left: 0.25rem;
-  color: var(--color-text-muted, #555);
+  color: var(--color-text-muted);
 }
 
 /* 블로그 태그 줄 */
@@ -213,7 +216,7 @@
 
 .tag-page__count {
   margin: 0.25rem 0 0;
-  color: var(--color-text-muted, #555);
+  color: var(--color-text-muted);
 }
 
 .tag-page__empty {

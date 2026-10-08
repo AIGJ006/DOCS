@@ -231,7 +231,7 @@ description: "Task list for 008-tag (태그와 태그별 글 목록)"
 - [X] T069 [P] 012·013 인계 메모: `specs/012-trending-search/plan.md`·`specs/013-ai-tag-suggest/plan.md`(작성되어 있으면)의 의존 항목에 `TagNormalizer.normalizeQuery`/`normalize`, `normalizeTag.ts`, `tagPath.ts`의 위치와 계약(contracts/normalization.md §5)을 적는다 (구현 메모: 브리프 규칙(맡지 않은 기능의 문서는 고치지 않음)에 따라 012·013 plan.md는 고치지 않고 인계 내용(TagNormalizer.normalizeQuery/normalize — backend tag/domain, normalizeTag.ts·tagPath.ts — frontend features/tag, 계약 contracts/normalization.md §5)을 작업 보고로 넘겼다)
 - [X] T070 [P] 원문 문서 갱신 제안: `docs/22-tag.md` §5~§8 API 표 옆에 "구현 계약은 specs/008-tag/contracts/openapi.yaml (머리말 `/summary`, 캐시 없음, 오류 형식 O8)"를 덧붙이는 변경을 팀에 제안한다(원문 수정은 팀 승인 후) (구현 메모: 제안만 — 원문 docs/22-tag.md는 고치지 않고 작업 보고에 제안 문구를 적었다)
 - [X] T071 quickstart.md §1~§5를 처음부터 끝까지 실행하고 결과를 기록한다 (구현 메모: quickstart 끝 '실행 기록' 절에 적었다. 실제 한글 입력기·화면 읽기 프로그램 수동 확인은 남김)
-- [ ] T072 전체 회귀: `./mvnw -pl backend verify`(002·005 테스트 포함)와 `npm test`·`npm run build`·`npm run lint`
+- [X] T072 전체 회귀: `./mvnw -pl backend verify`(002·005 테스트 포함)와 `npm test`·`npm run build`·`npm run lint` (구현 메모: main(aab4525) 합친 뒤 실행. 첫 실행에서 006 TrashedPostPermissionMatrixIT#태그_목록에_없다가 '008 기능이 생겼다'로 실패(설계된 알림) — 태그별 목록·글 수·전체 태그·블로그 태그 줄 단언을 채웠다. 새 색은 tokens.css 변수만 쓰도록 tag.css·TagList를 고쳤다)
 
 ### 조건부 작업
 

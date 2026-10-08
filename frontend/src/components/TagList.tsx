@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 import { tagPath } from '../features/tag/tagPath';
+import '../features/tag/tag.css';
 
 /**
  * 글의 태그 (005 T039, FR-032). 입력한 순서 그대로 `#이름`으로 보여주고 그 태그의 글 목록으로 연결한다.
@@ -27,19 +28,7 @@ export default function TagList({ tags }: TagListProps) {
     >
       {tags.map((tag) => (
         <li key={tag}>
-          <Link
-            data-testid="tag"
-            to={tagPath(tag)}
-            style={{
-              display: 'inline-block',
-              padding: '0.125rem 0.5rem',
-              borderRadius: '999px',
-              background: 'var(--tag-bg, #f1f3f5)',
-              color: 'inherit',
-              textDecoration: 'none',
-              fontSize: '0.875rem',
-            }}
-          >
+          <Link data-testid="tag" className="tag-link" to={tagPath(tag)}>
             #{tag}
           </Link>
         </li>
