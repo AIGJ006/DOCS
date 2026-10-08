@@ -5,8 +5,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.team.blog.interaction.application.FollowPurgeService;
+import com.team.blog.interaction.application.FollowWithdrawalPurgeStep;
 import com.team.blog.interaction.support.FollowApi;
 import com.team.blog.interaction.support.FollowFixtures;
+import com.team.blog.shared.application.withdraw.WithdrawalPurgeStep;
 import com.team.blog.support.IntegrationTestBase;
 import com.team.blog.support.TestLogin;
 import com.team.blog.support.fixture.PostFixtures;
@@ -21,13 +23,14 @@ import org.springframework.transaction.support.TransactionTemplate;
 
 /**
  * 탈퇴하는 회원의 팔로우 관계 (010 T039 US4, SC-006·SC-008). 015가 없어도 확인하도록 탈퇴 유예·복구는 DB에서 {@code
- * status}·{@code withdrawn_at}을 직접 바꾸고, 정리는 015 단계가 부를 {@link FollowPurgeService#purgeByMember}를
- * 트랜잭션 안에서 부른다.
+ * status}·{@code withdrawn_at}을 직접 바꾸고, 정리는 015 단계 order 65({@link FollowWithdrawalPurgeStep})가 부르는
+ * {@link FollowPurgeService#purgeByMember}를 트랜잭션 안에서 부른다.
  */
 class FollowWithdrawalIT extends IntegrationTestBase {
 
     @Autowired FollowPurgeService purgeService;
     @Autowired TransactionTemplate tx;
+    @Autowired List<WithdrawalPurgeStep> steps;
 
     private long a;
     private long b;
@@ -114,7 +117,16 @@ class FollowWithdrawalIT extends IntegrationTestBase {
     }
 
     @Test
-    void 정리_순서는_65() {
+    void 정리_단계_order_65는_010_FollowWithdrawalPurgeStep_하나다() {
+        List<WithdrawalPurgeStep> at65 = steps.stream().filter(step -> step.order() == 65).toList();
+        assertThat(at65).hasSize(1);
+        assertThat(at65.get(0)).isInstanceOf(FollowWithdrawalPurgeStep.class);
         assertThat(FollowPurgeService.WITHDRAWAL_PURGE_ORDER).isEqualTo(65);
+
+        tx.executeWithoutResult(status -> at65.get(0).purge(a));
+        assertThat(new FollowFixtures(jdbc).rowsOf(a)).isZero();
+        assertThatThrownBy(() -> at65.get(0).purge(b))
+                .as("MANDATORY")
+                .isInstanceOf(IllegalTransactionStateException.class);
     }
 }
