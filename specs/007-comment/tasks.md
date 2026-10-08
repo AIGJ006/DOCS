@@ -224,8 +224,8 @@ description: "Task list for 007-comment (댓글·답글)"
 - [X] T059 [P] 004 문구 정리: `specs/004-visibility-permission/spec.md`의 비회원 댓글 문구("로그인하고 댓글 쓰기")를 이 spec FR-023 문구로 맞추는 변경을 004 담당에게 제안한다(문서 변경, ANALYSIS-tier-bc) (구현 메모: 004 spec.md 120행·FR-045의 "로그인하고 댓글 쓰기"를 FR-023 문구로 바꾸자고 보고에 제안(문서는 고치지 않음). 화면 CommentInputGate는 FR-023 문구로 바꿈)
 - [X] T060 [P] 015 인계: `specs/015-withdraw/tasks.md`의 `CommentWithdrawalPurgeStep` 작업이 `CommentPurgeService.purgeByAuthor` 서명(contracts/events.md §2-2)과 order 20을 쓰는지 확인한다 (구현 메모: 015 tasks.md T051이 CommentWithdrawalPurgeStep(order 20) → CommentPurgeService.purgeByAuthor(long) : PurgeResult를 쓰고 events.md §2-2 서명과 같음. MANDATORY라 015 단계 트랜잭션 안에서 불러야 함)
 - [X] T061 `grep -rn "007 댓글 기능이\|007-comments가 확장\|TODO(007)" backend/src frontend/src`가 0건인지 확인하고 남은 표시를 정리한다(005 T041·006 T058 구현 메모) (구현 메모: CommentSectionSlot 구현 메모를 지워 grep 0건)
-- [ ] T062 quickstart.md §1~§5를 처음부터 끝까지 실행하고 결과를 기록한다
-- [ ] T063 전체 회귀: `./mvnw -pl backend verify`(001·004·005·006 테스트 포함)와 `npm test`·`npm run build`·`npm run lint`
+- [X] T062 quickstart.md §1~§5를 처음부터 끝까지 실행하고 결과를 기록한다 (구현 메모: 결과는 quickstart §6)
+- [X] T063 전체 회귀: `./mvnw -pl backend verify`(001·004·005·006 테스트 포함)와 `npm test`·`npm run build`·`npm run lint` (구현 메모: backend verify(단위 659·통합 1,764, 실패 0), 화면 656건·build·lint 통과. prettier --check는 main부터 있던 TagPage.test.tsx 1건만 경고(내 파일 아님, 그대로 둠))
 
 ---
 

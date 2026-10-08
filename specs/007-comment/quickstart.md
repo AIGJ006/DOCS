@@ -82,3 +82,11 @@ docker compose up -d postgres redis minio
 - 011: 댓글 작성 → 알림 생성, 자리로 남긴 삭제 → 그 알림 삭제
 - 014: 숨김 → 다른 회원에게 "운영 정책에 따라 숨겨진 댓글이에요", 작성자에게 원문 + "숨겨졌어요 (나만 보여요)", 댓글 수 −1
 - 015: 탈퇴 신청 → 그 회원 댓글 "탈퇴한 사용자의 댓글이에요", 수 그대로 → 30일 정리 → 남의 답글 있는 최상위만 자리, 수가 실제와 같다
+
+## 6. 실행 기록 (2026-10-08, 브랜치 `007-comment`, main 3961a76 합친 뒤)
+
+- §1: 임의 포트 PostgreSQL 18·Redis 7 + 빌드한 jar로 기동. Flyway는 V1·V2만 적용(새 마이그레이션 없음), `blog.comment.*` 기본값 그대로. 종단 시험만 `BLOG_COMMENT_RATELIMIT_CREATE_LIMIT=500`
+- §2: `./mvnw -q verify` 통과 — 단위 659, 통합 1,764(건너뜀 57: `@Tag("perf")`·환경 조건 시험), 실패 0. 화면 `npx vitest run` 88파일 656건 통과, `npm run build`·`npm run lint` 통과
+- §3: `e2e/comment.spec.ts`가 1~10번을 desktop·mobile(375px)로 자동화 — 4건 통과. 2번(인증 전 안내)은 `CommentForm.test.tsx`로 확인. 005·004·006 관련 종단 시험(visibility·manage-posts·reading·xss·site-header·tag) 14건 통과·10건 건너뜀(계정·환경 조건)
+- §4: 위 표 그대로
+- §5: 006 `PostPurgeIT`(CASCADE·`commentIdsOfPost`) 통과. 011·014·015는 아직 없음 — 015는 `CommentPurgeService.purgeByAuthor`(MANDATORY, order 20)를 부르면 된다(T060)
