@@ -1,9 +1,11 @@
 import { render, screen, waitFor, within } from '@testing-library/react';
+import type { MeSummary } from '../../api/me';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes, useNavigate } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { BlogHeader, PostCard, PostCardPage } from '../../api/types/reading';
-import { errorBody, json, requestsTo, stubFetch } from '../../test/fetchRoutes';
+import { SessionContext } from '../../features/auth/sessionContext';
+import { ME, errorBody, json, requestsTo, stubFetch } from '../../test/fetchRoutes';
 import BlogPage from '../BlogPage';
 
 const BIO = '스프링 백엔드를 공부합니다.\n하루에 한 글씩 씁니다.';
@@ -16,6 +18,9 @@ function header(overrides: Partial<BlogHeader> = {}): BlogHeader {
     profileImageUrl: null,
     publicPostCount: 12,
     isMe: false,
+    followerCount: 3,
+    followingCount: 1234,
+    followedByMe: false,
     ...overrides,
   };
 }
@@ -282,5 +287,74 @@ describe('BlogPage 태그 필터', () => {
     expect(filter).toHaveTextContent('#c#');
     expect(filter).not.toHaveTextContent('글');
     expect(within(filter).getByRole('link', { name: '필터 해제' })).toBeInTheDocument();
+  });
+  describe('팔로우 (010 T024·T037)', () => {
+    function renderLoggedIn() {
+      const session = {
+        loading: false,
+        me: { ...ME, emailVerified: true } as MeSummary,
+        refresh: async () => null,
+      };
+      return render(
+        <MemoryRouter initialEntries={['/@kim755030']}>
+          <SessionContext.Provider value={session}>
+            <Routes>
+              <Route path="/:handle" element={<BlogPage />} />
+            </Routes>
+          </SessionContext.Provider>
+        </MemoryRouter>,
+      );
+    }
+
+    it('머리말에 "공개 글 · 팔로워 · 팔로잉"과 목록 링크, [팔로우] 버튼', async () => {
+      stubBlog(header(), [page(range(12, 9), 'c1')]);
+
+      renderBlog();
+
+      const counts = await screen.findByTestId('follow-counts');
+      expect(counts).toHaveTextContent('공개 글 12·팔로워 3·팔로잉 1,234');
+      expect(within(counts).getByRole('link', { name: '팔로워 3' })).toHaveAttribute(
+        'href',
+        '/@kim755030/followers',
+      );
+      expect(within(counts).getByRole('link', { name: '팔로잉 1,234' })).toHaveAttribute(
+        'href',
+        '/@kim755030/following',
+      );
+      expect(screen.getByRole('button', { name: '팔로우' })).toHaveAttribute(
+        'aria-pressed',
+        'false',
+      );
+    });
+
+    it('팔로우 중이면 [팔로잉 ✓]로 시작하고 누르면 팔로워 수가 바로 줄어든다', async () => {
+      stubFetch({
+        'GET /api/members/kim755030': () => json(200, header({ followedByMe: true })),
+        'GET /api/members/kim755030/posts': () => json(200, page(range(12, 9), 'c1')),
+        'DELETE /api/members/kim755030/follow': () =>
+          json(200, { following: false, followerCount: 2 }),
+      });
+
+      renderLoggedIn();
+
+      const button = await screen.findByRole('button', { pressed: true });
+      expect(button).toHaveTextContent('팔로잉 ✓');
+      await userEvent.click(button);
+
+      expect(screen.getByTestId('follow-counts')).toHaveTextContent('팔로워 2');
+      expect(screen.getByRole('button', { name: '팔로우' })).toHaveAttribute(
+        'aria-pressed',
+        'false',
+      );
+    });
+
+    it('내 블로그면 팔로우 버튼이 없다', async () => {
+      stubBlog(header({ isMe: true }), [page(range(12, 9), 'c1')]);
+
+      renderBlog();
+
+      await screen.findByTestId('follow-counts');
+      expect(screen.queryByRole('button', { name: /팔로/ })).not.toBeInTheDocument();
+    });
   });
 });

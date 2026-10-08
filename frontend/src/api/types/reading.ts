@@ -41,6 +41,12 @@ export interface BlogHeader {
   profileImageUrl: string | null;
   publicPostCount: number;
   isMe: boolean;
+  /** 팔로워 수 — 탈퇴 유예 회원 제외 (010) */
+  followerCount: number;
+  /** 팔로잉 수 — 탈퇴 유예 회원 제외 (010) */
+  followingCount: number;
+  /** 내가 이 블로그 주인을 팔로우 중인가. 비회원·내 블로그면 false (010) */
+  followedByMe: boolean;
 }
 
 /** 화면 버튼 판단용 보는 사람 기준 값 — 004 `viewerFlags.ts`가 정의한다(이름·뜻 그대로). */
@@ -50,7 +56,7 @@ export type { ViewerFlags } from './viewerFlags';
 export interface PostDetailViewer extends ViewerFlags {
   /** 비회원·작성자는 항상 false */
   likedByMe: boolean;
-  /** 비회원·작성자는 항상 false. 010 미구현이면 false */
+  /** 비회원·작성자는 항상 false (010이 채운다) */
   followingAuthor: boolean;
 }
 

@@ -20,7 +20,7 @@ function loginHref(pathname: string, search: string): string {
  *
  * - 왼쪽: 서비스 이름 → 홈
  * - 비로그인: [로그인] [회원 가입]
- * - 로그인: [글쓰기] · 내 블로그 · 계정 메뉴(내 글 관리 · 설정 · 로그아웃)
+ * - 로그인: [글쓰기] · 피드(010) · 내 블로그 · 계정 메뉴(내 글 관리 · 설정 · 로그아웃)
  * - 글쓰기 화면(`/write/*`)에서는 [글쓰기]만 숨긴다. 머리말 자체는 남긴다 — 016 테마 버튼이 "어느 페이지에서나 같은 자리"(45 T-4).
  * - 맨 오른쪽은 016 테마 전환 버튼 자리다. 010 [피드]·011 알림 🔔도 이 줄의 `site-header-actions`에 더한다.
  */
@@ -43,6 +43,9 @@ export default function SiteHeader() {
                   글쓰기
                 </Link>
               )}
+              <Link to="/feed" className="site-header-link">
+                피드
+              </Link>
               <Link to={`/@${me.handle}`} className="site-header-link site-header-wide-only">
                 내 블로그
               </Link>
