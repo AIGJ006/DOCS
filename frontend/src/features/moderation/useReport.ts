@@ -12,7 +12,8 @@ export const REPORT_TEXT = {
   detailLabel: '설명',
   detailPlaceholder: '어떤 문제인지 적어 주세요',
   accepted: '신고가 접수됐어요. 검토 후 처리할게요',
-  notFound: (type: TargetType) => (type === 'POST' ? '볼 수 없는 글이에요' : '볼 수 없는 댓글이에요'),
+  notFound: (type: TargetType) =>
+    type === 'POST' ? '볼 수 없는 글이에요' : '볼 수 없는 댓글이에요',
   retryLater: '잠시 후 다시 시도해 주세요',
 } as const;
 

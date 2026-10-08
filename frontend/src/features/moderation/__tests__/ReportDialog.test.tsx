@@ -73,7 +73,9 @@ describe('ReportDialog', () => {
       'POST /api/reports': () =>
         status === 404
           ? json(404, errorBody('NOT_FOUND', '볼 수 없는 페이지예요'))
-          : json(429, errorBody('TOO_MANY_REQUESTS', '요청이 너무 많아요'), { 'Retry-After': '30' }),
+          : json(429, errorBody('TOO_MANY_REQUESTS', '요청이 너무 많아요'), {
+              'Retry-After': '30',
+            }),
     });
     const props = renderDialog();
     await userEvent.click(screen.getByRole('radio', { name: '스팸·광고' }));
@@ -87,7 +89,8 @@ describe('ReportDialog', () => {
 
   it('401·403은 onGate에 넘긴다', async () => {
     stubFetch({
-      'POST /api/reports': () => json(403, errorBody('EMAIL_NOT_VERIFIED', '이메일 인증 후 이용할 수 있어요')),
+      'POST /api/reports': () =>
+        json(403, errorBody('EMAIL_NOT_VERIFIED', '이메일 인증 후 이용할 수 있어요')),
     });
     const onGate = vi.fn(() => true);
     renderDialog({ onGate });

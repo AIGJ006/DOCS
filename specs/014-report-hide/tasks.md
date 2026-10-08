@@ -136,8 +136,8 @@ description: "Task list for 014-report-hide (신고·관리자 숨김·회원 �
 - [X] T028 [P] [US2] 테스트 `T/moderation/integration/CaseResolutionIT.java`: quickstart §2 표 `CaseResolutionIT` 행 전부(대기 탭 정렬·커서·고아 제외, 상세에 현재 원문 없음·`currentState`·`reportedByMe`·`onlyMyReport`·작성자 정보, 숨기기 7건, 반려, 동시 처리 하나만 200, 자기 글 400, 혼자 신고 400·남 신고 섞이면 200, 대상 없음 409, 처리됨 탭 `handledByNickname`·`targetHiddenNow`), 응답 SQL 수(`SqlCounter`, 목록 ≤ 5) (구현 메모: 목록 SQL 수를 5 이하로 맞추려고 사유별 수를 대기 목록 SQL에 FILTER 집계로 함께 센다(처리됨 탭은 따로 stats 1번))
 - [X] T029 [P] [US2] 테스트 `T/moderation/integration/DirectHideIT.java`(글 부분): 신고 없는 글 → 새 `HIDDEN` 사건(신고 0, 스냅샷 있음)·`ContentHidden` 1·`ReportResolved` 0, 대기 사건 있는 글 → 그 사건 `HIDDEN`·`ReportResolved` 신고마다, 남의 비공개 글·휴지통 글 404, 자기 글 400, 이미 숨김 200·이벤트 0
 - [X] T030 [P] [US2] 테스트 `T/moderation/integration/HiddenContentVisibilityIT.java`(글 부분, SC-001): 숨긴 글이 비회원·회원·관리자에게 상세 404, 홈·블로그·태그·검색·트렌딩·sitemap·블로그 글 수에서 빠짐(있는 기능만 — 없는 목록은 `Assumptions.abort`), 작성자 상세 200 + `authorView.hidden = true`·`hiddenReason = SPAM`, 006 관리 목록 `hidden: true`, 작성자에게도 홈·블로그 목록에 없음 (구현 메모: 검색·태그·트렌딩·sitemap·관리 목록은 응답이 200일 때만 확인한다. 012·009·010 목록은 모두 004 VisibilityFilter(p.hidden_at IS NULL)를 쓰고 있어 고칠 곳이 없었다)
-- [ ] T031 [P] [US2] 화면 테스트 `F/pages/admin/__tests__/AdminReportsPage.test.tsx`·`AdminReportDetailPage.test.tsx`: 탭 전환(`?tab=`), 항목 표시(배지·제목·`@작성자`·신고 수·사유별 수·상대 시각), [더 보기] 중복 사건 거름, 스냅샷 텍스트로만(`<script>` 글자 그대로), "현재: 비공개", 숨기기 사유 없으면 버튼 비활성, 확인 창, 409 → "이미 처리된 신고예요" + 다시 불러오기, `onlyMyReport` → 버튼 비활성 + 문구, 대상 없음 표시
-- [ ] T032 [P] [US2] 화면 테스트 `F/features/moderation/__tests__/HiddenReasonText.test.tsx`: 사유가 있으면 "운영 정책에 따라 숨겨진 글이에요 (사유: 스팸·광고). 다른 사람에게는 보이지 않아요", 없으면 괄호 없음, 모르는 코드면 "기타"
+- [X] T031 [P] [US2] 화면 테스트 `F/pages/admin/__tests__/AdminReportsPage.test.tsx`·`AdminReportDetailPage.test.tsx`: 탭 전환(`?tab=`), 항목 표시(배지·제목·`@작성자`·신고 수·사유별 수·상대 시각), [더 보기] 중복 사건 거름, 스냅샷 텍스트로만(`<script>` 글자 그대로), "현재: 비공개", 숨기기 사유 없으면 버튼 비활성, 확인 창, 409 → "이미 처리된 신고예요" + 다시 불러오기, `onlyMyReport` → 버튼 비활성 + 문구, 대상 없음 표시 (구현 메모: 구현(T039)과 같은 묶음에서 썼다 — 화면 테스트가 처음부터 통과해 실패 확인 단계는 없었다)
+- [X] T032 [P] [US2] 화면 테스트 `F/features/moderation/__tests__/HiddenReasonText.test.tsx`: 사유가 있으면 "운영 정책에 따라 숨겨진 글이에요 (사유: 스팸·광고). 다른 사람에게는 보이지 않아요", 없으면 괄호 없음, 모르는 코드면 "기타"
 - [X] T033 [P] [US2] 권한 매트릭스: `moderation.csv`에 `admin.post.hide` 행과 행동 `T/moderation/permission/AdminHidePostAction.java`
 
 ### Implementation for User Story 2
@@ -146,10 +146,10 @@ description: "Task list for 014-report-hide (신고·관리자 숨김·회원 �
 - [X] T035 [US2] `B/moderation/application/CaseResolutionService.java`(research R6 1~9 — `PostModerationService.hide`, 댓글은 `CommentModerationService.hide`, 이벤트는 트랜잭션 안에서 `publishEvent`) (구현 메모: 다른 모듈 Service의 예외가 트랜잭션을 rollback-only로 만들지 않도록 CaseCloser가 숨기기 전에 스냅샷으로 대상 유무를 먼저 본다. 대상 없음 종료는 커밋한 뒤 409를 던진다)
 - [X] T036 [US2] `B/moderation/application/DirectHideService.java`의 `hide(admin, type, id, reason)`(research R7 — 대상 판정은 T020 `ReportTargetResolver`를 관리자 `Viewer`로, 대기 사건 있으면 R6 7~9 재사용, 없으면 §4 새 사건) (구현 메모: 이미 숨김인 대상은 읽기 판정 없이 200 {hidden:true, caseId:null}(관리자도 숨긴 글을 읽을 수 없어서). 자기 콘텐츠 판정(400)이 볼 수 있는지 판정보다 먼저)
 - [X] T037 [US2] `B/moderation/web/AdminReportController.java`(`GET /api/admin/reports`, `GET …/{caseId}`, `POST …/{caseId}/resolution`)·`AdminHideController.java`(`PUT /api/admin/posts/{postId}/hidden`)와 dto(`CaseListItem`·`CaseDetail`·`ResolutionRequest`·`HideRequest`·`HiddenState`). 모든 Service 첫머리에 `viewer.isAdmin()` 확인 + `requireActive(CONTENT_WRITE)`(T027~T030·T033 통과)
-- [ ] T038 [P] [US2] `F/api/admin.ts`(목록·상세·처리·숨김·해제·회원·정지·해제)
-- [ ] T039 [US2] 화면 `F/pages/admin/AdminReportsPage.tsx`·`AdminReportDetailPage.tsx`와 `F/features/admin/CaseList.tsx`·`CaseSnapshot.tsx`(텍스트 노드, `white-space: pre-wrap`)·`ResolutionForm.tsx`·`adminText.ts`, 처리 확인은 006 `ConfirmDialog`(006 머지 후), "글 주소로 숨기기" 칸(직접 숨김)(T031 통과)
-- [ ] T040 [US2] `F/App.tsx`에 `/admin/reports`·`/admin/reports/:caseId`·`/admin/members/:handle`을 004 `AdminRouteGate` 아래에 더한다(**006 머지 후** — 같은 파일)
-- [ ] T041 [US2] `F/features/moderation/HiddenReasonText.tsx`와 `F/features/post-detail/AuthorStatusBanner.tsx`의 숨김 문장을 사유를 받는 조립으로 바꾼다(`HIDDEN_NOTICE` 상수 → 함수, `hiddenReasonSlot` 제거 또는 `HiddenReasonText`로 채움). 005 소유 파일, 005 회귀 `AuthorStatusBanner.test.tsx` 함께 실행(T032 통과)
+- [X] T038 [P] [US2] `F/api/admin.ts`(목록·상세·처리·숨김·해제·회원·정지·해제) (구현 메모: tab은 계약대로 PENDING·HANDLED를 보낸다(화면 주소는 ?tab=pending|handled). 정지·해제 응답은 계약대로 AdminMemberView)
+- [X] T039 [US2] 화면 `F/pages/admin/AdminReportsPage.tsx`·`AdminReportDetailPage.tsx`와 `F/features/admin/CaseList.tsx`·`CaseSnapshot.tsx`(텍스트 노드, `white-space: pre-wrap`)·`ResolutionForm.tsx`·`adminText.ts`, 처리 확인은 006 `ConfirmDialog`(006 머지 후), "글 주소로 숨기기" 칸(직접 숨김)(T031 통과) (구현 메모: 목록 응답(CaseListItem)에 대상 번호가 없어 처리됨 탭 [숨김 해제]는 사건 상세를 먼저 불러 대상 번호를 얻은 뒤 DELETE한다. 위험 동작 채운 버튼 바탕으로 tokens.css에 --color-danger-fill(라이트·다크 같은 #c92a2a, --color-on-fill 글자 대비 4.5:1 이상)을 더하고 tokenContrast.test 쌍에 넣었다)
+- [X] T040 [US2] `F/App.tsx`에 `/admin/reports`·`/admin/reports/:caseId`·`/admin/members/:handle`을 004 `AdminRouteGate` 아래에 더한다(**006 머지 후** — 같은 파일) (구현 메모: /admin 아래 중첩 라우트(index → /admin/reports, 모르는 하위 경로는 NotFoundPage). App.tsx의 Placeholder를 지웠다)
+- [X] T041 [US2] `F/features/moderation/HiddenReasonText.tsx`와 `F/features/post-detail/AuthorStatusBanner.tsx`의 숨김 문장을 사유를 받는 조립으로 바꾼다(`HIDDEN_NOTICE` 상수 → 함수, `hiddenReasonSlot` 제거 또는 `HiddenReasonText`로 채움). 005 소유 파일, 005 회귀 `AuthorStatusBanner.test.tsx` 함께 실행(T032 통과) (구현 메모: hiddenReasonSlot prop을 지우고 AuthorStatusBanner가 HiddenReasonText에 authorView.hiddenReason을 넘긴다. HIDDEN_NOTICE는 사유 없는 문장으로 남겼다. 005 테스트 두 곳(AuthorStatusBanner·PostDetailPage.author)의 숨김 문장 단언을 사유 포함 문장으로 바꿨다)
 
 **Checkpoint**: US1 + US2 — 신고부터 숨김까지 끝까지 동작(MVP)
 
@@ -169,7 +169,7 @@ description: "Task list for 014-report-hide (신고·관리자 숨김·회원 �
 ### Implementation for User Story 3
 
 - [X] T044 [US3] `AdminHideController`에 `PUT /api/admin/comments/{commentId}/hidden`, `DirectHideService`·`CaseResolutionService`의 댓글 경로(007 `hide`가 삭제된 자리에서 NotFound → 대상 없음 처리)(T042·T043 통과)
-- [ ] T045 [US3] 관리자 상세 화면의 댓글 스냅샷 표시(제목 없음, 내용 전체), 처리됨 목록 댓글 항목 — `CaseSnapshot.tsx`·`CaseList.tsx`와 테스트 두 경우 추가
+- [X] T045 [US3] 관리자 상세 화면의 댓글 스냅샷 표시(제목 없음, 내용 전체), 처리됨 목록 댓글 항목 — `CaseSnapshot.tsx`·`CaseList.tsx`와 테스트 두 경우 추가
 
 **Checkpoint**: 글·댓글 숨김 모두 동작
 
@@ -184,12 +184,12 @@ description: "Task list for 014-report-hide (신고·관리자 숨김·회원 �
 ### Tests for User Story 4 ⚠️
 
 - [X] T046 [P] [US4] 테스트 `T/moderation/integration/UnhideRestoresIT.java`: quickstart §2 표 `UnhideRestoresIT` 행 전부(SC-006 — 좋아요·댓글 행 수·`like_count`·`comment_count`·홈 목록 순서 숨기기 전후 같음, 숨긴 글의 작성자 수정·다시 발행·공개 범위 변경·휴지통·복구 뒤에도 `hidden_at` 그대로), 해제 → `ContentUnhidden` 1·`ReportResolved`·`ContentHidden` 0·사건 상태 `HIDDEN` 그대로, 숨김 아닌 대상 해제 200·이벤트 0, 자기 콘텐츠 해제 400, 없는 대상 404, 댓글 해제 → 댓글 수 +1
-- [ ] T047 [P] [US4] 화면 테스트: 처리됨 탭 항목 `targetHiddenNow`면 [숨김 해제] → 확인 → `DELETE` → 버튼 사라짐, 사건 결과 표시는 "숨김" 그대로 — `AdminReportsPage.test.tsx`에 추가
+- [X] T047 [P] [US4] 화면 테스트: 처리됨 탭 항목 `targetHiddenNow`면 [숨김 해제] → 확인 → `DELETE` → 버튼 사라짐, 사건 결과 표시는 "숨김" 그대로 — `AdminReportsPage.test.tsx`에 추가
 
 ### Implementation for User Story 4
 
 - [X] T048 [US4] `DirectHideService.unhide(admin, type, id)`와 `AdminHideController`의 `DELETE …/posts/{postId}/hidden`·`…/comments/{commentId}/hidden`(research R7 — 사건 상태 그대로, `ContentUnhidden`)(T046 통과)
-- [ ] T049 [US4] 처리됨 탭 [숨김 해제] 버튼과 상세 화면 [숨김 해제] — `CaseList.tsx`·`AdminReportDetailPage.tsx`, 확인은 006 `ConfirmDialog`·결과 알림 줄은 006 `useToast`(006 머지 후)(T047 통과)
+- [X] T049 [US4] 처리됨 탭 [숨김 해제] 버튼과 상세 화면 [숨김 해제] — `CaseList.tsx`·`AdminReportDetailPage.tsx`, 확인은 006 `ConfirmDialog`·결과 알림 줄은 006 `useToast`(006 머지 후)(T047 통과)
 
 **Checkpoint**: 숨김을 되돌릴 수 있다
 
@@ -204,13 +204,13 @@ description: "Task list for 014-report-hide (신고·관리자 숨김·회원 �
 ### Tests for User Story 5 ⚠️
 
 - [X] T050 [P] [US5] 테스트 `T/moderation/integration/SuspensionIT.java`: quickstart §2 표 `SuspensionIT` 행 전부(세션 3개 모두 끊김, 로그인 403 `details`, 영구, 기한 지남 자동 해제는 001 T108 결과 확인, 정지 회원 글 보임, 관리자·사유 없음·탈퇴 유예 400, 이미 정지 409, 동시 정지 → 열린 정지 1, `RedisOutage` 중 정지 → 503·DB 변화 없음, 해제 → `lifted_by`·`ACTIVE`, 알림·이벤트(`MemberSuspended` 1 외) 없음) (구현 메모: Redis 정지 중 정지는 HTTP로 하면 관리자 세션을 못 읽어 401이 되므로 SuspensionService를 직접 불러 TemporarilyUnavailableException·DB 변화 없음을 확인)
-- [ ] T051 [P] [US5] 화면 테스트 `F/pages/admin/__tests__/AdminMemberPage.test.tsx`: 정보·정지 이력 표, 정지 중이면 종료 시각(영구 표시)·사유·[정지 해제], 아니면 기간 4개 + 사유(필수, 200자) + [정지] 확인 창 "모든 기기에서 로그아웃돼요", 관리자 회원이면 정지 칸 없음, 400·409 문구, 상세 화면 작성자 카드 [회원 화면] 링크
+- [X] T051 [P] [US5] 화면 테스트 `F/pages/admin/__tests__/AdminMemberPage.test.tsx`: 정보·정지 이력 표, 정지 중이면 종료 시각(영구 표시)·사유·[정지 해제], 아니면 기간 4개 + 사유(필수, 200자) + [정지] 확인 창 "모든 기기에서 로그아웃돼요", 관리자 회원이면 정지 칸 없음, 400·409 문구, 상세 화면 작성자 카드 [회원 화면] 링크
 
 ### Implementation for User Story 5
 
 - [X] T052 [US5] `B/account/application/SuspensionService.java`의 `suspend`·`lift`·`history` 구현(contracts/moderation-sql.md §7 — 회원 행 잠금, 세션 삭제를 커밋 전 + 커밋 뒤 한 번 더, 실패 → `TEMPORARILY_UNAVAILABLE`)와 `SuspensionRecord.java`, 이유 코드 `CANNOT_SUSPEND_ADMIN`·`CANNOT_SUSPEND_WITHDRAWN`·`ALREADY_SUSPENDED`는 `B/account/application/AccountReasonCode.java`에 추가(001 소유 파일, 001 T106 TODO를 채움) (구현 메모: 세션 삭제는 트랜잭션 시작 전에 한 번(실패면 503·DB 변화 없음) + RedisGuard.runAfterCommit로 커밋 뒤 한 번 더(실패는 WARN). plan R10의 '커밋 전'은 트랜잭션 안 Redis 쓰기 금지 규칙과 부딪혀 이렇게 바꿨다. 기존 TODO 시그니처는 호출하는 곳이 없어 새 시그니처 suspend(memberId, reason, SuspensionDuration, adminId, now)로 바꿨다. SuspensionDuration enum은 모듈 순환을 피하려고 account에 둔다)
 - [X] T053 [US5] `B/moderation/application/AdminMemberService.java`(조회 = `findAdminView` + 숨겨진 수 + 이력, 정지·해제는 `SuspensionService`)와 `B/moderation/web/AdminMemberController.java`(`GET /api/admin/members/{handle}`, `POST …/suspensions` 201, `DELETE …/suspensions/current`), dto `AdminMemberView`·`SuspendRequest`(T050 통과)
-- [ ] T054 [US5] 화면 `F/pages/admin/AdminMemberPage.tsx`, `F/features/admin/SuspendForm.tsx`·`SuspensionHistory.tsx`, 상세 화면 작성자 카드에 [회원 화면], 정지·해제 확인은 006 `ConfirmDialog`(006 머지 후)(T051 통과)
+- [X] T054 [US5] 화면 `F/pages/admin/AdminMemberPage.tsx`, `F/features/admin/SuspendForm.tsx`·`SuspensionHistory.tsx`, 상세 화면 작성자 카드에 [회원 화면], 정지·해제 확인은 006 `ConfirmDialog`(006 머지 후)(T051 통과)
 
 **Checkpoint**: 모든 User Story 동작
 

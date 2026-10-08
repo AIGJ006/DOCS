@@ -50,7 +50,9 @@ describe('ReportButton', () => {
   });
 
   it('서버가 401이면 창을 닫고 로그인 안내', async () => {
-    stubFetch({ 'POST /api/reports': () => json(401, errorBody('LOGIN_REQUIRED', '로그인이 필요해요')) });
+    stubFetch({
+      'POST /api/reports': () => json(401, errorBody('LOGIN_REQUIRED', '로그인이 필요해요')),
+    });
     renderButton();
     await userEvent.click(screen.getByRole('button', { name: '신고' }));
     await userEvent.click(screen.getByRole('radio', { name: '스팸·광고' }));

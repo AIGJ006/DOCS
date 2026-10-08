@@ -19,7 +19,12 @@ export interface ReportButtonProps {
  * [신고] 버튼 + 신고 창 (014 T024). 글은 005 `ReactionBar.reportButton`, 댓글은 007 `CommentItem`의 `comment-actions` 자리에
  * 들어간다. 접수되면 창을 닫고 006 알림 줄로 "신고가 접수됐어요. 검토 후 처리할게요". 401·403은 004 `useAuthGate` 안내로 바꾼다.
  */
-export default function ReportButton({ targetType, targetId, viewer, className }: ReportButtonProps) {
+export default function ReportButton({
+  targetType,
+  targetId,
+  viewer,
+  className,
+}: ReportButtonProps) {
   const [open, setOpen] = useState(false);
   const gate = useAuthGate({ unauthorized: 'prompt' });
   const { show, toast } = useToast();
