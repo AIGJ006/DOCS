@@ -11,6 +11,7 @@ import com.team.blog.discovery.support.PostReadingFixture;
 import com.team.blog.discovery.support.ReadingApi;
 import com.team.blog.post.application.PostDraftQueryService;
 import com.team.blog.post.application.port.AuthorFollowStatusQuery;
+import com.team.blog.post.application.port.PostCategoryPathQuery;
 import com.team.blog.post.application.port.PostLikeStatusQuery;
 import com.team.blog.post.application.port.PostTagNamesQuery;
 import com.team.blog.support.IntegrationTestBase;
@@ -29,6 +30,8 @@ class PostDetailFallbackIntegrationTest extends IntegrationTestBase {
     @MockitoBean AuthorFollowStatusQuery followStatus;
     // PostDetailAuthorViewIntegrationTest와 같은 덮어쓰기 묶음으로 둬 테스트 컨텍스트를 함께 쓴다(여기서는 실제 동작 그대로)
     @MockitoSpyBean PostDraftQueryService draftQuery;
+    // 017 PostDetailCategoryIT와 같은 덮어쓰기 묶음 (실제 동작 그대로)
+    @MockitoSpyBean PostCategoryPathQuery categoryPaths;
 
     private PostReadingFixture fixture;
 

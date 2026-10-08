@@ -39,6 +39,7 @@ import { registerLifecycle } from '../features/editor/lifecycle';
 import { removeDraft, saveDraft } from '../features/editor/localDraftStore';
 import { openEditor, type OpenedEditor } from '../features/editor/openEditor';
 import { setActiveEditor } from '../features/editor/pendingWork';
+import CategorySelect from '../features/category/CategorySelect';
 import NotFoundPage from './NotFoundPage';
 import './editor.css';
 
@@ -555,6 +556,8 @@ export default function EditorPage() {
         </p>
       ) : null}
 
+      {/* 017 카테고리 — 고르는 즉시 저장 (발행과 별개) */}
+      <CategorySelect postId={postId} />
       <input
         className="editor-title"
         aria-label="제목"

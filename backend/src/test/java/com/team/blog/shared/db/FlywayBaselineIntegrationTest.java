@@ -8,12 +8,29 @@ import java.sql.SQLException;
 import org.junit.jupiter.api.Test;
 import org.springframework.dao.DataIntegrityViolationException;
 
-/** Flyway V1(= docs/51 SQL 블록) + V2(shedlock)를 빈 DB에 적용한 결과가 51 §검증 결과의 카탈로그 수치와 같은지 확인한다. */
+/**
+ * Flyway V1(= docs/51 SQL 블록) + V2(shedlock)를 빈 DB에 적용한 결과가 51 §검증 결과의 카탈로그 수치와 같은지 확인한다.
+ *
+ * <p>V3(017 카테고리, 개인 확장)가 더하는 것은 {@code V3_*} 상수로 따로 더한다 — 51 기준선 수치는 그대로 읽히게 둔다.
+ */
 class FlywayBaselineIntegrationTest extends IntegrationTestBase {
 
     /** 업무 테이블만 (Flyway 이력·ShedLock 제외). */
     private static final String BUSINESS =
             "n.nspname = 'public' AND c.relname NOT IN ('flyway_schema_history', 'shedlock')";
+
+    /**
+     * V3: category 테이블 1, 컬럼 8 + post.category_id 1, PK 1·FK 3·CHECK 3, 별도 인덱스 4(UNIQUE 1), 시각 컬럼
+     * 2.
+     */
+    private static final int V3_TABLES = 1;
+
+    private static final int V3_COLUMNS = 9;
+    private static final int V3_FK = 3;
+    private static final int V3_CHECK = 3;
+    private static final int V3_INDEXES = 4;
+    private static final int V3_UNIQUE_INDEXES = 1;
+    private static final int V3_TIMESTAMPTZ = 2;
 
     private long count(String sql) {
         return jdbc.queryForObject(sql, Long.class);
@@ -26,7 +43,7 @@ class FlywayBaselineIntegrationTest extends IntegrationTestBase {
                                 "SELECT count(*) FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace"
                                         + " WHERE c.relkind = 'r' AND "
                                         + BUSINESS))
-                .isEqualTo(20);
+                .isEqualTo(20 + V3_TABLES);
         assertThat(
                         count(
                                 "SELECT count(*) FROM pg_tables WHERE schemaname = 'public' AND tablename = 'shedlock'"))
@@ -39,7 +56,7 @@ class FlywayBaselineIntegrationTest extends IntegrationTestBase {
                         count(
                                 "SELECT count(*) FROM information_schema.columns WHERE table_schema = 'public'"
                                         + " AND table_name NOT IN ('flyway_schema_history', 'shedlock')"))
-                .isEqualTo(148);
+                .isEqualTo(148 + V3_COLUMNS);
     }
 
     @Test
@@ -49,10 +66,10 @@ class FlywayBaselineIntegrationTest extends IntegrationTestBase {
                         + " JOIN pg_namespace n ON n.oid = c.relnamespace WHERE "
                         + BUSINESS
                         + " AND k.contype = ";
-        assertThat(count(base + "'p'")).isEqualTo(20);
-        assertThat(count(base + "'f'")).isEqualTo(40);
+        assertThat(count(base + "'p'")).isEqualTo(20 + V3_TABLES);
+        assertThat(count(base + "'f'")).isEqualTo(40 + V3_FK);
         assertThat(count(base + "'u'")).isEqualTo(9);
-        assertThat(count(base + "'c'")).isEqualTo(52);
+        assertThat(count(base + "'c'")).isEqualTo(52 + V3_CHECK);
     }
 
     @Test
@@ -63,8 +80,9 @@ class FlywayBaselineIntegrationTest extends IntegrationTestBase {
                         + " JOIN pg_am am ON am.oid = ic.relam WHERE "
                         + BUSINESS
                         + " AND NOT EXISTS (SELECT 1 FROM pg_constraint k WHERE k.conindid = i.indexrelid)";
-        assertThat(count("SELECT count(*) " + standalone)).isEqualTo(42);
-        assertThat(count("SELECT count(*) " + standalone + " AND i.indisunique")).isEqualTo(5);
+        assertThat(count("SELECT count(*) " + standalone)).isEqualTo(42 + V3_INDEXES);
+        assertThat(count("SELECT count(*) " + standalone + " AND i.indisunique"))
+                .isEqualTo(5 + V3_UNIQUE_INDEXES);
         assertThat(count("SELECT count(*) " + standalone + " AND am.amname = 'gin'")).isEqualTo(4);
     }
 
@@ -80,7 +98,7 @@ class FlywayBaselineIntegrationTest extends IntegrationTestBase {
                 "SELECT count(*) FROM information_schema.columns WHERE table_schema = 'public'"
                         + " AND table_name NOT IN ('flyway_schema_history', 'shedlock') AND data_type = ";
         assertThat(count(cols + "'timestamp without time zone'")).isZero();
-        assertThat(count(cols + "'timestamp with time zone'")).isEqualTo(41);
+        assertThat(count(cols + "'timestamp with time zone'")).isEqualTo(41 + V3_TIMESTAMPTZ);
     }
 
     @Test
