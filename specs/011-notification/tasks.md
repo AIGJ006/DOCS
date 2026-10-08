@@ -246,8 +246,8 @@ description: "Task list for 011-notification (도메인 이벤트·인앱 알림
 **Purpose**: 종단 확인, 다른 기능 인계, 문서
 
 - [ ] T058 [P] Playwright `E/notification.spec.ts` — quickstart §3 1~11(두 브라우저 문맥: A·B), 375px 폭 가로 스크롤 없음, 종·[×] 44px 이상, 펼침 목록 키보드(Tab·Esc)
-- [ ] T059 [P] 이벤트 필드 맞춤 확인: 007 `CommentCreated`·`CommentDeleted`, 009 `PostLiked`·`PostUnliked`, 010 `MemberFollowed`·`MemberUnfollowed`, 014 `ReportResolved`·`ContentHidden`이 data-model §3 표와 같은지 확인하고 다르면 이 기능 문서를 고친다(필드는 각 기능 소유)
-- [ ] T060 [P] 001 `B/shared/security/ActionKind.java` `ACCOUNT_WRITE` 주석에 "알림 읽음·삭제·설정"을 더한다(001 담당에게 알림)
+- [X] T059 [P] 이벤트 필드 맞춤 확인: 007 `CommentCreated`·`CommentDeleted`, 009 `PostLiked`·`PostUnliked`, 010 `MemberFollowed`·`MemberUnfollowed`, 014 `ReportResolved`·`ContentHidden`이 data-model §3 표와 같은지 확인하고 다르면 이 기능 문서를 고친다(필드는 각 기능 소유) (구현 메모: 9개 record 필드가 data-model §3과 모두 같음(2026-10-08 확인), 문서 수정 없음)
+- [X] T060 [P] 001 `B/shared/security/ActionKind.java` `ACCOUNT_WRITE` 주석에 "알림 읽음·삭제·설정"을 더한다(001 담당에게 알림) (구현 메모: 001 담당 알림은 최종 보고에 적음)
 - [ ] T061 014·015 인계 확인: 014가 `reasonLabels.ts`·이벤트 record를 이 기능 것으로 쓰는지(T045·T047), 015 정리 단계 표 order 70 행이 T056과 같은지 기록한다
 - [ ] T062 quickstart.md §2 명령 전체 실행, §3 수동 확인, §4 다른 기능 확인(있는 기능만) 결과를 기록한다
 
