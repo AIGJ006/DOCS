@@ -32,8 +32,8 @@ export default function SiteHeader() {
   return (
     <header className="site-header">
       <div className="site-header-inner">
-        <Link to="/" className="site-header-logo">
-          {SITE_NAME}
+        <Link to="/" className="site-header-logo" aria-label={SITE_NAME}>
+          {logoParts(SITE_NAME)}
         </Link>
         <nav aria-label="사이트 메뉴" className="site-header-actions">
           {loading ? null : me ? (
@@ -161,4 +161,17 @@ function AccountMenu({ me }: { me: MeSummary }) {
       )}
     </div>
   );
+}
+
+/** 대문자만 브랜드 색으로 칠한다: BuildLOG → B·LOG가 이어져 BLOG로 읽힌다. */
+function logoParts(name: string) {
+  return Array.from(name.matchAll(/[A-Z]+|[^A-Z]+/g), ([part], i) => (
+    <span
+      key={i}
+      className={/[A-Z]/.test(part) ? 'site-header-logo-mark' : undefined}
+      aria-hidden="true"
+    >
+      {part}
+    </span>
+  ));
 }
