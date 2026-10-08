@@ -44,6 +44,11 @@ public record ListScope(String value) {
         return new ListScope("blog:" + handle + ":tag:" + name);
     }
 
+    /** 블로그 안 카테고리 필터 목록 (017). handle은 소문자, id는 카테고리 번호. */
+    public static ListScope blogCategory(String handle, long categoryId) {
+        return new ListScope("blog:" + handle + ":category:" + categoryId);
+    }
+
     /** 팔로잉 피드 (010). 보는 사람마다 내용이 다르지만 커서 값은 같은 범위다 — 피드 커서는 로그인한 본인만 쓴다. */
     public static ListScope feed() {
         return new ListScope("feed");

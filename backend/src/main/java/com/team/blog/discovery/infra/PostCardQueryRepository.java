@@ -90,6 +90,11 @@ public class PostCardQueryRepository {
                             + " AND f.followee_id = p.author_id)");
             params.put("followerId", filter.followerId());
         }
+        if (filter.categoryIds() != null) {
+            // 017 카테고리 필터: 번호 목록은 category 모듈이 준다(이 클래스는 category를 읽지 않음)
+            sql.append(" AND p.category_id IN (:categoryIds)");
+            params.put("categoryIds", filter.categoryIds());
+        }
         if (after != null) {
             sql.append(" AND (p.first_public_at, p.id) < (:cursorAt, :cursorId)");
             params.put("cursorAt", after.firstPublicAt().withOffsetSameInstant(ZoneOffset.UTC));

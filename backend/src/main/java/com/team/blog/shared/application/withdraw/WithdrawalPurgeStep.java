@@ -9,6 +9,7 @@ package com.team.blog.shared.application.withdraw;
  *   <caption>단계 표 (contracts §2)</caption>
  *   <tr><th>order</th><th>클래스 (모듈)</th><th>처리</th></tr>
  *   <tr><td>10</td><td>{@code PostWithdrawalPurgeStep} (post)</td><td>내 글 전부 완전 삭제 (006 {@code PostPurgeService})</td></tr>
+ *   <tr><td>15</td><td>{@code CategoryWithdrawalPurgeStep} (category, 017)</td><td>내 카테고리 삭제</td></tr>
  *   <tr><td>20</td><td>{@code CommentWithdrawalPurgeStep} (interaction)</td><td>남의 글의 내 댓글 (007)</td></tr>
  *   <tr><td>30</td><td>{@code LikeWithdrawalPurgeStep} (interaction)</td><td>내가 누른 좋아요 (009)</td></tr>
  *   <tr><td>40</td><td>{@code ImageWithdrawalPurgeStep} (media)</td><td>내 사진 연결 해제 (003)</td></tr>
