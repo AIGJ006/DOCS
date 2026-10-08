@@ -1,9 +1,15 @@
 package com.team.blog.account.infra.security;
 
+import com.team.blog.account.infra.AccountProperties;
+import com.team.blog.account.infra.redis.LoginFailureCounter;
+import com.team.blog.shared.error.ErrorResponseWriter;
+import com.team.blog.shared.infra.ratelimit.RateLimiter;
+import com.team.blog.shared.infra.redis.RedisGuard;
 import com.team.blog.shared.security.SecurityFilterChainCustomizer;
 import org.springframework.core.annotation.Order;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.security.web.authentication.logout.HttpStatusReturningLogoutSuccessHandler;
 import org.springframework.stereotype.Component;
 
@@ -26,7 +32,12 @@ import org.springframework.stereotype.Component;
  *       OAuth2LoginFailureHandler}. 액세스 토큰은 보관하지 않는다.
  * </ul>
  *
- * 요청 제한·재동의 필터는 US5에서 여기에 더한다.
+ * <ul>
+ *   <li>로그인 요청 제한({@link LoginRateLimitFilter}, US5): 폼 로그인 필터 앞 — Redis 장애 503, IP 1분 20회, 이메일 잠금.
+ * </ul>
+ *
+ * 재동의 게이트({@link ReagreementGateFilter})는 탈퇴 유예 게이트 뒤에 와야 하므로 {@link
+ * WithdrawnAccountGateCustomizer}가 붙인다.
  */
 @Component
 @Order(0)
@@ -43,6 +54,7 @@ public class AccountSecurityCustomizer implements SecurityFilterChainCustomizer 
     private final OAuth2MemberUserService oauth2UserService;
     private final OAuth2LoginSuccessHandler socialSuccessHandler;
     private final OAuth2LoginFailureHandler socialFailureHandler;
+    private final LoginRateLimitFilter loginRateLimitFilter;
 
     public AccountSecurityCustomizer(
             JsonLoginSuccessHandler successHandler,
@@ -52,7 +64,12 @@ public class AccountSecurityCustomizer implements SecurityFilterChainCustomizer 
             OidcMemberUserService oidcUserService,
             OAuth2MemberUserService oauth2UserService,
             OAuth2LoginSuccessHandler socialSuccessHandler,
-            OAuth2LoginFailureHandler socialFailureHandler) {
+            OAuth2LoginFailureHandler socialFailureHandler,
+            RedisGuard redisGuard,
+            RateLimiter rateLimiter,
+            LoginFailureCounter loginFailureCounter,
+            ErrorResponseWriter errorWriter,
+            AccountProperties properties) {
         this.successHandler = successHandler;
         this.failureHandler = failureHandler;
         this.socialRegistrations = socialRegistrations;
@@ -61,10 +78,14 @@ public class AccountSecurityCustomizer implements SecurityFilterChainCustomizer 
         this.oauth2UserService = oauth2UserService;
         this.socialSuccessHandler = socialSuccessHandler;
         this.socialFailureHandler = socialFailureHandler;
+        this.loginRateLimitFilter =
+                new LoginRateLimitFilter(
+                        redisGuard, rateLimiter, loginFailureCounter, errorWriter, properties);
     }
 
     @Override
     public void customize(HttpSecurity http) throws Exception {
+        http.addFilterBefore(loginRateLimitFilter, UsernamePasswordAuthenticationFilter.class);
         http.formLogin(
                 form ->
                         form.loginPage("/login")

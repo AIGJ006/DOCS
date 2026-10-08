@@ -25,14 +25,14 @@ public class PasswordChangeFailureCounter extends RedisFailureCounter {
     }
 
     public OptionalLong lockedFor(long memberId) {
-        return lockedFor(KEY + memberId);
+        return lockedForKey(KEY + memberId);
     }
 
     public OptionalLong recordFailure(long memberId) {
-        return recordFailure(KEY + memberId);
+        return recordFailureForKey(KEY + memberId);
     }
 
     public void reset(long memberId) {
-        reset(KEY + memberId);
+        resetKey(KEY + memberId);
     }
 }

@@ -5,6 +5,8 @@ import com.team.blog.account.domain.MemberAgreement;
 import com.team.blog.account.infra.AccountProperties;
 import com.team.blog.account.infra.MemberAgreementRepository;
 import com.team.blog.shared.error.FieldError;
+import com.team.blog.shared.error.ValidationException;
+import java.time.Clock;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
@@ -30,10 +32,13 @@ public class AgreementService {
 
     private final AccountProperties.Agreement settings;
     private final MemberAgreementRepository repository;
+    private final Clock clock;
 
-    public AgreementService(AccountProperties properties, MemberAgreementRepository repository) {
+    public AgreementService(
+            AccountProperties properties, MemberAgreementRepository repository, Clock clock) {
         this.settings = properties.agreement();
         this.repository = repository;
+        this.clock = clock;
     }
 
     public CurrentAgreements current() {
@@ -75,6 +80,24 @@ public class AgreementService {
     /** 가입 트랜잭션 안에서 TERMS·PRIVACY 두 행을 현재 버전으로 기록한다(FR-010 — 동의 기록 없이 계정이 생기지 않음). */
     @Transactional(propagation = Propagation.MANDATORY)
     public void recordOnSignup(long memberId, Instant now) {
+        for (AgreementType type : REQUIRED) {
+            repository.upsert(memberId, type.name(), currentVersion(type), now);
+        }
+    }
+
+    /**
+     * 재동의 (FR-012, openapi {@code reagree}). 보낸 버전이 현재 버전이면 TERMS·PRIVACY 두 행의 {@code
+     * version}·{@code agreed_at}을 지금으로 갱신한다(없으면 추가). 같은 버전으로 다시 보내도 결과가 같다. 세션 표시 해제는 호출한 쪽(웹)이 한다.
+     *
+     * @throws ValidationException {@code AGREEMENT_REQUIRED}·{@code AGREEMENT_VERSION_MISMATCH}
+     */
+    @Transactional
+    public void reagree(long memberId, AgreementVersions consent) {
+        List<FieldError> errors = consentErrors(consent);
+        if (!errors.isEmpty()) {
+            throw new ValidationException(errors);
+        }
+        Instant now = clock.instant();
         for (AgreementType type : REQUIRED) {
             repository.upsert(memberId, type.name(), currentVersion(type), now);
         }

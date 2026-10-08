@@ -1,6 +1,7 @@
 import { lazy, Suspense, useEffect, useState } from 'react';
 import { Route, Routes, useLocation } from 'react-router-dom';
 import { onNotFound } from './api/client';
+import { ReagreementGate } from './features/auth/ReagreementGate';
 import { SessionProvider } from './features/auth/SessionProvider';
 import DetailDeleteButton from './features/manage-posts/DetailDeleteButton';
 import SessionBar from './features/auth/SessionBar';
@@ -12,6 +13,7 @@ import BlogPage from './pages/BlogPage';
 import NotFoundPage from './pages/NotFoundPage';
 import PostDetailPage from './pages/PostDetailPage';
 import PrivacyPage from './pages/PrivacyPage';
+import ReagreementPage from './pages/ReagreementPage';
 import ResetPasswordPage from './pages/ResetPasswordPage';
 import SignupPage from './pages/SignupPage';
 import SocialSignupPage from './pages/SocialSignupPage';
@@ -57,48 +59,50 @@ export default function App() {
   return (
     <SessionProvider>
       <SessionBar />
-      {notFoundAt !== null && notFoundAt === location.key ? (
-        <NotFoundPage />
-      ) : (
-        <Routes>
-          <Route path="/" element={<HomePage />} />
-          <Route path="/signup" element={<SignupPage />} />
-          <Route path="/signup/social" element={<SocialSignupPage />} />
-          <Route path="/login" element={<LoginPage />} />
-          <Route path="/verify-email" element={<VerifyEmailPage />} />
-          <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-          <Route path="/reset-password" element={<ResetPasswordPage />} />
-          <Route path="/reagree" element={<Placeholder name="reagree" />} />
-          <Route path="/settings" element={<Placeholder name="settings" />} />
-          <Route path="/terms" element={<TermsPage />} />
-          <Route path="/privacy" element={<PrivacyPage />} />
-          <Route
-            path="/write/new"
-            element={
-              <Suspense fallback={<EditorLoading />}>
-                <NewPostPage />
-              </Suspense>
-            }
-          />
-          <Route
-            path="/write/:postId"
-            element={
-              <Suspense fallback={<EditorLoading />}>
-                <EditorPage />
-              </Suspense>
-            }
-          />
-          {/* 006 내 글 관리 — 사용자를 가리키는 값 없이 본인 글만 (FR-002) */}
-          <Route path="/manage/posts" element={<ManagePostsPage />} />
-          {/* 005 글 상세 — react-router는 `/@:handle`처럼 구간 일부만 파라미터로 받지 못해 `@`는 화면이 떼어 낸다 */}
-          <Route
-            path="/:handle/posts/:postId"
-            element={<PostDetailPage deleteControl={renderDetailDelete} />}
-          />
-          <Route path="/:handle" element={<BlogPage />} />
-          <Route path="*" element={<NotFoundPage />} />
-        </Routes>
-      )}
+      <ReagreementGate>
+        {notFoundAt !== null && notFoundAt === location.key ? (
+          <NotFoundPage />
+        ) : (
+          <Routes>
+            <Route path="/" element={<HomePage />} />
+            <Route path="/signup" element={<SignupPage />} />
+            <Route path="/signup/social" element={<SocialSignupPage />} />
+            <Route path="/login" element={<LoginPage />} />
+            <Route path="/verify-email" element={<VerifyEmailPage />} />
+            <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+            <Route path="/reset-password" element={<ResetPasswordPage />} />
+            <Route path="/reagree" element={<ReagreementPage />} />
+            <Route path="/settings" element={<Placeholder name="settings" />} />
+            <Route path="/terms" element={<TermsPage />} />
+            <Route path="/privacy" element={<PrivacyPage />} />
+            <Route
+              path="/write/new"
+              element={
+                <Suspense fallback={<EditorLoading />}>
+                  <NewPostPage />
+                </Suspense>
+              }
+            />
+            <Route
+              path="/write/:postId"
+              element={
+                <Suspense fallback={<EditorLoading />}>
+                  <EditorPage />
+                </Suspense>
+              }
+            />
+            {/* 006 내 글 관리 — 사용자를 가리키는 값 없이 본인 글만 (FR-002) */}
+            <Route path="/manage/posts" element={<ManagePostsPage />} />
+            {/* 005 글 상세 — react-router는 `/@:handle`처럼 구간 일부만 파라미터로 받지 못해 `@`는 화면이 떼어 낸다 */}
+            <Route
+              path="/:handle/posts/:postId"
+              element={<PostDetailPage deleteControl={renderDetailDelete} />}
+            />
+            <Route path="/:handle" element={<BlogPage />} />
+            <Route path="*" element={<NotFoundPage />} />
+          </Routes>
+        )}
+      </ReagreementGate>
     </SessionProvider>
   );
 }

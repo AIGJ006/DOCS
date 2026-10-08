@@ -1,4 +1,4 @@
-import { apiGet, apiPost, type ErrorBody } from './client';
+import { apiGet, apiPost, apiPut, type ErrorBody } from './client';
 
 /** 가입 때 동의한 문서 버전 (contracts `AgreementConsent`). */
 export interface AgreementConsent {
@@ -158,4 +158,9 @@ export function changePassword(
   newPasswordConfirm: string,
 ): Promise<void> {
   return apiPost<void>('/api/me/password', { currentPassword, newPassword, newPasswordConfirm });
+}
+
+/** 바뀐 약관·처리방침 재동의 (`reagree`, FR-012) → 204. 현재 버전이 아니면 400 `AGREEMENT_VERSION_MISMATCH`. */
+export function reagree(consent: AgreementConsent): Promise<void> {
+  return apiPut('/api/me/agreements', consent);
 }

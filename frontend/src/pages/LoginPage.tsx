@@ -75,7 +75,14 @@ export default function LoginPage() {
     setSubmitting(true);
     try {
       const result = await login(email, password, redirect);
-      window.location.assign(result.reagreementRequired ? '/reagree' : result.redirectTo || '/');
+      const target = result.redirectTo || '/';
+      window.location.assign(
+        result.reagreementRequired
+          ? target === '/'
+            ? '/reagree'
+            : `/reagree?returnTo=${encodeURIComponent(target)}`
+          : target,
+      );
     } catch (caught) {
       setPassword('');
       setError(messageOf(caught));

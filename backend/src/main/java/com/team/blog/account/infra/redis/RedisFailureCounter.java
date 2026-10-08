@@ -46,7 +46,7 @@ abstract class RedisFailureCounter {
     }
 
     /** 잠겨 있으면 남은 초(1 이상). */
-    protected OptionalLong lockedFor(String key) {
+    protected OptionalLong lockedForKey(String key) {
         return redisGuard.call(
                 () -> {
                     String value = redis.opsForValue().get(key);
@@ -64,7 +64,7 @@ abstract class RedisFailureCounter {
 
     /** 실패 한 번. 이번 실패로 잠기면 남은 초. */
     @SuppressWarnings("unchecked")
-    protected OptionalLong recordFailure(String key) {
+    protected OptionalLong recordFailureForKey(String key) {
         return redisGuard.callWrite(
                 () -> {
                     List<Long> result =
@@ -84,7 +84,7 @@ abstract class RedisFailureCounter {
                 });
     }
 
-    protected void reset(String key) {
+    protected void resetKey(String key) {
         redisGuard.runWrite(() -> redis.delete(key), () -> {});
     }
 }

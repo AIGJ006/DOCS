@@ -3,6 +3,7 @@ package com.team.blog.account.infra.security;
 import com.team.blog.account.application.LoginOutcome;
 import com.team.blog.account.application.LoginService;
 import com.team.blog.account.domain.Provider;
+import com.team.blog.account.infra.redis.LoginFailureCounter;
 import com.team.blog.account.web.dto.LoginResult;
 import com.team.blog.shared.error.ApiException;
 import com.team.blog.shared.error.ErrorResponseWriter;
@@ -31,6 +32,9 @@ import tools.jackson.databind.json.JsonMapper;
  *   <li>이동 주소: 폼의 {@code redirect}를 {@link SafeRedirectResolver}로 검사한 값, 아니면 {@code /} (FR-039).
  *   <li>정지 계정: 인증을 되돌리고 403 {@code ACCOUNT_SUSPENDED} {@code details {endsAt, reason}} (FR-038,
  *       R-23).
+ *   <li>성공하면 그 이메일의 로그인 실패 횟수를 지운다(FR-035). 카운터는 Redis 쓰기라 트랜잭션 밖인 여기서 부른다.
+ *   <li>재동의가 필요하면 세션 {@code reagreementRequired}를 두고({@link LoginSession}) {@code
+ *       reagreementRequired:true}로 알린다(FR-012).
  * </ul>
  */
 @Component
@@ -39,6 +43,7 @@ public class JsonLoginSuccessHandler implements AuthenticationSuccessHandler {
     public static final String REDIRECT_PARAMETER = "redirect";
 
     private final LoginService loginService;
+    private final LoginFailureCounter failureCounter;
     private final SafeRedirectResolver safeRedirect;
     private final ErrorResponseWriter errorWriter;
     private final JsonMapper jsonMapper;
@@ -49,10 +54,12 @@ public class JsonLoginSuccessHandler implements AuthenticationSuccessHandler {
 
     public JsonLoginSuccessHandler(
             LoginService loginService,
+            LoginFailureCounter failureCounter,
             SafeRedirectResolver safeRedirect,
             ErrorResponseWriter errorWriter,
             JsonMapper jsonMapper) {
         this.loginService = loginService;
+        this.failureCounter = failureCounter;
         this.safeRedirect = safeRedirect;
         this.errorWriter = errorWriter;
         this.jsonMapper = jsonMapper;
@@ -73,6 +80,7 @@ public class JsonLoginSuccessHandler implements AuthenticationSuccessHandler {
             errorWriter.write(response, e);
             return;
         }
+        failureCounter.reset(request.getParameter("email"));
         LoginSession.record(request.getSession(), Provider.LOCAL, outcome);
         LoginResult body =
                 new LoginResult(

@@ -1,8 +1,11 @@
 package com.team.blog.account.web;
 
+import com.team.blog.account.application.AgreementService;
 import com.team.blog.account.application.MeQueryService;
 import com.team.blog.account.application.MeSummary;
 import com.team.blog.account.application.PasswordChangeService;
+import com.team.blog.account.infra.security.LoginSession;
+import com.team.blog.account.web.dto.AgreementConsent;
 import com.team.blog.account.web.dto.PasswordChangeRequest;
 import com.team.blog.shared.error.ApiException;
 import com.team.blog.shared.error.CommonReasonCode;
@@ -12,6 +15,7 @@ import jakarta.servlet.http.HttpSession;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
@@ -24,11 +28,15 @@ public class MeController {
 
     private final MeQueryService meQueryService;
     private final PasswordChangeService passwordChangeService;
+    private final AgreementService agreementService;
 
     public MeController(
-            MeQueryService meQueryService, PasswordChangeService passwordChangeService) {
+            MeQueryService meQueryService,
+            PasswordChangeService passwordChangeService,
+            AgreementService agreementService) {
         this.meQueryService = meQueryService;
         this.passwordChangeService = passwordChangeService;
+        this.agreementService = agreementService;
     }
 
     /** 현재 로그인 상태 요약 ({@code getMe}). 비로그인이면 401. */
@@ -59,5 +67,22 @@ public class MeController {
         if (session != null) {
             request.changeSessionId();
         }
+    }
+
+    /**
+     * 약관·처리방침 재동의 ({@code reagree}) → 204. 현재 버전으로 동의를 갱신하고 세션의 {@code reagreementRequired} 표시를
+     * 지운다(FR-012). 재동의 게이트의 허용 목록에 있다.
+     */
+    @PutMapping("/agreements")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void reagree(
+            @CurrentUser Long memberId,
+            @RequestBody AgreementConsent body,
+            HttpServletRequest request) {
+        if (body == null) {
+            throw new ApiException(CommonReasonCode.MALFORMED_REQUEST);
+        }
+        agreementService.reagree(memberId, body.toVersions());
+        LoginSession.clearReagreement(request.getSession(false));
     }
 }

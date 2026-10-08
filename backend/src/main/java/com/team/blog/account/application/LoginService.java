@@ -15,7 +15,9 @@ import org.springframework.transaction.annotation.Transactional;
  * 로그인 성공 처리 (FR-057, 07 §6, R-04·R-25). 갱신하기 전 {@code last_login_at}을 돌려주고 {@code last_login_at =
  * now}로 바꾼다. 세션 속성({@code previousLoginAt}·{@code provider})은 호출한 보안 처리기가 담는다.
  *
- * <p>정지 확인·만료 해제, 재동의 표시(세션), 실패 카운터 초기화는 US5에서 이 메서드에 더한다.
+ * <p>정지 확인·만료 해제({@link SuspensionService#requireNotSuspended}), 재동의 판정({@link
+ * AgreementService#needsReagreement})도 여기서 한다. 세션 {@code reagreementRequired} 표시와 실패 카운터 초기화(Redis
+ * 쓰기 — 트랜잭션 밖)는 호출한 보안 처리기가 한다. 이메일 로그인·소셜 로그인 둘 다 이 메서드를 거친다.
  */
 @Service
 public class LoginService {
