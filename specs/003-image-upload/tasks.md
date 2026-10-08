@@ -310,9 +310,9 @@ description: "Task list for 003-image-upload (이미지 업로드)"
 
 ### 조건부 작업 (T002 결과가 PROXY일 때만)
 
-- [ ] T099 [P] PROXY 모드 테스트 `T/media/integration/ImageProxyUploadIT.java`: `upload-mode=PROXY`면 presign 응답의 `upload.url`이 `/api/images/{id}/content`, 업로더 아니면 404, 신고 크기 초과 본문은 413 대신 400 `IMAGE_REJECTED`(`SIZE_MISMATCH`)이고 저장소에 남지 않음, 형식 불일치 400, DIRECT 모드에서는 두 경로가 404
-- [ ] T100 PROXY 구현 `B/media/web/ImageContentController.java`(`@ConditionalOnProperty(blog.image.upload-mode=PROXY)`, 스트림을 신고 크기까지만 읽어 `ImageStorage.put`), `ImageUploadService.presign`의 주소 갈래(T099 통과). 화면 코드는 바꾸지 않는다
-- [ ] T101 (팀 결정 1이 "가입 때 서버 복사 예외"일 때만) `ImageUploadService.importProfile(memberId, InputStream, contentType)`을 추가해 서버가 받은 소셜 사진을 같은 검사·용량 규칙으로 PROFILE 사진으로 만든다. 001 T084와 함께 진행(research R23)
+- [ ] T099 [P] PROXY 모드 테스트 `T/media/integration/ImageProxyUploadIT.java`: `upload-mode=PROXY`면 presign 응답의 `upload.url`이 `/api/images/{id}/content`, 업로더 아니면 404, 신고 크기 초과 본문은 413 대신 400 `IMAGE_REJECTED`(`SIZE_MISMATCH`)이고 저장소에 남지 않음, 형식 불일치 400, DIRECT 모드에서는 두 경로가 404 (구현 메모: 조건부: 운영 점검(T002) 결과가 없어 기본안 DIRECT로 두고 하지 않았다)
+- [ ] T100 PROXY 구현 `B/media/web/ImageContentController.java`(`@ConditionalOnProperty(blog.image.upload-mode=PROXY)`, 스트림을 신고 크기까지만 읽어 `ImageStorage.put`), `ImageUploadService.presign`의 주소 갈래(T099 통과). 화면 코드는 바꾸지 않는다 (구현 메모: 조건부: T099와 같음)
+- [ ] T101 (팀 결정 1이 "가입 때 서버 복사 예외"일 때만) `ImageUploadService.importProfile(memberId, InputStream, contentType)`을 추가해 서버가 받은 소셜 사진을 같은 검사·용량 규칙으로 PROFILE 사진으로 만든다. 001 T084와 함께 진행(research R23) (구현 메모: 조건부: 팀 결정 1이 기본안(예외 없음) 그대로라 하지 않았다)
 
 ---
 
