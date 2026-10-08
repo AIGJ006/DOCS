@@ -1,0 +1,122 @@
+/* 내 글 관리 (006 T051). 375px에서 가로 스크롤이 생기지 않게 버튼·제목은 줄을 바꾼다. */
+.manage-page {
+  max-width: 880px;
+  margin: 0 auto;
+  padding: 16px;
+  box-sizing: border-box;
+}
+
+.manage-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.manage-tabs,
+.manage-filters,
+.manage-row-actions,
+.manage-title-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.manage-tabs {
+  margin: 12px 0;
+  border-bottom: 1px solid #ddd;
+}
+
+.manage-tabs [role='tab'] {
+  padding: 8px 4px;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  background: none;
+  cursor: pointer;
+}
+
+.manage-tabs [role='tab'][aria-selected='true'] {
+  border-bottom-color: currentcolor;
+  font-weight: 700;
+}
+
+.manage-filters [aria-pressed='true'] {
+  font-weight: 700;
+}
+
+.manage-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.manage-row {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 12px 0;
+  border-bottom: 1px solid #eee;
+}
+
+.manage-row-main {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  flex: 1 1 240px;
+}
+
+.manage-title {
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.manage-title-empty {
+  color: #888;
+  font-weight: 400;
+}
+
+.manage-meta,
+.manage-original,
+.manage-notice {
+  color: #666;
+  font-size: 0.9rem;
+}
+
+.manage-badge {
+  padding: 0 6px;
+  border-radius: 4px;
+  background: #eef;
+  font-size: 0.8rem;
+}
+
+.manage-badge-hidden {
+  background: #fee;
+}
+
+.manage-row-error,
+.manage-page-error {
+  flex-basis: 100%;
+  margin: 4px 0 0;
+  color: #b00020;
+}
+
+.manage-more {
+  margin: 16px auto;
+  display: block;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}

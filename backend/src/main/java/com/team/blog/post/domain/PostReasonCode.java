@@ -49,7 +49,11 @@ public enum PostReasonCode implements ReasonCode {
     /** 자동 저장 요청 본문 1MB 초과 (research B-2 제안). */
     PAYLOAD_TOO_LARGE(HttpStatus.CONTENT_TOO_LARGE, "요청이 너무 커요"),
     /** Redis 메모리 부족으로 자동 저장을 받지 못함 (FR-018: 밀어내지 않음, 브라우저가 재시도). */
-    AUTOSAVE_UNAVAILABLE(HttpStatus.SERVICE_UNAVAILABLE, "잠시 후 다시 저장할게요");
+    AUTOSAVE_UNAVAILABLE(HttpStatus.SERVICE_UNAVAILABLE, "잠시 후 다시 저장할게요"),
+
+    // ---- 006 내 글 관리 ----
+    /** 관리 목록의 모르는 {@code tab} 값 (006 research R20 제안). {@code errors[0].field = "tab"}. */
+    INVALID_TAB(HttpStatus.BAD_REQUEST, "목록 탭을 다시 선택해 주세요");
 
     private final HttpStatus status;
     private final String defaultMessage;
