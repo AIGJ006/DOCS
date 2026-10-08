@@ -213,12 +213,12 @@ description: "Task list for 015-withdraw (회원 탈퇴·복구)"
 **Purpose**: 권한 매트릭스, 종단 확인, 문서·인계, 회귀
 
 - [X] T059 [P] 권한 매트릭스: `TR/permission/withdraw.csv`(research R15 표 18행, owner `015`)와 `T/account/permission/WithdrawalActions.java`(`me.withdrawal`·`me.withdraw`(픽스처 기본 비밀번호 또는 "탈퇴")·`me.restore`), `T/account/permission/WithdrawPermissionMatrixIT.java`(004 `AbstractPermissionMatrixIT` 상속) (구현 메모: 하네스가 행마다 새 행위자를 만들어 me.withdraw 성공 행이 다른 행에 영향 없음. 18행 모두 R15 표대로 통과)
-- [ ] T060 [P] 종단 확인 `E/withdraw.spec.ts`(Playwright): quickstart §3의 1~8·10~12번(정리 작업 9번은 통합 테스트로 대신)
-- [ ] T061 [P] 375px·접근성: 세 화면 가로 스크롤 없음, 버튼 44px 이상, 체크박스·본인 확인 칸 `label`, 오류 `role="alert"`, [탈퇴하기]가 탭 순서상 마지막
-- [ ] T062 [P] 문서 반영: 001 `contracts/openapi.yaml` `MeSummary`에 두 칸·가입 email 칸 오류 `EMAIL_WITHDRAWAL_PENDING`, 001 data-model §2-1에 "탈퇴 전이는 015", 004 tasks T051 경로(T041가 문서 수정만 한 경우 확인)
-- [ ] T063 [P] 인계 확인: `specs/010-follow-feed/tasks.md`·`specs/011-notification/tasks.md`·`specs/014-report-hide/tasks.md`에 order 65·70·80 단계 작업이 contracts/purge-steps.md §2 표(클래스 이름·SQL·`MANDATORY`)대로 있는지, Redis 키를 새로 만드는 기능이 `redis-key-templates`에 줄을 더했는지 확인한다
-- [ ] T064 운영 확인: 정리 작업 시각(03:00)이 003·006(03:30)·009(04:10·04:20)과 겹치지 않는지, ShedLock 이름 `withdrawPurge`가 다른 작업과 다른지 확인하고 T003 결과(필수 단계 기본값)를 `R/application.yml` 주석에 적는다
-- [ ] T065 quickstart.md §1~§5를 처음부터 끝까지 실행하고 결과를 기록한다
+- [X] T060 [P] 종단 확인 `E/withdraw.spec.ts`(Playwright): quickstart §3의 1~8·10~12번(정리 작업 9번은 통합 테스트로 대신) (구현 메모: quickstart §3의 1·2·3·4·5·6·7·8·12를 확인(5 통과, mobile 프로젝트는 시험 안에서 폭을 바꾸므로 건너뜀). 매번 새 회원을 가입시켜 공용 E2E 회원은 건드리지 않음. 이메일 인증·신청 시각 조작은 E2E_PG_CONTAINER가 있을 때만(docker exec psql). 10(재가입)은 정리 작업이 필요해 RejoinAfterPurgeIT로, 11(소셜)은 가짜 OAuth 제공자가 필요해 WithdrawalApiIT로 대신. 4의 IndexedDB·다른 브라우저 세션, 5의 남의 글 댓글 가림, 7의 Mailpit 메일은 화면 테스트·통합 테스트(WithdrawPage.test·WithdrawalApiIT·WithdrawalGraceIT·WithdrawalMailIT)로 대신)
+- [X] T061 [P] 375px·접근성: 세 화면 가로 스크롤 없음, 버튼 44px 이상, 체크박스·본인 확인 칸 `label`, 오류 `role="alert"`, [탈퇴하기]가 탭 순서상 마지막 (구현 메모: E2E에서 탈퇴·완료·복구 화면 375px 가로 스크롤 없음, [탈퇴하기]·[복구하기] 44px 이상 확인. 체크박스·본인 확인 칸 label, 오류 role=alert와 aria-describedby, [탈퇴하기] 탭 순서 마지막은 WithdrawPage.test)
+- [X] T062 [P] 문서 반영: 001 `contracts/openapi.yaml` `MeSummary`에 두 칸·가입 email 칸 오류 `EMAIL_WITHDRAWAL_PENDING`, 001 data-model §2-1에 "탈퇴 전이는 015", 004 tasks T051 경로(T041가 문서 수정만 한 경우 확인) (구현 메모: 001 contracts/openapi.yaml MeSummary 두 칸(required 포함)과 가입 400 설명에 EMAIL_WITHDRAWAL_PENDING 추가. 001 data-model §2-1은 withdrawn_at·deleted_at·nickname 칸에 이미 '015'가 적혀 있어 고치지 않음. 004 tasks T051은 '/account/restore로 015 구현 때 맞춤'이 이미 적혀 있어 문서는 그대로 두고 코드(RESTORE_PATH)만 맞춤)
+- [X] T063 [P] 인계 확인: `specs/010-follow-feed/tasks.md`·`specs/011-notification/tasks.md`·`specs/014-report-hide/tasks.md`에 order 65·70·80 단계 작업이 contracts/purge-steps.md §2 표(클래스 이름·SQL·`MANDATORY`)대로 있는지, Redis 키를 새로 만드는 기능이 `redis-key-templates`에 줄을 더했는지 확인한다 (구현 메모: 011 tasks T056(NotificationWithdrawalPurgeStep order 70)·014 tasks T062(ReportWithdrawalPurgeStep order 80)는 계약 §2 표대로 있음. 010 tasks T041은 FollowWithdrawalPurgeStep을 적었지만 010 담당이 2026-10-08 FollowPurgeService.purgeByMember만 두고 단계 클래스는 015가 만들기로 정함 → 010 머지 뒤 015 임시 65를 FollowWithdrawalPurgeStep(위임)으로 바꿔야 함. Redis 키: 009 ratelimit:like, 010 ratelimit:follow는 기본 목록에 있음. 001의 rl:reset:email:{emailHash}·member:active-touch:{memberId}를 015가 더함)
+- [X] T064 운영 확인: 정리 작업 시각(03:00)이 003·006(03:30)·009(04:10·04:20)과 겹치지 않는지, ShedLock 이름 `withdrawPurge`가 다른 작업과 다른지 확인하고 T003 결과(필수 단계 기본값)를 `R/application.yml` 주석에 적는다 (구현 메모: 03:00은 03:30(003 사진·006 휴지통·002 빈 임시 글)·04:10·04:20(009)과 겹치지 않음. ShedLock 이름 withdrawPurge는 유일(autosave-flush·empty-draft-cleanup·post-rerender·trashPurgeJob·like-reconcile·view-flush·view-daily-retention·imageCleanup). lockAtMostFor 1시간이라 정리가 30분을 넘기면 03:30 사진 정리와 겹칠 수 있음(잠금이 달라 서로 막지는 않음 — 그날 못 지운 사진은 다음 날 지워짐). application.yml 주석에 필수 단계 기본값과 임시 구현을 적음)
+- [X] T065 quickstart.md §1~§5를 처음부터 끝까지 실행하고 결과를 기록한다 (구현 메모: §1 기동: 새 마이그레이션 없음, 시작 로그 '탈퇴 정리 단계 orders=[10, 20, 30, 40, 50, 60, 65, 70, 80, 90]'(테스트 프로필은 85 포함). §2 자동 테스트 모두 통과. §3 화면은 T060 E2E. §4 SQL 확인은 WithdrawPurgeJobIT US3_1·US3_5로 대신. §5 010·011·014 항목은 015 임시 단계로 WithdrawPurgeJobIT US3_3·US3_4·US3_5에서 확인(010 팔로워 수 제외는 010 머지 뒤 — WithdrawalGraceIT 한 사례 @Disabled))
 - [ ] T066 전체 회귀: `./mvnw -pl backend verify`(001·004·006 테스트 포함)와 `npm test`·`npm run build`·`npm run lint`
 
 ---
@@ -320,6 +320,6 @@ Task: "WithdrawalPurgeStep 인터페이스", "MemberWithdrawn/MemberRestored", "
 - 001·004·006 소유 파일을 고치는 작업은 그 기능의 회귀 테스트를 함께 돌리고 담당에게 알린다
 - 탈퇴 사유·비밀번호·이메일·닉네임을 로그에 남기지 않는다(코드 리뷰 점검 항목)
 - 정리 단계 안에서 파일 삭제·메일·Redis 호출을 하지 않는다(코드 리뷰 점검 항목)
-- T003 결과: (팀 답을 받으면 여기에 적는다)
+- T003 결과: 팀 답 없이 권장안으로 진행 — 필수 단계 기본값 [10, 20, 30, 40, 50, 60, 65, 70, 80, 90]. 65·70·80은 010·011·014가 머지될 때까지 015 임시 구현(@ConditionalOnMissingClass)이 채운다. 010은 단계 클래스 없이 FollowPurgeService만 두기로 해(2026-10-08) 010 머지 뒤 015가 65를 위임 단계로 바꾼다
 - Commit after each task or logical group
 - Stop at any checkpoint to validate story independently
