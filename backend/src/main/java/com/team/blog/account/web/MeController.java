@@ -5,8 +5,8 @@ import com.team.blog.account.application.AgreementService;
 import com.team.blog.account.application.MeQueryService;
 import com.team.blog.account.application.MeSummary;
 import com.team.blog.account.application.PasswordChangeService;
-import com.team.blog.account.application.PreviousLogin;
 import com.team.blog.account.application.ProfileService;
+import com.team.blog.account.domain.PreviousLogin;
 import com.team.blog.account.infra.security.LoginSession;
 import com.team.blog.account.web.dto.AgreementConsent;
 import com.team.blog.account.web.dto.MyProfileResponse;
@@ -19,6 +19,7 @@ import com.team.blog.shared.error.CommonReasonCode;
 import com.team.blog.shared.security.CurrentUser;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
+import java.time.Instant;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -138,8 +139,17 @@ public class MeController {
                 settingsService.update(memberId, body.toCommand(), previousLogin(request)));
     }
 
-    /** 세션의 직전 로그인 — US8(T141)에서 채운다. 지금은 null("첫 로그인"). */
+    /**
+     * 세션의 직전 로그인(FR-057·058): 로그인 때 담은 {@code previousLoginAt}(갱신 전 {@code last_login_at})과 로그인 방식.
+     * 없으면 null = "첫 로그인".
+     */
     private static PreviousLogin previousLogin(HttpServletRequest request) {
-        return null;
+        HttpSession session = request.getSession(false);
+        if (session == null
+                || !(session.getAttribute(LoginSession.PREVIOUS_LOGIN_AT) instanceof Instant at)) {
+            return null;
+        }
+        Object provider = session.getAttribute(LoginSession.PROVIDER);
+        return new PreviousLogin(at, provider == null ? null : provider.toString());
     }
 }

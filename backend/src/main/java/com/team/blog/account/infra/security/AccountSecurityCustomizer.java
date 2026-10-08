@@ -1,6 +1,8 @@
 package com.team.blog.account.infra.security;
 
+import com.team.blog.account.application.LastActiveService;
 import com.team.blog.account.infra.AccountProperties;
+import com.team.blog.account.infra.redis.ActiveTouchThrottle;
 import com.team.blog.account.infra.redis.LoginFailureCounter;
 import com.team.blog.shared.error.ErrorResponseWriter;
 import com.team.blog.shared.infra.ratelimit.RateLimiter;
@@ -9,6 +11,7 @@ import com.team.blog.shared.security.SecurityFilterChainCustomizer;
 import org.springframework.core.annotation.Order;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.web.access.intercept.AuthorizationFilter;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.security.web.authentication.logout.HttpStatusReturningLogoutSuccessHandler;
 import org.springframework.stereotype.Component;
@@ -34,6 +37,7 @@ import org.springframework.stereotype.Component;
  *
  * <ul>
  *   <li>로그인 요청 제한({@link LoginRateLimitFilter}, US5): 폼 로그인 필터 앞 — Redis 장애 503, IP 1분 20회, 이메일 잠금.
+ *   <li>최근 활동 갱신({@link LastActiveTouchFilter}, US8): 인가 필터 앞 — 그 뒤의 처리가 끝난 다음 한 시간에 한 번.
  * </ul>
  *
  * 재동의 게이트({@link ReagreementGateFilter})는 탈퇴 유예 게이트 뒤에 와야 하므로 {@link
@@ -55,6 +59,7 @@ public class AccountSecurityCustomizer implements SecurityFilterChainCustomizer 
     private final OAuth2LoginSuccessHandler socialSuccessHandler;
     private final OAuth2LoginFailureHandler socialFailureHandler;
     private final LoginRateLimitFilter loginRateLimitFilter;
+    private final LastActiveTouchFilter lastActiveTouchFilter;
 
     public AccountSecurityCustomizer(
             JsonLoginSuccessHandler successHandler,
@@ -69,7 +74,9 @@ public class AccountSecurityCustomizer implements SecurityFilterChainCustomizer 
             RateLimiter rateLimiter,
             LoginFailureCounter loginFailureCounter,
             ErrorResponseWriter errorWriter,
-            AccountProperties properties) {
+            AccountProperties properties,
+            ActiveTouchThrottle activeTouchThrottle,
+            LastActiveService lastActiveService) {
         this.successHandler = successHandler;
         this.failureHandler = failureHandler;
         this.socialRegistrations = socialRegistrations;
@@ -81,11 +88,14 @@ public class AccountSecurityCustomizer implements SecurityFilterChainCustomizer 
         this.loginRateLimitFilter =
                 new LoginRateLimitFilter(
                         redisGuard, rateLimiter, loginFailureCounter, errorWriter, properties);
+        this.lastActiveTouchFilter =
+                new LastActiveTouchFilter(activeTouchThrottle, lastActiveService);
     }
 
     @Override
     public void customize(HttpSecurity http) throws Exception {
         http.addFilterBefore(loginRateLimitFilter, UsernamePasswordAuthenticationFilter.class);
+        http.addFilterBefore(lastActiveTouchFilter, AuthorizationFilter.class);
         http.formLogin(
                 form ->
                         form.loginPage("/login")

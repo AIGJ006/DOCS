@@ -34,7 +34,8 @@ import org.springframework.transaction.annotation.Transactional;
  *       CANNOT_FRIEND_SELF}, {@code AccountStatusGuard(ACCOUNT_WRITE)}(이메일 인증 불필요). 새 행이면 {@link
  *       FriendRequested}, PENDING → ACCEPTED면 {@link FriendAccepted}, 변화 없으면 이벤트 없음(EV-4).
  *   <li>거절·취소·끊기({@link #remove}): 행 삭제, 상대에게 알리지 않고 이벤트도 없다. 관계가 없어도 같은 결과.
- *   <li>목록: 본인 것만(주소에 회원 값이 없다), 커서 {@code (시각 µs, 상대 ID)}, 페이지당 SQL 1번 + 프로필 사진 1번.
+ *   <li>목록: 본인 것만(주소에 회원 값이 없다), 커서 {@code (시각 µs, 상대 ID)}, 페이지당 SQL 1번 + 프로필 사진 1번. 친구 목록의 최근 활동은
+ *       목록 쿼리가 함께 읽는다(US8).
  * </ul>
  */
 @Service
@@ -50,6 +51,7 @@ public class FriendshipService {
     private final ImageUrlResolver imageUrlResolver;
     private final CursorCodec cursorCodec;
     private final ApplicationEventPublisher events;
+    private final LastActiveQueryService lastActiveQuery;
     private final Clock clock;
 
     public FriendshipService(
@@ -61,6 +63,7 @@ public class FriendshipService {
             ImageUrlResolver imageUrlResolver,
             CursorCodec cursorCodec,
             ApplicationEventPublisher events,
+            LastActiveQueryService lastActiveQuery,
             Clock clock) {
         this.memberQuery = memberQuery;
         this.friendships = friendships;
@@ -70,13 +73,14 @@ public class FriendshipService {
         this.imageUrlResolver = imageUrlResolver;
         this.cursorCodec = cursorCodec;
         this.events = events;
+        this.lastActiveQuery = lastActiveQuery;
         this.clock = clock;
     }
 
     @Transactional(readOnly = true)
     public FriendshipView view(long me, String handle) {
         long other = target(handle);
-        return new FriendshipView(state(me, other), other);
+        return withLastActive(me, other, state(me, other));
     }
 
     @Transactional
@@ -96,7 +100,7 @@ public class FriendshipService {
                         events.publishEvent(new FriendAccepted(other, me, now));
                     }
                 });
-        return new FriendshipView(state(me, other), other);
+        return withLastActive(me, other, state(me, other));
     }
 
     @Transactional
@@ -134,6 +138,7 @@ public class FriendshipService {
                         : lists.receivedRequests(me, afterAt, afterOtherId, PAGE_SIZE + 1);
         boolean more = rows.size() > PAGE_SIZE;
         List<FriendListQueryRepository.Row> pageRows = more ? rows.subList(0, PAGE_SIZE) : rows;
+        Instant now = clock.instant();
         Map<Long, ProfileImageKeys> photos =
                 profileImageQuery.currentKeysOf(
                         pageRows.stream().map(FriendListQueryRepository.Row::otherId).toList());
@@ -149,7 +154,10 @@ public class FriendshipService {
                                                         .map(ProfileImageKeys::display)
                                                         .map(imageUrlResolver::publicUrl)
                                                         .orElse(null),
-                                                row.at()))
+                                                row.at(),
+                                                lastActiveQuery
+                                                        .bucket(row.visibleLastActiveAt(), now)
+                                                        .orElse(null)))
                         .toList();
         String next = null;
         if (more) {
@@ -157,6 +165,16 @@ public class FriendshipService {
             next = cursorCodec.encode(scope, List.of(micros(last.at()), last.otherId()), Map.of());
         }
         return new FriendListPage(items, next);
+    }
+
+    /** 친구면 최근 활동(조건을 만족할 때만)을 붙인다. */
+    private FriendshipView withLastActive(long me, long other, FriendshipState state) {
+        return new FriendshipView(
+                state,
+                other,
+                state == FriendshipState.FRIENDS
+                        ? lastActiveQuery.lastActiveFor(me, other).orElse(null)
+                        : null);
     }
 
     private FriendshipState state(long me, long other) {

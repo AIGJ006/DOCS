@@ -19,7 +19,7 @@ import FriendLists from '../features/friends/FriendLists';
 import { useSession } from '../features/auth/useSession';
 import { uploadProfileImage } from '../features/profile/uploadProfileImage';
 import PasswordChangeForm from '../features/settings/PasswordChangeForm';
-import { formatDate, formatDateTime } from '../features/time/dateFormat';
+import { formatDate } from '../features/time/dateFormat';
 import '../features/auth/auth.css';
 import '../features/settings/settings.css';
 
@@ -32,6 +32,18 @@ const PROVIDER_LABEL: Record<Provider, string> = {
 const VISIBILITY_LABEL = { PUBLIC: '전체 공개', PRIVATE: '나만 보기' } as const;
 const FAILED_MESSAGE = '잠시 후 다시 시도해 주세요';
 
+const HOUR_MINUTE = new Intl.DateTimeFormat('ko-KR', {
+  timeZone: 'Asia/Seoul',
+  hour: '2-digit',
+  minute: '2-digit',
+  hourCycle: 'h23',
+});
+
+/** 직전 로그인 `YYYY.MM.DD HH:mm` (Asia/Seoul, FR-058). */
+function formatLoginTime(value: string): string {
+  return `${formatDate(value)} ${HOUR_MINUTE.format(new Date(value))}`;
+}
+
 type PendingPhoto =
   { kind: 'none' } | { kind: 'default' } | { kind: 'cropped'; blob: Blob; url: string };
 
@@ -40,7 +52,7 @@ type PendingPhoto =
  *
  * - 프로필: 사진([사진 바꾸기]·[기본 이미지로] — 고른 사진은 [저장] 때 올리고 연결한다), 닉네임(30일 제한 중이면 막고 다음 변경
  *   가능일), 소개(글자 수는 코드 포인트), 블로그 주소 `@handle` 읽기 전용. [저장] 한 번에 바꾼 칸만 보내고, 실패한 칸을 모두 보인다.
- * - 계정: 이메일 읽기 전용, 로그인 수단, 비밀번호 변경(이메일 계정만), 새 글 기본 공개 범위·최근 활동 공개(바꾸면 바로 저장), 약관 링크.
+ * - 계정: 이메일 읽기 전용, 로그인 수단, 직전 로그인(없으면 "첫 로그인"), 비밀번호 변경(이메일 계정만), 새 글 기본 공개 범위·최근 활동 공개(바꾸면 바로 저장), 약관 링크.
  * - 친구: 받은 친구 요청·내 친구 목록(`FriendLists`, US7).
  * - 회원 탈퇴는 015가 채운다.
  *
@@ -330,15 +342,12 @@ function AccountSection({
         <dd>{settings.email ?? '없음'}</dd>
         <dt>로그인 수단</dt>
         <dd>{PROVIDER_LABEL[settings.provider]}</dd>
-        {settings.previousLogin && (
-          <>
-            <dt>직전 로그인</dt>
-            <dd>
-              {formatDateTime(settings.previousLogin.at)} (
-              {PROVIDER_LABEL[settings.previousLogin.provider]})
-            </dd>
-          </>
-        )}
+        <dt>직전 로그인</dt>
+        <dd>
+          {settings.previousLogin
+            ? `${formatLoginTime(settings.previousLogin.at)}, ${PROVIDER_LABEL[settings.previousLogin.provider] ?? settings.previousLogin.provider}`
+            : '첫 로그인'}
+        </dd>
       </dl>
       <div className="field">
         <label htmlFor="settings-visibility">새 글 기본 공개 범위</label>
@@ -361,9 +370,14 @@ function AccountSection({
           id="settings-last-active"
           type="checkbox"
           checked={settings.lastActiveVisible}
+          aria-describedby="settings-last-active-help"
           onChange={(e) => void save({ lastActiveVisible: e.target.checked })}
         />
-        <label htmlFor="settings-last-active">최근 활동 시각 공개</label>
+        <label htmlFor="settings-last-active">최근 활동을 친구에게 보이기</label>
+        <p className="field-help" id="settings-last-active-help">
+          친구에게 "오늘·어제·N일 전·1주 이상"으로만 보여요. 끄면 나도 친구의 최근 활동을 볼 수
+          없어요.
+        </p>
       </div>
       {error && (
         <p role="alert" className="form-error">

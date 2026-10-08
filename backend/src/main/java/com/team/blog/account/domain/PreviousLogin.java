@@ -1,4 +1,4 @@
-package com.team.blog.account.application;
+package com.team.blog.account.domain;
 
 import java.time.Instant;
 

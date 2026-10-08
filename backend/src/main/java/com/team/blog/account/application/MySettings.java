@@ -1,5 +1,7 @@
 package com.team.blog.account.application;
 
+import com.team.blog.account.domain.PreviousLogin;
+
 /**
  * 내 계정 설정 (openapi {@code MySettings}, FR-046·053·058·061).
  *

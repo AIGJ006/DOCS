@@ -2,6 +2,7 @@ package com.team.blog.account.application;
 
 import com.team.blog.account.domain.AuthIdentity;
 import com.team.blog.account.domain.Member;
+import com.team.blog.account.domain.PreviousLogin;
 import com.team.blog.account.infra.AuthIdentityRepository;
 import com.team.blog.account.infra.MemberRepository;
 import com.team.blog.post.domain.VisibilityRegistry;

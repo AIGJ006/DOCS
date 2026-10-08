@@ -9,6 +9,7 @@ import {
 } from '../../api/friends';
 import { ApiError } from '../../api/client';
 import DefaultAvatar from '../../components/DefaultAvatar';
+import LastActiveBadge from '../../components/LastActiveBadge';
 import { useConfirm } from '../../components/useConfirm';
 import { formatDate } from '../time/dateFormat';
 import { useCursorList } from './useFriendLists';
@@ -114,6 +115,7 @@ export default function FriendLists() {
             <li key={item.handle}>
               <Person item={item} />
               <span className="friend-since">{formatDate(item.friendsSince)}부터</span>
+              <LastActiveBadge value={item.lastActive} />
               <span className="friend-actions">
                 <button
                   type="button"

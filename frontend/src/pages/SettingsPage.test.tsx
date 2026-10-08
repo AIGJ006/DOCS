@@ -235,10 +235,50 @@ describe('SettingsPage (FR-046~053)', () => {
     await waitFor(() =>
       expect(bodyOf(mock, 'PATCH', '/api/me/settings')).toEqual({ defaultVisibility: 'PRIVATE' }),
     );
-    await user.click(screen.getByLabelText('최근 활동 시각 공개'));
+    await user.click(screen.getByLabelText('최근 활동을 친구에게 보이기'));
     await waitFor(() =>
       expect(bodyOf(mock, 'PATCH', '/api/me/settings', 1)).toEqual({ lastActiveVisible: false }),
     );
+  });
+
+  it('직전 로그인: 없으면 "첫 로그인", 있으면 YYYY.MM.DD HH:mm(Asia/Seoul)과 로그인 방식', async () => {
+    routes();
+    const { unmount } = renderPage();
+    const account = await screen.findByRole('region', { name: '계정' });
+    expect(within(account).getByText('첫 로그인')).toBeInTheDocument();
+    expect(
+      within(account).getByText('끄면 나도 친구의 최근 활동을 볼 수 없어요', { exact: false }),
+    ).toBeInTheDocument();
+    unmount();
+    routes({
+      'GET /api/me/settings': () =>
+        json(200, {
+          ...SETTINGS,
+          previousLogin: { at: '2026-10-06T01:30:00Z', provider: 'GOOGLE' },
+        }),
+    });
+    renderPage();
+    expect(await screen.findByText('2026.10.06 10:30, Google')).toBeInTheDocument();
+  });
+
+  it('친구 목록에 최근 활동 구간을 보인다', async () => {
+    routes({
+      'GET /api/me/friends': () =>
+        json(200, {
+          items: [
+            {
+              handle: 'bob',
+              nickname: '밥밥이',
+              profileImageUrl: null,
+              friendsSince: '2026-09-01T00:00:00Z',
+              lastActive: { bucket: 'DAYS_AGO', days: 3 },
+            },
+          ],
+          nextCursor: null,
+        }),
+    });
+    renderPage();
+    expect(await screen.findByText('최근 활동 3일 전')).toBeInTheDocument();
   });
 
   it('소셜 계정은 비밀번호 변경을 보이지 않고 로그인 수단을 보인다', async () => {

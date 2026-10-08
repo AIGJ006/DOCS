@@ -1,5 +1,6 @@
 package com.team.blog.account.infra;
 
+import java.sql.Timestamp;
 import java.time.Instant;
 import java.time.ZoneOffset;
 import java.time.temporal.ChronoUnit;
@@ -18,12 +19,24 @@ import org.springframework.stereotype.Repository;
 @Repository
 public class FriendListQueryRepository {
 
-    /** 목록 한 줄. {@code at}은 친구가 된 시각 또는 요청 시각. */
-    public record Row(long otherId, String handle, String nickname, Instant at) {}
+    /**
+     * 목록 한 줄. {@code at}은 친구가 된 시각 또는 요청 시각. {@code visibleLastActiveAt}은 친구 목록에서 상대·나 둘 다 최근 활동을
+     * 공개할 때만 값이 있다(받은 요청 목록은 항상 null) — 같은 쿼리에서 읽어 SQL 수를 늘리지 않는다.
+     */
+    public record Row(
+            long otherId,
+            String handle,
+            String nickname,
+            Instant at,
+            Instant visibleLastActiveAt) {}
 
     private static final String FRIENDS =
             """
-            SELECT f.other_id, m.handle, m.nickname, f.at FROM (
+            SELECT f.other_id, m.handle, m.nickname, f.at,
+                   CASE WHEN m.last_active_visible
+                         AND (SELECT me.last_active_visible FROM member me WHERE me.id = :me)
+                        THEN m.last_active_at END AS visible_last_active_at
+              FROM (
               SELECT member_b_id AS other_id, accepted_at AS at FROM friendship
                WHERE member_a_id = :me AND status = 'ACCEPTED'
               UNION ALL
@@ -36,7 +49,9 @@ public class FriendListQueryRepository {
 
     private static final String REQUESTS =
             """
-            SELECT f.other_id, m.handle, m.nickname, f.at FROM (
+            SELECT f.other_id, m.handle, m.nickname, f.at,
+                   CAST(NULL AS timestamptz) AS visible_last_active_at
+              FROM (
               SELECT member_b_id AS other_id, created_at AS at FROM friendship
                WHERE member_a_id = :me AND status = 'PENDING' AND requested_by <> :me
               UNION ALL
@@ -80,12 +95,15 @@ public class FriendListQueryRepository {
                             .param("otherId", afterOtherId);
         }
         return spec.query(
-                        (rs, n) ->
-                                new Row(
-                                        rs.getLong("other_id"),
-                                        rs.getString("handle"),
-                                        rs.getString("nickname"),
-                                        rs.getTimestamp("at").toInstant()))
+                        (rs, n) -> {
+                            Timestamp lastActive = rs.getTimestamp("visible_last_active_at");
+                            return new Row(
+                                    rs.getLong("other_id"),
+                                    rs.getString("handle"),
+                                    rs.getString("nickname"),
+                                    rs.getTimestamp("at").toInstant(),
+                                    lastActive == null ? null : lastActive.toInstant());
+                        })
                 .list();
     }
 }
