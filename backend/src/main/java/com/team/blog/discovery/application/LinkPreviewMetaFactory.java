@@ -8,8 +8,10 @@ import com.team.blog.media.application.ProfileImageQuery;
 import com.team.blog.post.application.PostUrls;
 import com.team.blog.post.infra.PostDetailRow;
 import com.team.blog.shared.web.shell.LinkPreviewMeta;
+import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import org.springframework.stereotype.Component;
+import org.springframework.web.util.UriUtils;
 
 /**
  * 첫 응답의 링크 미리보기·검색 엔진 메타 (005 T063, FR-044·045, 40 §5, research R-18·R-27). 값의 HTML 이스케이프는 {@code
@@ -24,6 +26,9 @@ import org.springframework.stereotype.Component;
  *   <li>{@link #unavailable()}: 공통 문구 + {@code noindex} (볼 수 없는 글·작성자가 보는 비공개·숨김 글).
  *   <li>{@link #forBlog}: {@code <title>{닉네임} (@{handle})}, 소개 앞 160자, {@code og:type=profile}, 프로필
  *       사진 <b>원본</b>(없으면 기본 이미지).
+ *   <li>{@link #forTag}: {@code <title>#{이름}}, 고정 설명 문구, {@code og:type=website}, 기본 이미지. 공개 글 수는
+ *       넣지 않는다(008 SC-005 — 빈 태그와 비공개 전용 태그의 첫 응답이 같아야 한다).
+ *   <li>{@link #forTagIndex()}: 전체 태그 목록 화면 (008 T051).
  * </ul>
  */
 @Component
@@ -86,6 +91,37 @@ public class LinkPreviewMetaFactory {
                 title,
                 description,
                 image,
+                null,
+                null,
+                false);
+    }
+
+    /** 태그 페이지 (008 T035). {@code name}은 정규화된 이름이다. */
+    public LinkPreviewMeta forTag(String name) {
+        String title = "#" + name;
+        String description = title + " 태그로 모은 글";
+        return website(
+                title,
+                description,
+                properties.site().baseUrl()
+                        + "/tags/"
+                        + UriUtils.encodePathSegment(name, StandardCharsets.UTF_8));
+    }
+
+    /** 전체 태그 목록 (008 T051). */
+    public LinkPreviewMeta forTagIndex() {
+        return website("태그", "공개 글에 붙은 태그 목록", properties.site().baseUrl() + "/tags");
+    }
+
+    private LinkPreviewMeta website(String title, String description, String canonicalUrl) {
+        return new LinkPreviewMeta(
+                title,
+                description,
+                canonicalUrl,
+                "website",
+                title,
+                description,
+                properties.seo().defaultOgImageUrl(),
                 null,
                 null,
                 false);

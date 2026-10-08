@@ -91,6 +91,8 @@ export default function EditorPage() {
   const [message, setMessage] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<FieldError[]>([]);
   const [publishing, setPublishing] = useState(false);
+  /** 발행하지 않고 닫은 발행 창의 태그 칩 (이 화면에만 남는다 — 자동 저장 대상 아님, 008 FR-014). */
+  const [pendingTags, setPendingTags] = useState<string[] | null>(null);
   const [saving, setSaving] = useState(false);
   /** 발행 글을 고치는 중인가 (작업본 또는 서버 쪽 보관분이 있음, FR-034). */
   const [editing, setEditing] = useState(false);
@@ -477,7 +479,8 @@ export default function EditorPage() {
         <PublishDialog
           postId={postId}
           getContent={getPublishContent}
-          initialTags={opened.server.tags}
+          initialTags={pendingTags ?? opened.server.tags}
+          onTagsChange={setPendingTags}
           initialVisibility={opened.server.visibility}
           onPublished={onPublished}
           onFieldErrors={setFieldErrors}

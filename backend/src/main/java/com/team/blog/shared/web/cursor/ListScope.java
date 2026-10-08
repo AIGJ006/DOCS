@@ -7,7 +7,8 @@ import java.util.Objects;
  * 006 R16).
  *
  * <p>값 규칙: {@code home}, {@code blog:{handle}}, {@code me:friends}, {@code me:friend-requests},
- * {@code manage:{tab}[:{filter}]}(006) 등. 기능은 {@link #of(String)}로 자기 값을 만든다.
+ * {@code manage:{tab}[:{filter}]}(006), {@code tag:{name}}·{@code blog:{handle}:tag:{name}}(008 —
+ * 정규화된 태그 이름에는 공백·{@code :}이 없다) 등. 기능은 {@link #of(String)}로 자기 값을 만든다.
  */
 public record ListScope(String value) {
 
@@ -30,6 +31,16 @@ public record ListScope(String value) {
     /** 개인 블로그 글 목록 (005). handle은 소문자. */
     public static ListScope blog(String handle) {
         return new ListScope("blog:" + handle);
+    }
+
+    /** 태그별 글 목록 (008). name은 정규화된 태그 이름. */
+    public static ListScope tag(String name) {
+        return new ListScope("tag:" + name);
+    }
+
+    /** 블로그 안 태그 필터 목록 (008). handle은 소문자, name은 정규화된 태그 이름. */
+    public static ListScope blogTag(String handle, String name) {
+        return new ListScope("blog:" + handle + ":tag:" + name);
     }
 
     /** 내 친구 목록 (001 US7). */
