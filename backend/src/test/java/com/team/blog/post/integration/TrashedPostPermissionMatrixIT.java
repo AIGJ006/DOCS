@@ -17,7 +17,6 @@ import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -111,7 +110,6 @@ class TrashedPostPermissionMatrixIT extends IntegrationTestBase {
     }
 
     @Test
-    @Disabled("US3 관리 목록(GET /api/me/posts) 구현 뒤 켠다")
     void 작성자에게는_관리_목록의_휴지통_탭에만_보인다() throws Exception {
         TrashApi api = new TrashApi(mockMvc);
         List<Integer> trash = read(api.list(authorSession, "tab=trash"), "$.items[*].id");
