@@ -1,6 +1,5 @@
 package com.team.blog.post.application;
 
-import com.team.blog.post.domain.PostDraft;
 import com.team.blog.post.infra.PostDraftRepository;
 import java.time.Instant;
 import java.util.Collection;
@@ -21,9 +20,9 @@ public class PostDraftQueryService {
         this.drafts = drafts;
     }
 
-    /** 작업본의 마지막 저장 시각({@code post_draft.updated_at}). 작업본이 없으면 empty. */
+    /** 작업본의 마지막 저장 시각({@code post_draft.updated_at}). 작업본이 없으면 empty. 본문 컬럼은 읽지 않는다. */
     public Optional<Instant> findSavedAt(long postId) {
-        return drafts.findById(postId).map(PostDraft::updatedAt);
+        return drafts.findUpdatedAtByPostId(postId);
     }
 
     /** 주어진 글 중 작업본이 있는 글 번호 (묶음 1쿼리, N+1 금지). */

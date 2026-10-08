@@ -9,6 +9,7 @@ import com.team.blog.post.infra.PostDetailRow;
 import com.team.blog.shared.security.Viewer;
 import java.time.Instant;
 import java.util.List;
+import java.util.Optional;
 import java.util.function.BooleanSupplier;
 import java.util.function.Supplier;
 import org.slf4j.Logger;
@@ -24,7 +25,10 @@ import org.springframework.stereotype.Component;
  *   <li>{@code hasCodeBlock} = 본문에 {@code <pre><code}가 있는가.
  *   <li>주소는 002 {@link PostUrls}, 프로필 사진은 001 {@link ImageUrlResolver}로만 만든다.
  *   <li>좋아요·팔로우 포트는 비회원·작성자 본인에게는 부르지 않는다(SQL 절약, 결과가 늘 {@code false}).
- *   <li>부가 정보(태그·좋아요·팔로우) 조회가 실패하면 기본값 + 경고 로그로 상세는 계속 보여 준다(원칙 V, research R-30).
+ *   <li>부가 정보(태그·좋아요·팔로우·작업본) 조회가 실패하면 기본값 + 경고 로그로 상세는 계속 보여 준다(원칙 V, research R-30).
+ *   <li>작성자 본인에게만 {@code authorView}(작업본 유무·저장 시각, 숨김 여부·사유)를 채운다(005 T055, FR-038·039). 작업본 저장 시각은
+ *       002 {@link PostDraftQueryService#findSavedAt}({@code post_draft.updated_at}, 본문은 읽지 않음)로
+ *       읽는다 — 자동 저장은 Redis 버퍼를 거쳐 최대 약 1분 늦게 반영될 수 있다.
  * </ul>
  */
 @Component
@@ -36,16 +40,19 @@ public class PostDetailAssembler {
     private final PostTagNamesQuery tagNames;
     private final PostLikeStatusQuery likeStatus;
     private final AuthorFollowStatusQuery followStatus;
+    private final PostDraftQueryService drafts;
 
     public PostDetailAssembler(
             ImageUrlResolver imageUrls,
             PostTagNamesQuery tagNames,
             PostLikeStatusQuery likeStatus,
-            AuthorFollowStatusQuery followStatus) {
+            AuthorFollowStatusQuery followStatus,
+            PostDraftQueryService drafts) {
         this.imageUrls = imageUrls;
         this.tagNames = tagNames;
         this.likeStatus = likeStatus;
         this.followStatus = followStatus;
+        this.drafts = drafts;
     }
 
     public PostDetailView toView(PostDetailRow row, Viewer viewer) {
@@ -80,7 +87,15 @@ public class PostDetailAssembler {
                         others && following(viewer.id(), row.authorId()),
                         viewer.emailVerified(),
                         viewer.isAdmin()),
-                null);
+                isAuthor ? authorView(row) : null);
+    }
+
+    /** 작성자 본인에게만 주는 상태 정보 (FR-038·039). 작업본 조회가 실패하면 "작업본 없음"으로 둔다. */
+    private PostDetailView.AuthorView authorView(PostDetailRow row) {
+        Optional<Instant> savedAt = guard(() -> drafts.findSavedAt(row.id()), "작업본");
+        Instant draftSavedAt = savedAt == null ? null : savedAt.orElse(null);
+        return new PostDetailView.AuthorView(
+                draftSavedAt != null, draftSavedAt, row.isHidden(), row.hiddenReason());
     }
 
     /** 화면 날짜 기준 (research R-13). */

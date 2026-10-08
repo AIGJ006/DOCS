@@ -1,6 +1,6 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { MemoryRouter, Route, Routes } from 'react-router-dom';
+import { MemoryRouter, Route, Routes, useNavigate } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { BlogHeader, PostCard, PostCardPage } from '../../api/types/reading';
 import { errorBody, json, requestsTo, stubFetch } from '../../test/fetchRoutes';
@@ -63,6 +63,8 @@ function renderBlog(path = '/@kim755030') {
 /** 개인 블로그 화면 (005 T046, US3 #1·#2·#5). */
 describe('BlogPage', () => {
   beforeEach(() => {
+    // 뒤로 가기 복원 보관값(005 US6)이 앞 테스트에서 넘어오지 않게
+    sessionStorage.clear();
     vi.useFakeTimers({ shouldAdvanceTime: true });
     vi.setSystemTime(new Date('2026-10-07T05:00:00Z'));
   });
@@ -147,5 +149,56 @@ describe('BlogPage', () => {
     renderBlog('/kim755030');
 
     expect(await screen.findByText('볼 수 없는 페이지예요')).toBeInTheDocument();
+  });
+
+  it('첫 글 목록을 못 불러오면 "글을 불러오지 못했어요 [다시 시도]" (005 T071)', async () => {
+    let call = 0;
+    stubFetch({
+      'GET /api/members/kim755030': () => json(200, header()),
+      'GET /api/members/kim755030/posts': () =>
+        call++ === 0
+          ? json(500, errorBody('INTERNAL_ERROR', '잠시 후 다시 시도해 주세요'))
+          : json(200, page(range(12, 9), 'c1')),
+    });
+    renderBlog();
+
+    expect(await screen.findByText('글을 불러오지 못했어요')).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: '다시 시도' }));
+
+    await waitFor(() => expect(screen.getAllByTestId('post-card')).toHaveLength(9));
+    expect(screen.queryByText('글을 불러오지 못했어요')).not.toBeInTheDocument();
+  });
+
+  it('뒤로 가기로 돌아오면 blog:{handle} 보관값으로 카드를 복원한다 (005 T071)', async () => {
+    const fetchMock = stubBlog(header(), [page(range(12, 9), 'c1'), page([3, 2, 1], null)]);
+    vi.spyOn(window, 'scrollTo').mockImplementation(() => undefined);
+    function Back() {
+      const navigate = useNavigate();
+      return (
+        <button type="button" onClick={() => navigate(-1)}>
+          뒤로
+        </button>
+      );
+    }
+    render(
+      <MemoryRouter initialEntries={['/@kim755030']}>
+        <Routes>
+          <Route path="/:handle" element={<BlogPage />} />
+          <Route path="/:handle/posts/:postId" element={<Back />} />
+        </Routes>
+      </MemoryRouter>,
+    );
+    await waitFor(() => expect(screen.getAllByTestId('post-card')).toHaveLength(9));
+    await userEvent.click(screen.getByRole('button', { name: '더 보기' }));
+    await waitFor(() => expect(screen.getAllByTestId('post-card')).toHaveLength(12));
+    expect(sessionStorage.getItem('list-restore:blog:kim755030')).not.toBeNull();
+
+    await userEvent.click(screen.getByRole('link', { name: /글 2 / }));
+    await userEvent.click(await screen.findByRole('button', { name: '뒤로' }));
+
+    await waitFor(() => expect(screen.getAllByTestId('post-card')).toHaveLength(12));
+    expect(requestsTo(fetchMock, 'GET', '/api/members/kim755030/posts')).toHaveLength(2);
+    expect(screen.getByText('모든 글을 다 봤어요')).toBeInTheDocument();
+    vi.restoreAllMocks();
   });
 });

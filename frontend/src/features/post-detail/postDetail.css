@@ -1,0 +1,25 @@
+/*
+ * 글 상세 본문 (005 T074, FR-014·015, SC-006). 본문 HTML은 서버가 정화해 넣으므로 안쪽 요소에 스타일 속성을 달 수 없다.
+ * 375px에서도 화면이 가로로 넘치지 않게, 넓은 코드 블록·표는 그 상자 안에서만 가로로 스크롤하고 사진은 폭에 맞춘다.
+ */
+.post-detail-content {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.post-detail-content pre {
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+.post-detail-content table {
+  display: block;
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+.post-detail-content img,
+.post-detail-content video {
+  max-width: 100%;
+  height: auto;
+}

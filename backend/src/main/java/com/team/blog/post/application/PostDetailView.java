@@ -12,7 +12,7 @@ import java.util.List;
  *
  * @param id 글 번호
  * @param status 글 상태
- * @param editorPath 작성자용 편집 화면 주소 (US4에서 채움, 그 밖은 {@code null})
+ * @param editorPath 작성자용 편집 화면 주소 (임시글 응답 {@link Draft}에만 있다 — 여기서는 항상 {@code null})
  * @param canonicalPath 바른 글 주소 {@code /@{handle}/posts/{id}} (화면이 주소를 맞춘다)
  * @param visibility 공개 범위
  * @param title 제목 (글자 그대로)
@@ -28,7 +28,7 @@ import java.util.List;
  * @param commentCount 댓글 수
  * @param author 작성자
  * @param viewer 보는 사람 기준 플래그
- * @param authorView 작성자에게만 주는 정보 (그 밖은 {@code null}; US4에서 채움)
+ * @param authorView 작성자에게만 주는 정보 (그 밖은 {@code null})
  */
 public record PostDetailView(
         long id,
@@ -49,7 +49,23 @@ public record PostDetailView(
         int commentCount,
         Author author,
         ViewerFlags viewer,
-        AuthorView authorView) {
+        AuthorView authorView)
+        implements PostDetailResponse {
+
+    /** 작성자 본인의 임시글 (005 T056, research R-22): 본문 없이 에디터 주소만 준다. */
+    public static Draft draft(long id, String editorPath) {
+        return new Draft(id, "DRAFT", editorPath);
+    }
+
+    /**
+     * 작성자 본인이 자기 임시글 상세를 열었을 때의 응답 — contracts {@code PostDetail}의 "status가 DRAFT면
+     * id·status·editorPath만".
+     *
+     * @param id 글 번호
+     * @param status 항상 {@code DRAFT}
+     * @param editorPath {@code /write/{id}}
+     */
+    public record Draft(long id, String status, String editorPath) implements PostDetailResponse {}
 
     /**
      * @param handle 블로그 주소
@@ -81,7 +97,7 @@ public record PostDetailView(
             @JsonProperty("isAdmin") boolean isAdmin) {}
 
     /**
-     * 작성자에게만 주는 정보 (US4 T053~T056에서 채운다).
+     * 작성자에게만 주는 정보 (005 T055, FR-038·039). 독자에게는 {@code null}이다.
      *
      * @param hasDraft 발행 뒤 고치는 중인 내용이 있는가
      * @param draftSavedAt 그 내용을 저장한 시각 ({@code post_draft.updated_at})

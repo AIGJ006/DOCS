@@ -76,11 +76,11 @@ export interface PostDetailAuthor extends AuthorSummary {
   bio: string | null;
 }
 
-/** 글 상세 (contracts `PostDetail`). `status`가 `DRAFT`면 id·status·editorPath만 채워진다. */
+/** 글 상세 (contracts `PostDetail`). 작성자 본인의 임시글이면 {@link PostDetailDraft}가 온다. */
 export interface PostDetail {
   id: number;
-  status: 'PUBLISHED' | 'DRAFT';
-  /** `DRAFT`일 때만 `/write/{postId}` */
+  status: 'PUBLISHED';
+  /** 발행 글은 항상 null (`DRAFT` 응답에만 있다) */
   editorPath: string | null;
   canonicalPath: string;
   visibility: 'PUBLIC' | 'PRIVATE';
@@ -102,3 +102,14 @@ export interface PostDetail {
   viewer: PostDetailViewer;
   authorView: PostAuthorView | null;
 }
+
+/** 작성자 본인이 자기 임시글 상세를 열었을 때 (contracts `PostDetail` — id·status·editorPath만). 화면은 에디터로 옮긴다. */
+export interface PostDetailDraft {
+  id: number;
+  status: 'DRAFT';
+  /** `/write/{postId}` */
+  editorPath: string;
+}
+
+/** `GET /api/posts/{postId}` 응답. */
+export type PostDetailResponse = PostDetail | PostDetailDraft;

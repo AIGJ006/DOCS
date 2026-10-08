@@ -1,17 +1,33 @@
 import { useCallback } from 'react';
+import { Link, useNavigationType } from 'react-router-dom';
 import { listHomePosts } from '../api/posts';
-import LoadMoreButton from '../components/LoadMoreButton';
+import LoadMoreButton, { INITIAL_LOAD_FAILED_TEXT } from '../components/LoadMoreButton';
 import PostCard from '../components/PostCard';
 import PostCardGrid from '../components/PostCardGrid';
+import { useSession } from '../features/auth/useSession';
 import { useCursorList } from '../features/post-list/useCursorList';
 
+/** 공개 글이 하나도 없을 때 (FR-017). */
+export const EMPTY_HOME_TEXT = '아직 올라온 글이 없어요. 첫 글의 주인공이 되어 보세요';
+export { INITIAL_LOAD_FAILED_TEXT };
+
+/** 홈 목록의 복원 저장소 키 (FR-018). */
+export const HOME_LIST_KEY = 'home';
+
 /**
- * 홈 — 전체 공개 글 목록 (005 T024, US1, FR-001~004). 카드 9개 + [더 보기]로 이어 본다.
- * 빈 목록·로딩·실패 문구는 US6(T068~T071)에서 다듬는다.
+ * 홈 — 전체 공개 글 목록 (005 T024·T071, US1·US6, FR-001~004·016~018). 카드 9개 + [더 보기]로 이어 본다.
+ *
+ * - 뒤로 가기(POP)로 돌아오면 30분 안에 보관한 카드·스크롤 위치를 요청 없이 복원한다. 링크로 새로 들어오면 처음부터.
+ * - 첫 목록 실패: "글을 불러오지 못했어요 [다시 시도]". [더 보기] 실패·로딩 문구는 `LoadMoreButton`.
+ * - 글이 하나도 없으면 빈 홈 문구 + [글쓰기](로그인 회원 → 002 새 글) / [로그인](비회원 → `/login?returnTo=/`).
  */
 export default function HomePage() {
+  const navigationType = useNavigationType();
+  const { loading: sessionLoading, me } = useSession();
   const load = useCallback((cursor?: string | null) => listHomePosts(cursor), []);
-  const list = useCursorList(load);
+  const list = useCursorList(load, { listKey: HOME_LIST_KEY, restore: navigationType === 'POP' });
+
+  const empty = list.loadedOnce && list.items.length === 0;
 
   return (
     <main
@@ -30,7 +46,23 @@ export default function HomePage() {
           <PostCard key={card.id} card={card} showAuthor />
         ))}
       </PostCardGrid>
-      {list.loadedOnce && list.items.length === 0 ? null : (
+      {list.initialError ? (
+        <p role="status" style={{ textAlign: 'center', padding: '3rem 1rem' }}>
+          {INITIAL_LOAD_FAILED_TEXT}{' '}
+          <button type="button" onClick={() => void list.retry()}>
+            다시 시도
+          </button>
+        </p>
+      ) : empty ? (
+        <p data-testid="empty-home" style={{ textAlign: 'center', padding: '3rem 1rem' }}>
+          {EMPTY_HOME_TEXT}{' '}
+          {sessionLoading ? null : me ? (
+            <Link to="/write/new">글쓰기</Link>
+          ) : (
+            <Link to="/login?returnTo=/">로그인</Link>
+          )}
+        </p>
+      ) : (
         <LoadMoreButton
           status={list.status}
           done={list.done}

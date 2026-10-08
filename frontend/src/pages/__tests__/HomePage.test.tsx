@@ -46,6 +46,8 @@ function renderHome() {
 /** 홈 화면 (005 T021, US1 #2·#3). */
 describe('HomePage', () => {
   beforeEach(() => {
+    // 뒤로 가기 복원 보관값(005 US6)이 앞 테스트에서 넘어오지 않게
+    sessionStorage.clear();
     vi.useFakeTimers({ shouldAdvanceTime: true });
     vi.setSystemTime(new Date('2026-10-07T05:00:00Z'));
   });

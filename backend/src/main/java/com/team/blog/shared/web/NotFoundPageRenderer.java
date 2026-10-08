@@ -1,5 +1,6 @@
 package com.team.blog.shared.web;
 
+import com.team.blog.shared.web.shell.LinkPreviewMeta;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
@@ -29,9 +30,14 @@ public class NotFoundPageRenderer {
 
     static final String PLACEHOLDER = "<!--app-head-->";
 
+    /** 공통 문구는 005 {@link LinkPreviewMeta}와 같은 상수를 쓴다(작성자가 보는 비공개 글 메타와 문구가 갈라지지 않게). */
     static final String HEAD =
-            "<meta property=\"og:title\" content=\"볼 수 없는 글이에요\">"
-                    + "<meta property=\"og:description\" content=\"친구 공개·비공개 글이거나 삭제된 글입니다.\">"
+            "<meta property=\"og:title\" content=\""
+                    + LinkPreviewMeta.UNAVAILABLE_TITLE
+                    + "\">"
+                    + "<meta property=\"og:description\" content=\""
+                    + LinkPreviewMeta.UNAVAILABLE_DESCRIPTION
+                    + "\">"
                     + "<meta name=\"robots\" content=\"noindex\">";
 
     static final String FALLBACK =

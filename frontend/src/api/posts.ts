@@ -3,7 +3,7 @@
  * 004의 공개 범위 변경 함수 등 다른 기능의 함수는 이 파일에 더한다.
  */
 import { apiDelete, apiGet, apiPost, apiPut, CSRF_COOKIE, CSRF_HEADER } from './client';
-import type { PostCardPage, PostDetail } from './types/reading';
+import type { PostCardPage, PostDetailResponse } from './types/reading';
 
 export type Visibility = 'PUBLIC' | 'PRIVATE';
 export type PostStatus = 'DRAFT' | 'PUBLISHED';
@@ -161,9 +161,12 @@ export function listHomePosts(cursor?: string | null): Promise<PostCardPage> {
   );
 }
 
-/** 글 상세 (005 FR-026). 없는 글·볼 수 없는 글은 모두 404 `NOT_FOUND`. */
-export function getPostDetail(postId: number | string): Promise<PostDetail> {
-  return apiGet<PostDetail>(`/api/posts/${postId}`);
+/**
+ * 글 상세 (005 FR-026). 없는 글·볼 수 없는 글은 모두 404 `NOT_FOUND`.
+ * 작성자 본인의 임시글이면 본문 없이 `{id, status: 'DRAFT', editorPath}`가 온다.
+ */
+export function getPostDetail(postId: number | string): Promise<PostDetailResponse> {
+  return apiGet<PostDetailResponse>(`/api/posts/${postId}`);
 }
 
 /**

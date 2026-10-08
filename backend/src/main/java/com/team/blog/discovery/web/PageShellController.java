@@ -3,11 +3,11 @@ package com.team.blog.discovery.web;
 import com.team.blog.account.application.BlogOwner;
 import com.team.blog.account.application.MemberQueryService;
 import com.team.blog.discovery.application.BlogQueryService;
-import com.team.blog.discovery.application.ReadingProperties;
-import com.team.blog.media.application.ImageUrlResolver;
-import com.team.blog.media.application.ProfileImageQuery;
+import com.team.blog.discovery.application.LinkPreviewMetaFactory;
 import com.team.blog.post.application.PostQueryService;
+import com.team.blog.post.application.PostUrls;
 import com.team.blog.post.domain.PostNotFoundException;
+import com.team.blog.post.domain.Visibility;
 import com.team.blog.post.infra.PostDetailRow;
 import com.team.blog.shared.error.NotFoundException;
 import com.team.blog.shared.security.Viewer;
@@ -37,10 +37,13 @@ import org.springframework.web.bind.annotation.RestController;
  *   <li>① {@code handle}에 대문자가 있으면 소문자 주소로 {@code 301}(쿼리 문자열 유지) — 볼 수 없는 글이어도 먼저 적용한다.
  *   <li>② 글 번호가 숫자가 아니면 공통 404 화면.
  *   <li>③ 상세 API와 같은 조회·판정으로 볼 수 없으면 같은 404 화면.
- *   <li>⑥ 그 밖에는 React 셸 {@code 200}.
+ *   <li>④ 주소의 블로그가 작성자와 다르면 바른 주소로 {@code 301}(쿼리 유지) — ③ 뒤에만 하므로 볼 수 없는 글의 작성자는 드러나지 않는다.
+ *   <li>⑤ 작성자 본인의 임시글이면 {@code 302 /write/{postId}}.
+ *   <li>⑥ 그 밖에는 React 셸 {@code 200} + 공개 글 미리보기 메타({@link LinkPreviewMetaFactory}). 작성자가 보는 비공개·숨김
+ *       글은 공통 문구 + {@code noindex}, {@code private, no-store}.
  * </ol>
  *
- * ④(handle 불일치 301)는 US5 T064, ⑤(작성자 임시글 302)는 US4 T057에서 더한다. 이 경로는 조회수를 바꾸지 않는다.
+ * 이 경로는 조회수를 바꾸지 않는다.
  */
 @RestController
 public class PageShellController {
@@ -50,25 +53,19 @@ public class PageShellController {
 
     private final PostQueryService postQueryService;
     private final BlogQueryService blogQueryService;
-    private final ProfileImageQuery profileImages;
-    private final ImageUrlResolver imageUrls;
-    private final ReadingProperties properties;
+    private final LinkPreviewMetaFactory metaFactory;
     private final SpaShellRenderer shell;
     private final NotFoundPageRenderer notFoundPage;
 
     public PageShellController(
             PostQueryService postQueryService,
             BlogQueryService blogQueryService,
-            ProfileImageQuery profileImages,
-            ImageUrlResolver imageUrls,
-            ReadingProperties properties,
+            LinkPreviewMetaFactory metaFactory,
             SpaShellRenderer shell,
             NotFoundPageRenderer notFoundPage) {
         this.postQueryService = postQueryService;
         this.blogQueryService = blogQueryService;
-        this.profileImages = profileImages;
-        this.imageUrls = imageUrls;
-        this.properties = properties;
+        this.metaFactory = metaFactory;
         this.shell = shell;
         this.notFoundPage = notFoundPage;
     }
@@ -90,50 +87,7 @@ public class PageShellController {
         } catch (NotFoundException e) {
             return notFoundPage.render();
         }
-        return html(shell.render(blogMeta(owner)), CacheControlPolicy.NO_CACHE);
-    }
-
-    /**
-     * 블로그 미리보기 메타 (40 §5): {@code <title>{닉네임} (@{handle})}, description은 소개 앞 {@code
-     * blog.seo.description-length}자, canonical은 {@code blog.site.base-url}+{@code /@handle}, {@code
-     * og:type=profile}, {@code og:image}는 프로필 사진 <b>원본</b>(없으면 기본 이미지).
-     */
-    private LinkPreviewMeta blogMeta(BlogOwner owner) {
-        String title = owner.nickname() + " (@" + owner.handle() + ")";
-        String description = shorten(owner.bio(), properties.seo().descriptionLength());
-        String originalKey =
-                profileImages.currentKeys(owner.id()).map(keys -> keys.original()).orElse(null);
-        String image =
-                originalKey == null
-                        ? properties.seo().defaultOgImageUrl()
-                        : imageUrls.publicUrl(originalKey);
-        return new LinkPreviewMeta(
-                title,
-                description,
-                properties.site().baseUrl() + "/@" + owner.handle(),
-                "profile",
-                title,
-                description,
-                image,
-                null,
-                null,
-                false);
-    }
-
-    /**
-     * 소개 → 미리보기 설명. 줄바꿈·연속 공백은 한 칸으로 모으고 앞 {@code max}자만 쓴다. 값이 없으면 {@code null}(태그를 만들지 않는다).
-     *
-     * <p>(구현 메모) spec은 "소개 앞 160자"만 정했다. 메타 속성 값에 줄바꿈을 그대로 넣지 않으려고 공백으로 모은다.
-     */
-    static String shorten(String text, int max) {
-        if (text == null) {
-            return null;
-        }
-        String flat = text.replaceAll("\\s+", " ").strip();
-        if (flat.isEmpty()) {
-            return null;
-        }
-        return flat.length() <= max ? flat : flat.substring(0, max);
+        return html(shell.render(metaFactory.forBlog(owner)), CacheControlPolicy.NO_CACHE);
     }
 
     @GetMapping("/@{handle}/posts/{postId}")
@@ -152,9 +106,31 @@ public class PageShellController {
         } catch (PostNotFoundException e) {
             return notFoundPage.render();
         }
-        return html(
-                shell.render(LinkPreviewMeta.empty()),
-                CacheControlPolicy.forPost(row.status(), row.visibility(), row.isHidden()));
+        // ④ 주소의 블로그가 작성자와 다르면 바른 주소로 (볼 수 있는 글에만 — ③ 뒤라 작성자가 드러나지 않는다)
+        if (!handle.equals(row.handle())) {
+            return movedPermanently(PostUrls.of(row.handle(), row.id()), request);
+        }
+        // ⑤ 작성자 본인의 임시글 → 에디터 (FR-026 ⑤, 40 R-4)
+        if (PostQueryService.isAuthorDraft(row, viewer)) {
+            return ResponseEntity.status(HttpStatus.FOUND)
+                    .header(HttpHeaders.LOCATION, PostQueryService.editorPath(row.id()))
+                    .header(HttpHeaders.CACHE_CONTROL, CacheControlPolicy.NO_STORE)
+                    .build();
+        }
+        String cacheControl =
+                CacheControlPolicy.forPost(row.status(), row.visibility(), row.isHidden());
+        return html(shell.render(postMeta(row)), cacheControl);
+    }
+
+    /**
+     * ⑥의 메타. 공개 글은 제목·요약·대표 이미지(원본) 미리보기, 작성자가 보는 비공개·숨김 글은 공통 문구 + {@code noindex}(FR-044·045,
+     * research R-18). OG 원본 조회는 이 경로에서만 한다(API는 하지 않는다).
+     */
+    private LinkPreviewMeta postMeta(PostDetailRow row) {
+        if (row.visibility() != Visibility.PUBLIC || row.isHidden()) {
+            return metaFactory.unavailable();
+        }
+        return metaFactory.forPublicPost(row);
     }
 
     /** 원래 쿼리 문자열을 유지한 영구 이동 (research R-32). */

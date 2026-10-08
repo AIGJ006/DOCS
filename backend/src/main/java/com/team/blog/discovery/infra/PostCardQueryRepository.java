@@ -58,6 +58,17 @@ public class PostCardQueryRepository {
      * @param limit 읽을 행 수 (보통 page-size + 1)
      */
     public List<PostCardRow> findCards(Viewer viewer, Long authorId, CursorKey after, int limit) {
+        CardQuery query = cardQuery(viewer, authorId, after, limit);
+        return jdbc.sql(query.sql())
+                .params(query.params())
+                .query(PostCardQueryRepository::toRow)
+                .list();
+    }
+
+    /**
+     * {@link #findCards}가 실행하는 SQL과 매개변수 (005 T072 — 인덱스 사용을 {@code EXPLAIN}으로 확인할 때 같은 문장을 쓴다).
+     */
+    public CardQuery cardQuery(Viewer viewer, Long authorId, CursorKey after, int limit) {
         SqlCondition condition = visibilityFilter.forViewer(viewer, authorId);
         StringBuilder sql = new StringBuilder(SELECT).append(condition.sql());
         Map<String, Object> params = new LinkedHashMap<>(condition.params());
@@ -68,8 +79,16 @@ public class PostCardQueryRepository {
         }
         sql.append(" ORDER BY p.first_public_at DESC, p.id DESC LIMIT :limit");
         params.put("limit", limit);
-        return jdbc.sql(sql.toString()).params(params).query(PostCardQueryRepository::toRow).list();
+        return new CardQuery(sql.toString(), params);
     }
+
+    /**
+     * 카드 조회 문장.
+     *
+     * @param sql 이름 붙은 매개변수({@code :name})를 쓴 SQL
+     * @param params 매개변수 값
+     */
+    public record CardQuery(String sql, Map<String, Object> params) {}
 
     /**
      * 블로그 공개 글 수 (목록과 같은 조건의 {@code COUNT(*)}, {@code ix_post_blog}).
