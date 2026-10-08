@@ -2,7 +2,10 @@ package com.team.blog.account.application;
 
 import com.team.blog.account.domain.MemberStatus;
 import com.team.blog.account.domain.Role;
+import java.util.Collection;
+import java.util.LinkedHashMap;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Optional;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Service;
@@ -15,6 +18,7 @@ import org.springframework.transaction.annotation.Transactional;
  *   <li>{@link #findAccessInfo(long)} — 004 {@code Viewer}·T042a 탈퇴 유예 필터
  *   <li>{@link #findReadableBlogOwner(String)}·{@link #normalizeHandle(String)} — 005 블로그 주소
  *   <li>{@link #defaultVisibility(long)} — 002 새 글 기본 공개 범위
+ *   <li>{@link #findDisplays(Collection)} — 007 댓글 작성자·대상 표시
  * </ul>
  */
 @Service
@@ -80,6 +84,39 @@ public class MemberQueryService {
                 .query(String.class)
                 .optional()
                 .orElseThrow(() -> new IllegalArgumentException("없는 회원입니다: " + memberId));
+    }
+
+    /**
+     * 여러 회원의 표시 정보(SQL 1번, 007 T010). 탈퇴 유예·익명 처리 회원은 {@code withdrawn = true}이고 익명 처리 회원은 주소·닉네임이
+     * {@code null}이다. 없는 번호는 결과에 없다. 빈 입력은 SQL 없이 빈 맵.
+     */
+    public Map<Long, MemberDisplay> findDisplays(Collection<Long> ids) {
+        Map<Long, MemberDisplay> result = new LinkedHashMap<>();
+        if (ids == null || ids.isEmpty()) {
+            return result;
+        }
+        jdbc.sql(
+                        """
+                        SELECT id, handle, nickname, status, deleted_at IS NOT NULL AS anonymized
+                          FROM member
+                         WHERE id IN (:ids)
+                        """)
+                .param("ids", ids)
+                .query(
+                        rs -> {
+                            long id = rs.getLong("id");
+                            boolean anonymized = rs.getBoolean("anonymized");
+                            boolean withdrawn =
+                                    anonymized || "WITHDRAWN".equals(rs.getString("status"));
+                            result.put(
+                                    id,
+                                    new MemberDisplay(
+                                            id,
+                                            anonymized ? null : rs.getString("handle"),
+                                            anonymized ? null : rs.getString("nickname"),
+                                            withdrawn));
+                        });
+        return result;
     }
 
     /** 주소 비교·301 판단용 소문자화 (FR-021). 주소는 영문 소문자·숫자·{@code _}·{@code -}만 쓰므로 {@link Locale#ROOT}. */

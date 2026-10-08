@@ -139,7 +139,7 @@ describe('AutosaveQueue', () => {
     const t = setup();
     t.queue.update('a', '1');
     await tick(3000);
-    t.fail(new ApiError(429, 'RATE_LIMITED', '잠시 후', [], null, 5));
+    t.fail(new ApiError(429, 'TOO_MANY_REQUESTS', '잠시 후', [], null, 5));
     await tick(4999);
     expect(t.sent).toHaveLength(1);
     await tick(1);

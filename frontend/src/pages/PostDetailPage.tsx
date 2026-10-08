@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { ApiError } from '../api/client';
+import { listComments } from '../api/comments';
 import { getPostDetail } from '../api/posts';
+import type { CommentPage } from '../api/types/comments';
 import type { PostDetail } from '../api/types/reading';
 import AuthorCard from '../components/AuthorCard';
 import AuthorChip from '../components/AuthorChip';
@@ -24,6 +26,8 @@ type LoadStatus = 'loading' | 'ready' | 'not-found' | 'error' | 'redirecting';
 interface DetailState {
   status: LoadStatus;
   detail: PostDetail | null;
+  /** 상세 요청과 동시에 시작한 댓글 첫 페이지 요청 (007 Clarifications Q1) */
+  comments?: Promise<CommentPage> | null;
 }
 
 const LOADING: DetailState = { status: 'loading', detail: null };
@@ -66,6 +70,7 @@ export default function PostDetailPage({
   const postId = params.postId ?? '';
   const blogAddress = rawHandle.startsWith('@');
 
+  const commentAround = new URLSearchParams(location.search).get('comment');
   const [state, setState] = useState<DetailState>(LOADING);
   const [reloadKey, setReloadKey] = useState(0);
   const contentRef = useRef<HTMLDivElement | null>(null);
@@ -76,9 +81,13 @@ export default function PostDetailPage({
       return undefined;
     }
     let cancelled = false;
+    // 상세와 댓글 첫 페이지를 동시에 부른다(007 FR-016). 댓글 실패는 댓글 영역만 알린다 — 여기서 처리됨으로 표시해 둔다.
+    const detailRequest = getPostDetail(postId);
+    const comments = listComments(postId, { around: commentAround });
+    comments.catch(() => undefined);
     void (async () => {
       try {
-        const response = await getPostDetail(postId);
+        const response = await detailRequest;
         if (cancelled) {
           return;
         }
@@ -88,7 +97,7 @@ export default function PostDetailPage({
           navigate(response.editorPath, { replace: true });
           return;
         }
-        setState({ status: 'ready', detail: response });
+        setState({ status: 'ready', detail: response, comments });
       } catch (error) {
         if (!cancelled) {
           const notFound = error instanceof ApiError && error.status === 404;
@@ -99,7 +108,7 @@ export default function PostDetailPage({
     return () => {
       cancelled = true;
     };
-  }, [postId, blogAddress, reloadKey, navigate]);
+  }, [postId, blogAddress, reloadKey, navigate, commentAround]);
 
   const detail = state.detail;
   const canonicalPath = detail?.canonicalPath;
@@ -154,7 +163,6 @@ export default function PostDetailPage({
     return <main data-route="post-detail" style={{ padding: '4rem 1rem' }} aria-busy="true" />;
   }
 
-  const aroundCommentId = new URLSearchParams(location.search).get('comment');
   const isAuthor = detail.viewer.isAuthor;
 
   return (
@@ -233,9 +241,12 @@ export default function PostDetailPage({
       </article>
       <AuthorCard author={detail.author} isMe={isAuthor} />
       <CommentSectionSlot
+        key={`${detail.id}-${reloadKey}`}
         postId={detail.id}
         commentCount={detail.commentCount}
-        aroundCommentId={aroundCommentId}
+        viewer={detail.viewer}
+        aroundCommentId={commentAround}
+        initialPage={state.comments}
       />
     </main>
   );

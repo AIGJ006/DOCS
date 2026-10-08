@@ -11,8 +11,8 @@ export interface CommentInputGateProps {
 }
 
 /**
- * 댓글 입력창 안내 (004 T062, FR-045, US6-3). 007 댓글 입력창이 이것으로 감싼다: 비회원은 "로그인하고 댓글 쓰기"(지금 글로 돌아오는
- * 로그인 링크), 인증 전 회원은 "이메일 인증 후 댓글을 쓸 수 있어요 [인증 메일 다시 보내기]", 그 밖(회원·관리자·작성자)은 입력창. 판정은
+ * 댓글 입력창 안내 (004 T062, FR-045, US6-3). 007 댓글 입력창이 이것으로 감싼다: 비회원은 "로그인하고 댓글을 남겨 보세요 [로그인]"
+ * (007 FR-023 문구, 지금 글로 돌아오는 로그인 링크), 인증 전 회원은 "이메일 인증 후 댓글을 쓸 수 있어요 [인증 메일 다시 보내기]", 그 밖(회원·관리자·작성자)은 입력창. 판정은
  * 서버가 다시 한다.
  */
 export default function CommentInputGate({ viewer, children }: CommentInputGateProps) {
@@ -20,7 +20,8 @@ export default function CommentInputGate({ viewer, children }: CommentInputGateP
   if (!viewer.loggedIn) {
     return (
       <div className="comment-input-gate" data-gate="login">
-        <Link to={loginPathFor(location.pathname + location.search)}>로그인하고 댓글 쓰기</Link>
+        <p>로그인하고 댓글을 남겨 보세요</p>
+        <Link to={loginPathFor(location.pathname + location.search)}>로그인</Link>
       </div>
     );
   }

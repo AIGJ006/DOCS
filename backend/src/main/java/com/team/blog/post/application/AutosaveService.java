@@ -1,6 +1,5 @@
 package com.team.blog.post.application;
 
-import com.team.blog.post.application.exception.RateLimitedException;
 import com.team.blog.post.application.exception.VersionConflictException;
 import com.team.blog.post.config.PostAuthoringProperties;
 import com.team.blog.post.domain.PostNotFoundException;
@@ -12,7 +11,6 @@ import com.team.blog.post.infra.PostEditRepository.FlushTarget;
 import com.team.blog.post.infra.PostRepository;
 import com.team.blog.post.infra.RedisAutosaveStore;
 import com.team.blog.post.infra.RedisAutosaveStore.SaveOutcome;
-import com.team.blog.shared.infra.ratelimit.RateLimitResult;
 import com.team.blog.shared.infra.ratelimit.RateLimiter;
 import com.team.blog.shared.infra.redis.RedisGuard;
 import com.team.blog.shared.security.AccountStatusGuard;
@@ -77,10 +75,7 @@ public class AutosaveService {
             long postId, long memberId, String title, String contentMd, long baseVersion) {
         accountStatusGuard.requireActive(memberId, ActionKind.CONTENT_WRITE);
         PostAuthoringProperties.RateLimit limit = properties.autosave().rateLimit();
-        if (rateLimiter.tryAcquire("ratelimit:autosave:" + memberId, limit.limit(), limit.window())
-                instanceof RateLimitResult.Denied denied) {
-            throw new RateLimitedException(denied.retryAfterSeconds());
-        }
+        rateLimiter.acquireOrThrow("ratelimit:autosave:" + memberId, limit.limit(), limit.window());
         EditState state = requireOwned(postId, memberId);
         String t = title == null ? "" : title;
         String md = contentMd == null ? "" : contentMd;

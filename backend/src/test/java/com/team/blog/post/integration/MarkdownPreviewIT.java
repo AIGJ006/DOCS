@@ -67,7 +67,7 @@ class MarkdownPreviewIT extends IntegrationTestBase {
     }
 
     @Test
-    void 일분에_61번째는_429_RATE_LIMITED와_Retry_After() throws Exception {
+    void 일분에_61번째는_429_TOO_MANY_REQUESTS와_Retry_After() throws Exception {
         long me = members().member().create();
         Cookie session = TestLogin.loginAs(mockMvc, me);
         for (int i = 0; i < 60; i++) {
@@ -75,7 +75,7 @@ class MarkdownPreviewIT extends IntegrationTestBase {
         }
         MvcResult result = api().preview(session, "본문 61");
         assertThat(status(result)).isEqualTo(429);
-        assertThat((String) read(result, "$.code")).isEqualTo("RATE_LIMITED");
+        assertThat((String) read(result, "$.code")).isEqualTo("TOO_MANY_REQUESTS");
         assertThat(Integer.parseInt(result.getResponse().getHeader("Retry-After")))
                 .isBetween(1, 60);
     }

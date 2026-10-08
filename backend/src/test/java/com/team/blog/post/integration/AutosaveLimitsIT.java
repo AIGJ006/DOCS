@@ -32,7 +32,7 @@ class AutosaveLimitsIT extends IntegrationTestBase {
         MvcResult second = api().autosave(session, postId, saveBody("a", "2", 1));
 
         assertThat(status(second)).isEqualTo(429);
-        assertThat((String) read(second, "$.code")).isEqualTo("RATE_LIMITED");
+        assertThat((String) read(second, "$.code")).isEqualTo("TOO_MANY_REQUESTS");
         assertThat(Integer.parseInt(second.getResponse().getHeader("Retry-After"))).isBetween(1, 5);
     }
 
