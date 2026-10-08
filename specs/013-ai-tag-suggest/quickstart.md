@@ -17,7 +17,7 @@
 cp .env.example .env                        # GEMINI_API_KEY= 는 비워 두거나 개인 키를 넣는다
 docker compose up -d postgres redis minio mailpit ollama ollama-pull
 docker compose logs -f ollama-pull          # "success"가 보이면 모델 받기 끝 (처음 한 번, 약 1GB)
-./mvnw -pl backend spring-boot:run
+(cd backend && ./mvnw spring-boot:run)
 (cd frontend && npm ci && npm run dev)
 ```
 
@@ -28,10 +28,15 @@ docker compose logs -f ollama-pull          # "success"가 보이면 모델 받�
 ## 2. 자동 테스트
 
 ```bash
-./mvnw -pl backend verify -Dit.test='TagSuggest*IT,AiConsentIT' -Dtest='SuggestInputCleanerTest,TrigramSimilarityTest,PromptBuilderTest,GeminiTagSuggesterTest,OllamaTagSuggesterTest'
-./mvnw -pl backend verify -Dit.test=OllamaSmokeIT -Dgroups=ollama            # 실제 Ollama, 수동
+cd backend
+./mvnw verify -Dit.test='TagSuggest*IT,AiConsentIT,DailyUsageIT,PostOwnershipQueryIT,AiConsentServiceIT' \
+  -Dtest='SuggestInputCleanerTest,TrigramSimilarityTest,PromptBuilderTest,GeminiTagSuggesterTest,OllamaTagSuggesterTest,SuggestResultFilterTest,TagSuggestPropertiesBindingTest'
+# 실제 Ollama, 수동 (기본 빌드에서는 건너뜀 — @Tag("ollama") + -Dollama.smoke=true일 때만)
+./mvnw verify -Dtest=NoSuch -Dsurefire.failIfNoSpecifiedTests=false -Dit.test=OllamaSmokeIT \
+  -Dollama.smoke=true -Dollama.base-url=http://localhost:11434
+cd ..
 (cd frontend && npx vitest run src/features/ai-suggest)
-(cd frontend && npx playwright test e2e/ai-tag-suggest.spec.ts)
+(cd frontend && E2E_EMAIL=… E2E_PASSWORD=… npx playwright test e2e/ai-tag-suggest.spec.ts --project=desktop --workers=1)
 ```
 
 | 테스트 | 확인하는 것 |
@@ -42,7 +47,7 @@ docker compose logs -f ollama-pull          # "success"가 보이면 모델 받�
 | `GeminiTagSuggesterTest` | providers §3 표: `x-goog-api-key` 헤더, `responseSchema`, 429 `PerDay`/`PerMinute`/모름 구분, 형식 깨짐(6개, 문자열 아님), 10초 시간 초과 |
 | `OllamaTagSuggesterTest` | providers §4: `format` 스키마, `num_thread`, `stream: false`, 30초 시간 초과 |
 | `TagSuggestApiIT` | US1 #1~#5: 추천 최대 5개·남은 자리만큼(붙인 태그 8개 → 2개, 10개 → AI 안 부르고 `[]`), 이미 붙인 태그·금칙어·형식 위반 제거(SC-007), 422(정리 후 99자), 응답 뒤 `post_tag` 변화 없음(SC-003), 판정 순서(401 → 403 `EMAIL_NOT_VERIFIED` → 404 남의 글·휴지통 → 503 `DISABLED` → 409 → 400 → 422), 하루 20회 뒤 429 `AI_DAILY_LIMIT` `details.resetAt`·`Retry-After`, 실패 요청은 횟수 그대로(Q4) |
-| `AiConsentIT` | US2 #1~#4: 동의 전 요청은 공급자 호출 0번(SC-001 — 가짜 공급자 호출 수), `PUT` 뒤 `member_agreement` AI 행(버전·시각), 버전을 올리면 409 다시, 다른 버전 `PUT` → 400 `AGREEMENT_VERSION_MISMATCH`, `DELETE` 뒤 409, 로그인 재동의 목록에 AI 없음(Q2), `GET` 세 모양, 인증 전 회원도 `PUT` 가능 |
+| `AiConsentIT` | US2 #1~#4 (+ 015 탈퇴 익명 처리 뒤 AI 행 유지): 동의 전 요청은 공급자 호출 0번(SC-001 — 가짜 공급자 호출 수), `PUT` 뒤 `member_agreement` AI 행(버전·시각), 버전을 올리면 409 다시, 다른 버전 `PUT` → 400 `AGREEMENT_VERSION_MISMATCH`, `DELETE` 뒤 409, 로그인 재동의 목록에 AI 없음(Q2), `GET` 세 모양, 인증 전 회원도 `PUT` 가능 |
 | `TagSuggestCacheIT` | US3 #1~#4, SC-004: 같은 입력 두 번째 `cached: true`·호출 0·횟수 그대로, 다른 회원 같은 입력도 재사용, 태그 하나 붙인 뒤 → 재사용 + 그 태그 빠짐, 오타 몇 개 → 비슷한 내용 재사용, 문단 추가 → 새 호출, `refresh` → 비슷한 내용 건너뜀, 같은 내용이 Ollama 결과이고 Gemini 가능 → 새로 만듦, 빈 결과·실패는 저장 안 함, `prompt-version` 올리면 새 키 |
 | `TagSuggestRoutingIT` | US4 #1~#5, SC-005: 450회 뒤 Ollama, 429 `PerDay` → 같은 요청 Ollama 성공(사용자 실패 없음), `PerMinute` → 60초 Ollama 뒤 Gemini, 모르는 429 세 번 → `exhausted`, 시간 초과 → 이번 503 `FAILED` + 60초 Ollama, 비공개 글은 Gemini 호출 0(FR-030), 비공개 글 + Ollama 꺼짐 → 503, Ollama 동시 2번째 → 503 `BUSY`, 키 없음 → Ollama, 공급자 날짜(태평양 시간) 경계 |
 | `TagSuggestFailureIsolationIT` | SC-002: 두 공급자·Redis 모두 실패 상태에서 002 자동 저장·저장·발행 API 성공, 추천 503 `STORE_UNAVAILABLE`, 상태 API `available = false` |
@@ -59,7 +64,7 @@ docker compose logs -f ollama-pull          # "success"가 보이면 모델 받�
 5. 본문을 50자로 줄이고 누르기 → "글을 조금 더 쓴 뒤 추천받아 보세요"
 6. 글 공개 범위를 비공개로 저장하고 누르기 → "자체 AI로 추천 중이라 조금 걸려요" 뒤 결과(`provider: OLLAMA`)
 7. `docker compose stop ollama` 후 비공개 글로 누르기 → "지금은 추천할 수 없어요". 그 상태로 자동 저장·발행이 잘 된다
-8. 설정 → "AI 동의" 칸: "AI 태그 추천에 동의했어요 (날짜) [동의 취소]" → 취소 → 다시 추천을 누르면 동의 창
+8. 설정 → "AI 동의" 칸: "2026.10.08에 동의했어요 [동의 취소]" → 취소 → "동의하지 않았어요…" → 다시 추천을 누르면 동의 창. 옛 버전에 동의한 회원은 "…다시 동의가 필요해요"
 9. `BLOG_AGREEMENT_AI_VERSION`을 바꿔 재기동 → 로그인 재동의 화면은 뜨지 않고, 추천을 누를 때만 동의 창이 다시 뜬다
 10. `BLOG_AI_TAG_SUGGEST_ENABLED=false`로 재기동 → 버튼이 없다
 11. 인증 전 회원 B → 버튼을 눌러도 "이메일 인증 후 이용할 수 있어요"
@@ -69,4 +74,12 @@ docker compose logs -f ollama-pull          # "success"가 보이면 모델 받�
 ## 4. 다른 기능 확인 (있을 때)
 
 - 015: 회원이 탈퇴 익명 처리된 뒤에도 `member_agreement`의 AI 행이 남아 있다
-- 개인정보 처리방침(`/privacy`)에 "외부 AI 서비스(Google Gemini)로의 전송" 문단 — 반영 시점은 팀 결정(T004)
+- 개인정보 처리방침(`/privacy`)에 "6. 외부 AI 서비스(Google Gemini)로의 전송" 문단 — T004 가정대로 첫 판에 넣고 처리방침 버전은 그대로
+
+## 5. 실행 기록 (2026-10-08, 013-ai-tag 브랜치, T055)
+
+- §1 기동: `docker compose config`로 `ollama`(0.34.4)·`ollama-pull`·app 환경(`GEMINI_API_KEY` 빈 값, `BLOG_AI_TAG_SUGGEST_OLLAMA_BASE_URL=http://ollama:11434`)·`depends_on`을 확인했다. 공용 포트를 점유하지 않으려고 compose 전체 기동은 하지 않았다. 새 Flyway 마이그레이션 없음
+- §2 자동 테스트: 위 표의 시험이 모두 통과(가짜 공급자). `OllamaSmokeIT`는 이 작업 환경의 프록시가 `registry.ollama.ai`를 막아 모델을 받지 못해 재지 못했다 — 배포 서버에서 재고 §0의 SC-006 값에 적는다
+- §2 E2E: 임의 포트 PostgreSQL·Redis + jar + 설치된 Chromium으로 `ai-tag-suggest.spec.ts` desktop 1건 통과(추천·상태·동의 API는 `page.route` 흉내, 375px 가로 스크롤 없음 포함)
+- §3 수동: 2·3·13은 E2E로, 4~11은 `TagSuggestApiIT`·`TagSuggestCacheIT`·`TagSuggestRoutingIT`·`AiConsentIT`·`TagSuggestFailureIsolationIT`와 화면 시험(`AiTagSuggest`·`AiConsentDialog`·`AiConsentSettings`)으로 대신 확인했다. 12는 `TagSuggestLoggingIT`. 실제 자체 AI를 쓰는 6·7은 모델 내려받기가 막혀 확인하지 못했다
+- §4: 015가 main에 있어 `AiConsentIT`에 탈퇴 정리(`WithdrawPurgeJob.run`) 뒤 AI 행이 남는 시험을 더했다 — 통과. 015의 정리 단계 중 `member_agreement`를 지우는 것은 없다

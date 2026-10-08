@@ -192,12 +192,12 @@ description: "Task list for 013-ai-tag-suggest (AI 태그 추천)"
 
 **Purpose**: 장애 격리, 로그, 실제 모델 측정, 종단 확인
 
-- [ ] T051 [P] 테스트 `T/tag/integration/TagSuggestFailureIsolationIT.java`(SC-002): 두 공급자 실패 + `RedisOutage` 상태에서 002 자동 저장·저장·발행 API 성공, 추천 503 `STORE_UNAVAILABLE`, 상태 API `available = false`. Redis 메모리 부족에서 오는 `AutosaveUnavailableException`도 `AI_UNAVAILABLE`로 바뀌는지 — `TagSuggestService`·`SuggestCache`·`DailyUsage`·`ProviderState`의 예외 변환을 이 테스트로 마무리한다
-- [ ] T052 [P] 테스트 `T/tag/integration/TagSuggestLoggingIT.java`(SC-008, `OutputCaptureExtension`): 제목·본문 일부·태그 이름·`GEMINI_API_KEY` 테스트 값이 INFO~ERROR 어떤 줄에도 없다(공급자 예외 포함), 요청당 INFO 한 줄 형식
-- [ ] T053 [P] `T/tag/integration/OllamaSmokeIT.java`(`@Tag("ollama")`, 기본 빌드에서 빠짐): 실제 `qwen2.5:1.5b`로 2,000자 입력 30초 안·태그 1개 이상(SC-006). 배포 서버 측정값을 T005 기록에 더한다
-- [ ] T054 [P] `E/ai-tag-suggest.spec.ts`(Playwright, `page.route`로 추천·상태·동의 API 응답 흉내): 동의 창 → 동의 → 칩 2개 → 하나 클릭 → 태그 입력에 들어감 → 발행 창 닫기 → 저장된 태그 그대로, 375px 가로 스크롤 없음
-- [ ] T055 quickstart.md §1~§3 실행 결과를 기록하고 어긋난 문서를 고친다
-- [ ] T056 015 머지 후: 탈퇴 익명 처리 뒤 `member_agreement` AI 행이 남는지 quickstart §4로 확인(015 FR-028). 지우는 단계가 생기면 015에 알린다
+- [X] T051 [P] 테스트 `T/tag/integration/TagSuggestFailureIsolationIT.java`(SC-002): 두 공급자 실패 + `RedisOutage` 상태에서 002 자동 저장·저장·발행 API 성공, 추천 503 `STORE_UNAVAILABLE`, 상태 API `available = false`. Redis 메모리 부족에서 오는 `AutosaveUnavailableException`도 `AI_UNAVAILABLE`로 바뀌는지 — `TagSuggestService`·`SuggestCache`·`DailyUsage`·`ProviderState`의 예외 변환을 이 테스트로 마무리한다 (구현 메모: Redis 장애는 002 시험처럼 회로 차단기 강제 열기(세션 저장소도 Redis라 컨테이너 정지 불가), 메모리 부족은 CONFIG SET maxmemory 1을 잠깐 걸고 서비스·구성 요소를 직접 부른다)
+- [X] T052 [P] 테스트 `T/tag/integration/TagSuggestLoggingIT.java`(SC-008, `OutputCaptureExtension`): 제목·본문 일부·태그 이름·`GEMINI_API_KEY` 테스트 값이 INFO~ERROR 어떤 줄에도 없다(공급자 예외 포함), 요청당 INFO 한 줄 형식 (구현 메모: 공급자 예외·오류 응답은 실제 Gemini/Ollama 클라이언트를 JDK HttpServer에 붙여 확인)
+- [X] T053 [P] `T/tag/integration/OllamaSmokeIT.java`(`@Tag("ollama")`, 기본 빌드에서 빠짐): 실제 `qwen2.5:1.5b`로 2,000자 입력 30초 안·태그 1개 이상(SC-006). 배포 서버 측정값을 T005 기록에 더한다 (구현 메모: -Dollama.smoke=true일 때만 돈다(@Tag ollama). 이 환경은 프록시가 registry.ollama.ai를 막아 모델을 받지 못해 측정 못 함 — 배포 서버에서 측정해 T005 기록에 더할 것)
+- [X] T054 [P] `E/ai-tag-suggest.spec.ts`(Playwright, `page.route`로 추천·상태·동의 API 응답 흉내): 동의 창 → 동의 → 칩 2개 → 하나 클릭 → 태그 입력에 들어감 → 발행 창 닫기 → 저장된 태그 그대로, 375px 가로 스크롤 없음 (구현 메모: 임의 포트 PostgreSQL·Redis + jar + 설치된 Chromium으로 desktop 1건 통과(375px는 같은 시험 안에서 폭을 바꿔 확인). 닫았다 다시 열어 칩 유지, 발행 뒤 working-copy tags로 저장 확인)
+- [X] T055 quickstart.md §1~§3 실행 결과를 기록하고 어긋난 문서를 고친다 (구현 메모: §5 실행 기록 추가. §2 명령(OllamaSmokeIT는 -Dollama.smoke=true, backend 디렉터리에서 ./mvnw)과 §3-8 문구를 실제에 맞게 고쳤다)
+- [X] T056 015 머지 후: 탈퇴 익명 처리 뒤 `member_agreement` AI 행이 남는지 quickstart §4로 확인(015 FR-028). 지우는 단계가 생기면 015에 알린다 (구현 메모: 015가 main에 있어 AiConsentIT에 탈퇴 정리 뒤 AI 행 유지 시험을 더함(통과). 015 정리 단계 중 member_agreement를 지우는 것 없음 — 015에 알릴 것 없음)
 
 ---
 

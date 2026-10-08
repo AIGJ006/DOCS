@@ -9,6 +9,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 
+import com.team.blog.account.application.purge.WithdrawPurgeJob;
 import com.team.blog.support.IntegrationTestBase;
 import com.team.blog.support.MemberFixtures;
 import com.team.blog.support.TestLogin;
@@ -37,6 +38,7 @@ class AiConsentIT extends IntegrationTestBase {
     private static final String URL = "/api/me/agreements/ai";
 
     @Autowired private FakeAi fakeAi;
+    @Autowired private WithdrawPurgeJob purgeJob;
 
     private AiSuggestApi api;
 
@@ -252,5 +254,26 @@ class AiConsentIT extends IntegrationTestBase {
         assertThat(status(r)).as(body(r)).isEqualTo(200);
         assertThat((Boolean) read(r, "$.reagreementRequired")).isFalse();
         assertThat(body(r)).doesNotContain("\"AI\"");
+    }
+
+    @Test
+    void 탈퇴_익명_처리_뒤에도_AI_동의_행은_남는다() {
+        // 015 FR-028 (013 T056): 동의 기록은 법령에 따라 보관 — 익명 처리 단계가 지우지 않는다
+        long id = members().member().create();
+        api.consent(id);
+        jdbc.update(
+                "UPDATE member SET status = 'WITHDRAWN', withdrawn_at = now() - interval '31 days'"
+                        + " WHERE id = ?",
+                id);
+
+        purgeJob.run(Instant.now());
+
+        assertThat(
+                        jdbc.queryForObject(
+                                "SELECT deleted_at IS NOT NULL FROM member WHERE id = ?",
+                                Boolean.class,
+                                id))
+                .isTrue();
+        assertThat(row(id)).isNotNull().containsEntry("version", AiSuggestApi.VERSION);
     }
 }
