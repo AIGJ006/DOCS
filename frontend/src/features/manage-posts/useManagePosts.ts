@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
 import { ApiError } from '../../api/client';
+import { authPromptFor } from '../auth-gate/authGate';
+import { useAuthGate } from '../auth-gate/useAuthGate';
 import {
   listMyPosts,
   type ManageCounts,
@@ -43,14 +44,10 @@ const LOAD_FAILED = '목록을 불러오지 못했어요';
  *   id는 건너뛴다(SC-006).
  * - `counts`는 첫 응답 값만 쓰고 [더 보기]의 `null`로 덮지 않는다. 줄 처리 뒤에는 `adjustCounts`로 화면 숫자만 고친다.
  * - 탭·필터가 바뀌면 커서·목록을 비우고 첫 페이지를 다시 부른다. 늦게 온 이전 탭 응답은 버린다.
- * - 401이면 로그인 화면으로 보내고 지금 주소를 `returnTo`로 붙인다(FR-001).
- *
- * (구현 메모) 004 `useAuthGate`가 아직 없어 401 이동을 이 훅에서 직접 한다. 004가 생기면 그것으로 바꾼다.
+ * - 401이면 004 `useAuthGate`가 로그인 화면으로 보내고 지금 주소를 `returnTo`로 붙인다(FR-001).
  */
 export function useManagePosts({ tab, visibility }: ManageQuery): ManagePostsState {
-  const navigate = useNavigate();
-  const location = useLocation();
-  const returnTo = location.pathname + location.search;
+  const gate = useAuthGate();
   const filter = tab === 'published' ? visibility : null;
 
   const [items, setItems] = useState<ManagePostItem[]>([]);
@@ -60,21 +57,19 @@ export function useManagePosts({ tab, visibility }: ManageQuery): ManagePostsSta
   const [error, setError] = useState<string | null>(null);
   /** 지금 화면의 탭·필터 요청 번호 — 늦게 온 이전 응답을 버린다 */
   const generation = useRef(0);
-  const returnToRef = useRef(returnTo);
+  /** 주소(필터)가 바뀔 때마다 목록을 다시 부르지 않게 최신 처리기를 ref로 든다 */
+  const handleAuthRef = useRef(gate.handle);
   useEffect(() => {
-    returnToRef.current = returnTo;
-  }, [returnTo]);
+    handleAuthRef.current = gate.handle;
+  }, [gate.handle]);
 
-  const fail = useCallback(
-    (caught: unknown) => {
-      if (caught instanceof ApiError && caught.status === 401) {
-        navigate(`/login?returnTo=${encodeURIComponent(returnToRef.current)}`, { replace: true });
-        return;
-      }
-      setError(caught instanceof ApiError ? caught.message : LOAD_FAILED);
-    },
-    [navigate],
-  );
+  const fail = useCallback((caught: unknown) => {
+    if (authPromptFor(caught) === 'login') {
+      handleAuthRef.current(caught);
+      return;
+    }
+    setError(caught instanceof ApiError ? caught.message : LOAD_FAILED);
+  }, []);
 
   // 탭·필터가 바뀌면 렌더 중에 이전 탭의 줄·커서를 비운다(효과 안에서 초기화하지 않는다)
   const queryKey = `${tab}|${filter ?? ''}`;
