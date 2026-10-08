@@ -11,6 +11,7 @@ import BlogPage from './pages/BlogPage';
 import NotFoundPage from './pages/NotFoundPage';
 import PostDetailPage from './pages/PostDetailPage';
 import VisibilitySelect from './features/visibility/VisibilitySelect';
+import AdminRouteGate from './features/auth-gate/AdminRouteGate';
 import type { AuthorActionContext } from './features/post-detail/AuthorActions';
 import PrivacyPage from './pages/PrivacyPage';
 import SignupPage from './pages/SignupPage';
@@ -97,6 +98,15 @@ export default function App() {
           />
           {/* 006 내 글 관리 — 사용자를 가리키는 값 없이 본인 글만 (FR-002) */}
           <Route path="/manage/posts" element={<ManagePostsPage />} />
+          {/* 004 관리자 화면 가드 — 비로그인은 로그인으로, 일반 회원은 공통 404. 하위 화면은 014가 채운다 */}
+          <Route
+            path="/admin/*"
+            element={
+              <AdminRouteGate>
+                <Placeholder name="admin" />
+              </AdminRouteGate>
+            }
+          />
           {/* 005 글 상세 — react-router는 `/@:handle`처럼 구간 일부만 파라미터로 받지 못해 `@`는 화면이 떼어 낸다 */}
           <Route
             path="/:handle/posts/:postId"
