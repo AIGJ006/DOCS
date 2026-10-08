@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import com.team.blog.discovery.application.PostListCursor.CursorKey;
 import com.team.blog.discovery.support.PostReadingFixture;
 import com.team.blog.discovery.support.SqlCapture;
+import com.team.blog.post.infra.PostQueryRepository;
 import com.team.blog.post.infra.VisibilityFilter;
 import com.team.blog.shared.security.Viewer;
 import com.team.blog.support.IntegrationTestBase;
@@ -25,6 +26,7 @@ class PostCardQueryRepositoryIntegrationTest extends IntegrationTestBase {
 
     @Autowired private PostCardQueryRepository repository;
     @Autowired private VisibilityFilter visibilityFilter;
+    @Autowired private PostQueryRepository postQueryRepository;
     @Autowired private DataSource dataSource;
 
     private PostReadingFixture fixture;
@@ -178,9 +180,21 @@ class PostCardQueryRepositoryIntegrationTest extends IntegrationTestBase {
 
     @Test
     void 블로그_공개_글_수는_목록과_같은_조건() {
-        assertThat(repository.countListed(Viewer.anonymous(), fixture.memberId("A"))).isEqualTo(12);
-        assertThat(repository.countListed(Viewer.anonymous(), fixture.memberId("B"))).isEqualTo(8);
-        assertThat(repository.countListed(Viewer.anonymous(), fixture.memberId("C"))).isZero();
-        assertThat(repository.countListed(Viewer.anonymous(), fixture.memberId("D"))).isZero();
+        assertThat(
+                        postQueryRepository.countListedByAuthor(
+                                Viewer.anonymous(), fixture.memberId("A")))
+                .isEqualTo(12);
+        assertThat(
+                        postQueryRepository.countListedByAuthor(
+                                Viewer.anonymous(), fixture.memberId("B")))
+                .isEqualTo(8);
+        assertThat(
+                        postQueryRepository.countListedByAuthor(
+                                Viewer.anonymous(), fixture.memberId("C")))
+                .isZero();
+        assertThat(
+                        postQueryRepository.countListedByAuthor(
+                                Viewer.anonymous(), fixture.memberId("D")))
+                .isZero();
     }
 }

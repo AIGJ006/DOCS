@@ -26,7 +26,7 @@ import org.springframework.test.web.servlet.MvcResult;
 
 /**
  * 변경 취소 {@code DELETE /api/posts/{id}/working-copy} (002 T090, US4 #3, FR-035, B-3 ⑤). 권한 행렬(행위자
- * 6종)은 {@code PostAuthoringPermissionMatrixIT}의 {@code post.discard} 행이 맡는다.
+ * 6종)은 004 {@code PermissionMatrixIT}의 {@code post.discard} 행이 맡는다.
  */
 @Import(PostTestConfig.class)
 class DiscardWorkingCopyIT extends IntegrationTestBase {

@@ -2,6 +2,7 @@ package com.team.blog.post.infra;
 
 import com.team.blog.post.domain.PostStatus;
 import com.team.blog.post.domain.Visibility;
+import com.team.blog.shared.security.Viewer;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
@@ -18,9 +19,27 @@ import org.springframework.stereotype.Repository;
 public class PostQueryRepository {
 
     private final JdbcClient jdbc;
+    private final VisibilityFilter visibilityFilter;
 
-    public PostQueryRepository(JdbcClient jdbc) {
+    public PostQueryRepository(JdbcClient jdbc, VisibilityFilter visibilityFilter) {
         this.jdbc = jdbc;
+        this.visibilityFilter = visibilityFilter;
+    }
+
+    /**
+     * 블로그 글 수 (004 T044, FR-006·FR-009, 06 V-8). {@code post p JOIN member m} + {@link
+     * VisibilityFilter#forViewer(Viewer, Long)}만 쓴 {@code COUNT(*)}이라 블로그 목록과 같은 글만 센다 — 작성자 본인이 봐도
+     * 같은 수다(비공개·임시·휴지통·숨김 글은 세지 않음). 005 블로그 머리말·008 태그별 글 수 등 "남에게 보이는 글 수"는 조건을 따로 쓰지 말고 이 메서드(또는
+     * 같은 {@code VisibilityFilter} 조건)를 쓴다. {@code ix_post_blog}를 탄다.
+     */
+    public long countListedByAuthor(Viewer viewer, long authorId) {
+        SqlCondition condition = visibilityFilter.forViewer(viewer, authorId);
+        return jdbc.sql(
+                        "SELECT COUNT(*) FROM post p JOIN member m ON m.id = p.author_id WHERE "
+                                + condition.sql())
+                .params(condition.params())
+                .query(Long.class)
+                .single();
     }
 
     /**

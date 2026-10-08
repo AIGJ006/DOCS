@@ -2,9 +2,9 @@ package com.team.blog.discovery.application;
 
 import com.team.blog.account.application.BlogOwner;
 import com.team.blog.account.application.MemberQueryService;
-import com.team.blog.discovery.infra.PostCardQueryRepository;
 import com.team.blog.media.application.ImageUrlResolver;
 import com.team.blog.media.application.ProfileImageQuery;
+import com.team.blog.post.infra.PostQueryRepository;
 import com.team.blog.shared.error.NotFoundException;
 import com.team.blog.shared.security.Viewer;
 import com.team.blog.shared.web.cursor.ListScope;
@@ -17,7 +17,8 @@ import org.springframework.transaction.annotation.Transactional;
  * <ul>
  *   <li>주인은 001 {@link MemberQueryService#findReadableBlogOwner}로만 찾는다 — 없음·탈퇴 유예·익명 처리는 같은 404다.
  *       대문자 주소도 그대로 조회해 없음으로 처리한다(화면 경로가 먼저 301한다).
- *   <li>글 수·목록 조건은 홈과 같은 004 {@code VisibilityFilter}다 — <b>주인이 봐도</b> 자기 비공개·임시·숨김 글은 없다(06 V-8).
+ *   <li>글 수(004 {@code PostQueryRepository.countListedByAuthor})·목록 조건은 홈과 같은 004 {@code
+ *       VisibilityFilter}다 — <b>주인이 봐도</b> 자기 비공개·임시·숨김 글은 없다(06 V-8).
  *   <li>프로필 사진은 001 {@link ProfileImageQuery} + {@link ImageUrlResolver}로만 만든다 — member·image를 직접
  *       읽지 않는다.
  * </ul>
@@ -27,19 +28,19 @@ import org.springframework.transaction.annotation.Transactional;
 public class BlogQueryService {
 
     private final MemberQueryService members;
-    private final PostCardQueryRepository cards;
+    private final PostQueryRepository postQueries;
     private final ProfileImageQuery profileImages;
     private final ImageUrlResolver imageUrls;
     private final PostListService lists;
 
     public BlogQueryService(
             MemberQueryService members,
-            PostCardQueryRepository cards,
+            PostQueryRepository postQueries,
             ProfileImageQuery profileImages,
             ImageUrlResolver imageUrls,
             PostListService lists) {
         this.members = members;
-        this.cards = cards;
+        this.postQueries = postQueries;
         this.profileImages = profileImages;
         this.imageUrls = imageUrls;
         this.lists = lists;
@@ -61,7 +62,7 @@ public class BlogQueryService {
                 owner.nickname(),
                 owner.bio(),
                 imageUrls.publicUrl(displayImageKey(owner.id())),
-                cards.countListed(viewer, owner.id()),
+                postQueries.countListedByAuthor(viewer, owner.id()),
                 viewer.isAuthorOf(owner.id()));
     }
 

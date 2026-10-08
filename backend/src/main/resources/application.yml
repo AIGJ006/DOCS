@@ -123,6 +123,15 @@ blog:
     max-tags: 10
     title-max: 100
     content-max: 100000
+    # 휴지통 (006 data-model §5, 13 D-1·§2-5). 보관 기간이 지난 휴지통 글은 매일 새벽 배치가 완전히 지운다
+    trash:
+      retention: P30D
+      purge-cron: "0 30 3 * * *"
+      purge-batch-size: 100
+      purge-max-duration: PT30M
+  # 내 글 관리 (006 data-model §5, 41 M-6). 클라이언트의 size는 무시하고 이 값으로 고정
+  manage:
+    page-size: 20
   publish:
     idempotency-ttl: 600s
   # 본문 렌더러 (12 §7-5~§7-7, 002 research A-10·B-7)

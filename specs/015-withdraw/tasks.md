@@ -150,7 +150,7 @@ description: "Task list for 015-withdraw (회원 탈퇴·복구)"
 - [ ] T035 [US2] 001 `B/account/application/MeSummary.java`·`MeQueryService.java`에 `restoreDeadline`·`restoreExpired`를 더하고(추가만, research R6) 001 `MeController` 테스트를 함께 돌린다
 - [ ] T036 [US2] `WithdrawalMailListener`에 `MemberRestored` → `R/mail/account-restored.txt`를 더하고 `WithdrawalMailIT`에 복구 메일 부분을 더한다
 - [ ] T037 [US2] 001 `B/account/application/SignupService.java`: `LOCAL` 로그인 수단이 있고 그 회원이 `status = WITHDRAWN AND deleted_at IS NULL`이면 email 칸 오류를 `EMAIL_WITHDRAWAL_PENDING`으로(research R13) — 001 가입 테스트 함께 실행
-- [ ] T038 [P] [US2] `F/pages/RestorePage.tsx`(`/account/restore`, `GET /api/me` 기반 두 상태, [복구하기] 뒤 `SessionProvider` 새로 고침·토스트)
+- [ ] T038 [P] [US2] `F/pages/RestorePage.tsx`(`/account/restore`, `GET /api/me` 기반 두 상태, [복구하기] 뒤 `SessionProvider` 새로 고침·토스트). 004 `F/features/auth-gate/authGate.ts`의 `RESTORE_PATH`(지금 `/restore`)도 `/account/restore`로 바꾼다
 - [ ] T039 [US2] (**006 머지 후** — `App.tsx`) `F/features/withdraw/RestoreGate.tsx`와 `F/App.tsx` 연결(`SessionProvider` 아래, 허용 경로 목록은 research R12), 001 `F/pages/LoginPage.tsx`에서 `accountStatus === 'WITHDRAWN'`이면 `/account/restore`로 (T033 통과)
 - [ ] T040 [P] [US2] `F/pages/SignupPage.tsx`: email 칸 `EMAIL_WITHDRAWAL_PENDING`이면 문구 + [로그인] 링크(001 `fieldErrors.ts` 매핑) — 001 `SignupPage.test.tsx`에 사례 추가
 - [ ] T041 [US2] 004 `useAuthGate`의 `ACCOUNT_WITHDRAWN` 이동 경로를 `/account/restore`로 맞춘다(ANALYSIS-tier-a R13). 004 화면 코드(T051)가 아직 없으면 004 tasks T051 설명의 `/restore`를 `/account/restore`로 고치는 문서 수정만 한다

@@ -1,0 +1,55 @@
+/* 공통 확인창·알림 (006 T012·T013) */
+.app-dialog-backdrop {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: rgb(0 0 0 / 40%);
+  z-index: 100;
+}
+
+.app-dialog {
+  width: 100%;
+  max-width: 420px;
+  padding: 20px;
+  border-radius: 8px;
+  background: #fff;
+  color: #111;
+  overflow-wrap: anywhere;
+}
+
+.app-dialog-title {
+  margin: 0 0 8px;
+  font-size: 1.1rem;
+}
+
+.app-dialog-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.app-toast {
+  position: fixed;
+  left: 50%;
+  bottom: 24px;
+  transform: translateX(-50%);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  max-width: calc(100vw - 32px);
+  padding: 12px 16px;
+  border-radius: 8px;
+  background: #222;
+  color: #fff;
+  z-index: 110;
+}
+
+.app-toast a {
+  color: #9cd3ff;
+}

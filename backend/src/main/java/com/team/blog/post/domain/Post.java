@@ -188,6 +188,38 @@ public class Post {
         return this.editVersion;
     }
 
+    /**
+     * 공개 범위 지정 (004 T031, 06 §4·V-6, 05 P-3, data-model §4-2). 다시 발행하지 않고 값만 바꾼다.
+     *
+     * <ul>
+     *   <li>같은 값이면 아무것도 바꾸지 않는다({@code updated_at}도 그대로).
+     *   <li>{@code first_public_at}은 {@code first_public_at == null && status == PUBLISHED && to ==
+     *       PUBLIC}일 때만 {@code now}로 채운다 — 공개를 껐다 켜도 목록 위치는 처음 공개한 자리다. 같은 변경 안에서 채우므로 {@code
+     *       ck_post_public_at}을 통과한다.
+     *   <li>값이 바뀌면 {@code updated_at = now}.
+     *   <li>{@code edited_at}·{@code edit_version}·{@code published_at}·{@code hidden_*}·본문은 건드리지
+     *       않는다 ("수정됨"이 생기지 않고 작업본·숨김이 그대로).
+     * </ul>
+     *
+     * 소유·휴지통 확인과 값 검사({@code VisibilityRegistry})는 호출하는 쪽(Service)이 먼저 한다.
+     */
+    public VisibilityChange changeVisibility(Visibility to, Instant now) {
+        Objects.requireNonNull(to, "to");
+        Objects.requireNonNull(now, "now");
+        Visibility from = this.visibility;
+        if (from == to) {
+            return new VisibilityChange(false, false, from);
+        }
+        boolean wentPublic = false;
+        if (this.firstPublicAt == null && isPublished() && to == Visibility.PUBLIC) {
+            this.firstPublicAt = now;
+            wentPublic = true;
+        }
+        this.visibility = to;
+        this.updatedAt = now;
+        return new VisibilityChange(true, wentPublic, from);
+    }
+
     public boolean isDraft() {
         return status == PostStatus.DRAFT;
     }

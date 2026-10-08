@@ -3,12 +3,13 @@ import type { FieldError } from '../../api/client';
 import type { PublishResponse, ServerCopy, Visibility } from '../../api/posts';
 import { EDITOR_CONFIG } from '../../features/editor/editorConfig';
 import { PUBLISH_FAILED, publishOnce } from '../../features/editor/publish';
+import VisibilitySelect from '../../features/visibility/VisibilitySelect';
 
 /**
  * 발행 설정 창 (002 T055, FR-026·038, US1 #2·#3).
  *
  * - 태그: 임시 칩 입력(최대 `maxTags`, 008 화면이 교체). Enter·쉼표로 넣는다.
- * - 공개 범위: 004 `VisibilitySelect`가 아직 없어 단순 선택 상자를 쓴다(초기값 = working copy `visibility`).
+ * - 공개 범위: 004 `VisibilitySelect`의 값만 고르는 모드(서버는 발행 때 함께 받는다, 초기값 = working copy `visibility`).
  * - [발행]을 누를 때마다 `crypto.randomUUID()`로 새 `Idempotency-Key`를 만든다. 409 `IN_PROGRESS`만 같은 키로 1초 뒤 다시
  *   (`features/editor/publish.ts`, US6 T112). 응답 전에는 버튼을 끄고 "발행 중…"으로 보인다.
  * - 409 `VERSION_CONFLICT`면 `onConflict`로 서버 내용을 넘겨 비교 창(US5)을 연다.
@@ -33,11 +34,6 @@ interface Props {
   /** 발행 시도가 끝났다 (성공·실패 모두) — 에디터가 자동 저장을 다시 켠다. */
   onSettled?: () => void;
 }
-
-const VISIBILITY_LABELS: Record<Visibility, string> = {
-  PUBLIC: '전체 공개',
-  PRIVATE: '나만 보기',
-};
 
 export default function PublishDialog({
   postId,
@@ -171,22 +167,12 @@ export default function PublishDialog({
           {tagsError ? <p className="field-error">{tagsError.message}</p> : null}
         </fieldset>
 
-        <label>
-          공개 범위
-          <select
-            aria-label="공개 범위"
-            value={visibility}
-            aria-invalid={visibilityError ? 'true' : undefined}
-            onChange={(e) => setVisibility(e.target.value as Visibility)}
-          >
-            {(Object.keys(VISIBILITY_LABELS) as Visibility[]).map((value) => (
-              <option key={value} value={value}>
-                {VISIBILITY_LABELS[value]}
-              </option>
-            ))}
-          </select>
-        </label>
-        {visibilityError ? <p className="field-error">{visibilityError.message}</p> : null}
+        <VisibilitySelect
+          value={visibility}
+          onChange={setVisibility}
+          disabled={busy}
+          error={visibilityError?.message ?? null}
+        />
 
         {message ? (
           <p role="alert" className="form-error">

@@ -9,6 +9,7 @@
  * - 401이면 등록된 `onUnauthorized` 콜백을 부른다(로그인 화면 안내).
  *
  * - 404 `NOT_FOUND`면 등록된 `onNotFound` 콜백을 부른다(공통 404 화면 전환, 004 T024).
+ *   요청 옵션 `notFoundScreen: false`면 부르지 않는다(006 줄 단위 오류 표시).
  *
  * 화면별 403 코드 안내(`useAuthGate`)는 004가 이 파일 위에 더한다.
  */
@@ -63,6 +64,11 @@ export class ApiError extends Error {
 export interface RequestOptions {
   headers?: Record<string, string>;
   signal?: AbortSignal;
+  /**
+   * `false`면 404 `NOT_FOUND`여도 `onNotFound` 콜백(공통 404 화면 전환)을 부르지 않고 오류만 던진다.
+   * 006 내 글 관리처럼 화면은 그대로 두고 그 줄 아래에 이유를 보여야 하는 요청이 쓴다. 기본 `true`.
+   */
+  notFoundScreen?: boolean;
 }
 
 type Method = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
@@ -226,7 +232,7 @@ async function request<T>(
         handler(error);
       }
     }
-    if (error.status === 404 && error.code === 'NOT_FOUND') {
+    if (error.status === 404 && error.code === 'NOT_FOUND' && options.notFoundScreen !== false) {
       for (const handler of [...notFoundHandlers]) {
         handler(error);
       }
