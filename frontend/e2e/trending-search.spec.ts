@@ -5,8 +5,8 @@ import { api, createPost, hasAccount, login } from './support';
  * 012 quickstart §3 화면 확인 3·5~13·15 (T041). 작성자 `E2E_EMAIL`, 독자 `E2E_READER_EMAIL`(인증됨), 비밀번호 `E2E_PASSWORD`.
  * 작성자 닉네임·주소는 `E2E_AUTHOR_NICKNAME`·`E2E_AUTHOR_HANDLE`.
  *
- * 트렌딩은 스냅샷이 없을 때의 즉시 계산을 본다 — 서버를 `blog.trending.refresh-on-startup=false`로 띄운다(반응 없는 기동 직후
- * 스냅샷이 10분 동안 "빈 순위"로 남지 않게). 14번(1분 31번 → 429)은 `SearchRateLimitIT`가 맡는다.
+ * 트렌딩은 스냅샷이 없을 때의 즉시 계산을 본다 — 서버를 `blog.trending.refresh-on-startup=false`,
+ * `blog.trending.refresh-cron=-`로 띄운다(좋아요 전에 만든 스냅샷이 10분 동안 그대로 남지 않게). 14번(1분 31번 → 429)은 `SearchRateLimitIT`가 맡는다.
  */
 const READER_EMAIL = process.env.E2E_READER_EMAIL ?? '';
 const PASSWORD = process.env.E2E_PASSWORD ?? '';
