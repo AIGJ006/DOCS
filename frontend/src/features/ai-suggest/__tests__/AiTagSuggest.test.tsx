@@ -3,10 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { useState } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 import { ApiError } from '../../../api/client';
-import type {
-  TagSuggestResponse,
-  TagSuggestStatus,
-} from '../../../api/types/tagSuggestions';
+import type { TagSuggestResponse, TagSuggestStatus } from '../../../api/types/tagSuggestions';
 import AiTagSuggest from '../AiTagSuggest';
 import type { SuggestApi } from '../useTagSuggest';
 
@@ -70,7 +67,9 @@ async function pressSuggest(user: ReturnType<typeof userEvent.setup>) {
 
 describe('AiTagSuggest', () => {
   it('available = false면 영역을 그리지 않는다', async () => {
-    const api = apiOf({ getStatus: vi.fn(async () => ({ ...STATUS, available: false, provider: null })) });
+    const api = apiOf({
+      getStatus: vi.fn(async () => ({ ...STATUS, available: false, provider: null })),
+    });
     const { container } = render(<Harness api={api} />);
     await waitFor(() => expect(api.getStatus).toHaveBeenCalled());
     expect(container.querySelector('.ai-suggest')).toBeNull();
@@ -145,7 +144,9 @@ describe('AiTagSuggest', () => {
     });
     render(<Harness api={api} />);
     await pressSuggest(user);
-    const waiting = await screen.findByRole('button', { name: '자체 AI로 추천 중이라 조금 걸려요' });
+    const waiting = await screen.findByRole('button', {
+      name: '자체 AI로 추천 중이라 조금 걸려요',
+    });
     expect(waiting).toBeDisabled();
     await act(async () => finish(response({ provider: 'OLLAMA' })));
   });
@@ -158,16 +159,32 @@ describe('AiTagSuggest', () => {
   });
 
   it.each([
-    ['422', apiError(422, 'CONTENT_TOO_SHORT', { minChars: 100, length: 42 }), '글을 조금 더 쓴 뒤 추천받아 보세요'],
-    ['503 FAILED', apiError(503, 'AI_UNAVAILABLE', { reason: 'FAILED' }), '지금은 추천할 수 없어요'],
-    ['503 DISABLED', apiError(503, 'AI_UNAVAILABLE', { reason: 'DISABLED' }), '지금은 추천할 수 없어요'],
+    [
+      '422',
+      apiError(422, 'CONTENT_TOO_SHORT', { minChars: 100, length: 42 }),
+      '글을 조금 더 쓴 뒤 추천받아 보세요',
+    ],
+    [
+      '503 FAILED',
+      apiError(503, 'AI_UNAVAILABLE', { reason: 'FAILED' }),
+      '지금은 추천할 수 없어요',
+    ],
+    [
+      '503 DISABLED',
+      apiError(503, 'AI_UNAVAILABLE', { reason: 'DISABLED' }),
+      '지금은 추천할 수 없어요',
+    ],
     [
       '503 STORE_UNAVAILABLE',
       apiError(503, 'AI_UNAVAILABLE', { reason: 'STORE_UNAVAILABLE' }),
       '지금은 추천할 수 없어요',
     ],
     ['503 BUSY', apiError(503, 'AI_UNAVAILABLE', { reason: 'BUSY' }), '잠시 후 다시 시도해 주세요'],
-    ['429', apiError(429, 'AI_DAILY_LIMIT', { resetAt: '2026-10-08T15:00:00Z' }), '오늘 추천을 모두 썼어요. 내일 다시 써 보세요'],
+    [
+      '429',
+      apiError(429, 'AI_DAILY_LIMIT', { resetAt: '2026-10-08T15:00:00Z' }),
+      '오늘 추천을 모두 썼어요. 내일 다시 써 보세요',
+    ],
   ])('%s 문구', async (_name, error, text) => {
     const user = userEvent.setup();
     render(<Harness api={apiOf({ suggest: vi.fn(async () => Promise.reject(error)) })} />);

@@ -18,6 +18,7 @@ import ProfileImageCropper from '../components/ProfileImageCropper';
 import { groupFieldErrors } from '../features/auth/fieldErrors';
 import FriendLists from '../features/friends/FriendLists';
 import NotificationSettingsSection from '../features/notification/NotificationSettingsSection';
+import AiConsentSettings from '../features/ai-suggest/AiConsentSettings';
 import { useSession } from '../features/auth/useSession';
 import { uploadProfileImage } from '../features/profile/uploadProfileImage';
 import PasswordChangeForm from '../features/settings/PasswordChangeForm';
@@ -117,6 +118,8 @@ export default function SettingsPage() {
         }}
       />
       <AccountSection settings={settings} onChange={setSettings} />
+      {/* 013 T037: AI 외부 전송 동의 */}
+      <AiConsentSettings />
       <section aria-labelledby="storage-title">
         <h2 id="storage-title">사진 저장 공간</h2>
         <StorageUsageBar />

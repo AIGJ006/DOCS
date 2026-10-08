@@ -130,16 +130,16 @@ description: "Task list for 013-ai-tag-suggest (AI 태그 추천)"
 
 ### Tests for User Story 2 ⚠️
 
-- [ ] T033 [P] [US2] 테스트 `T/account/integration/AiConsentIT.java`: US2 #1~#4 — 동의 전 요청은 두 가짜 공급자 호출 0(SC-001), `GET` 세 모양(없음·현재·옛 버전), `PUT {현재}` → 200 + 행(버전·시각), `PUT {옛 버전}` → 400 `AGREEMENT_VERSION_MISMATCH`, `blog.agreement.ai.version`을 바꾸면 409 `details.version` = 새 버전, `DELETE` → 200 `agreed: false` → 추천 409, 인증 전 회원도 `PUT` 가능(001 `ACCOUNT_WRITE`), 정지 회원 403, CSRF 없음 403, 로그인 응답의 재동의 목록에 AI 없음(Q2)
-- [ ] T034 [P] [US2] 화면 테스트 `F/features/ai-suggest/__tests__/AiConsentDialog.test.tsx`·`AiConsentSettings.test.tsx`: 409 → 동의 창(`role="dialog"`, 초점 가둠, 처음 초점 [동의하고 추천받기]), 문구 다섯 줄과 버전, Esc·[취소] → 요청 없음, [동의하고 추천받기] → `PUT {version}` 뒤 원래 추천 요청 한 번 다시, `PUT` 400 → "동의 문구가 바뀌었어요. 새로 고친 뒤 다시 시도해 주세요", 설정 칸 세 상태(동의함·안 함·옛 버전 "다시 동의가 필요해요")와 [동의 취소] → `DELETE`, `aiConsentText.ts`의 버전 상수 = `2026-10-08`(서버 기본값과 같은 값 — T002 테스트와 짝)
+- [X] T033 [P] [US2] 테스트 `T/account/integration/AiConsentIT.java`: US2 #1~#4 — 동의 전 요청은 두 가짜 공급자 호출 0(SC-001), `GET` 세 모양(없음·현재·옛 버전), `PUT {현재}` → 200 + 행(버전·시각), `PUT {옛 버전}` → 400 `AGREEMENT_VERSION_MISMATCH`, `blog.agreement.ai.version`을 바꾸면 409 `details.version` = 새 버전, `DELETE` → 200 `agreed: false` → 추천 409, 인증 전 회원도 `PUT` 가능(001 `ACCOUNT_WRITE`), 정지 회원 403, CSRF 없음 403, 로그인 응답의 재동의 목록에 AI 없음(Q2) (구현 메모: 설정 버전을 바꾸는 경우는 새 컨텍스트 대신 저장 버전을 옛 값으로 두어 같은 판정을 만든다)
+- [X] T034 [P] [US2] 화면 테스트 `F/features/ai-suggest/__tests__/AiConsentDialog.test.tsx`·`AiConsentSettings.test.tsx`: 409 → 동의 창(`role="dialog"`, 초점 가둠, 처음 초점 [동의하고 추천받기]), 문구 다섯 줄과 버전, Esc·[취소] → 요청 없음, [동의하고 추천받기] → `PUT {version}` 뒤 원래 추천 요청 한 번 다시, `PUT` 400 → "동의 문구가 바뀌었어요. 새로 고친 뒤 다시 시도해 주세요", 설정 칸 세 상태(동의함·안 함·옛 버전 "다시 동의가 필요해요")와 [동의 취소] → `DELETE`, `aiConsentText.ts`의 버전 상수 = `2026-10-08`(서버 기본값과 같은 값 — T002 테스트와 짝) (구현 메모: 동의 흐름 시험은 AiTagSuggest를 통해 창을 띄워 검사. 설정 칸은 api 주입)
 
 ### Implementation for User Story 2
 
-- [ ] T035 [US2] `B/account/web/AiConsentController.java`(`GET`·`PUT`·`DELETE /api/me/agreements/ai`, 계정 상태 `ACCOUNT_WRITE`)와 `B/account/web/dto/AiConsentView.java`(T033 통과)
-- [ ] T036 [US2] `F/features/ai-suggest/aiConsentText.ts`(문구·버전 상수, research R10)와 `F/features/ai-suggest/AiConsentDialog.tsx`, `useTagSuggest.ts`에 409 → 창 → `PUT` → 다시 요청 흐름, `F/api/tagSuggestions.ts`에 `getAiConsent`·`agreeAi`·`revokeAi`(T034 통과)
-- [ ] T037 [US2] `F/features/ai-suggest/AiConsentSettings.tsx`와 `F/pages/SettingsPage.tsx` 계정 영역에 "AI 동의" 칸(001 소유 파일, 001 T122 이후, 추가만)
-- [ ] T038 [US2] `F/pages/PrivacyPage.tsx`에 "외부 AI 서비스(Google Gemini)로의 전송" 문단(무료 등급 데이터 사용·사람 검토 가능·비공개 글 제외·동의 철회 방법)과 `.env.example`·`R/application.yml`의 처리방침 버전 갱신(001 소유 파일, **T004 답 이후**)
-- [ ] T039 [P] [US2] `.env.example`에 `BLOG_AGREEMENT_AI_VERSION=2026-10-08`·`BLOG_AGREEMENT_AI_EFFECTIVE_DATE=2026-10-08` 줄(값은 버전 날짜뿐, 비밀값 아님)
+- [X] T035 [US2] `B/account/web/AiConsentController.java`(`GET`·`PUT`·`DELETE /api/me/agreements/ai`, 계정 상태 `ACCOUNT_WRITE`)와 `B/account/web/dto/AiConsentView.java`(T033 통과) (구현 메모: 응답 본문 AiConsentView는 B/account/application에 두고(T019) web/dto에는 요청 본문 AiConsentRequest만. ACCOUNT_WRITE 확인은 컨트롤러에서 PUT·DELETE만)
+- [X] T036 [US2] `F/features/ai-suggest/aiConsentText.ts`(문구·버전 상수, research R10)와 `F/features/ai-suggest/AiConsentDialog.tsx`, `useTagSuggest.ts`에 409 → 창 → `PUT` → 다시 요청 흐름, `F/api/tagSuggestions.ts`에 `getAiConsent`·`agreeAi`·`revokeAi`(T034 통과) (구현 메모: T030·T031 때 함께 구현됨. 이번엔 T034 시험으로 확인만)
+- [X] T037 [US2] `F/features/ai-suggest/AiConsentSettings.tsx`와 `F/pages/SettingsPage.tsx` 계정 영역에 "AI 동의" 칸(001 소유 파일, 001 T122 이후, 추가만) (구현 메모: 설정 칸은 [동의 취소]만 둔다(동의는 발행 창의 동의 창에서). 계정 칸 바로 아래 독립 section으로 추가)
+- [X] T038 [US2] `F/pages/PrivacyPage.tsx`에 "외부 AI 서비스(Google Gemini)로의 전송" 문단(무료 등급 데이터 사용·사람 검토 가능·비공개 글 제외·동의 철회 방법)과 `.env.example`·`R/application.yml`의 처리방침 버전 갱신(001 소유 파일, **T004 답 이후**) (구현 메모: T004 가정대로 처리방침 6번 문단만 넣고 BLOG_AGREEMENT_PRIVACY_VERSION은 그대로(첫 공개 전). PrivacyPage.ai.test.tsx 추가)
+- [X] T039 [P] [US2] `.env.example`에 `BLOG_AGREEMENT_AI_VERSION=2026-10-08`·`BLOG_AGREEMENT_AI_EFFECTIVE_DATE=2026-10-08` 줄(값은 버전 날짜뿐, 비밀값 아님)
 
 **Checkpoint**: US1 + US2 — 실제 사용자가 처음부터 끝까지 쓸 수 있다
 
