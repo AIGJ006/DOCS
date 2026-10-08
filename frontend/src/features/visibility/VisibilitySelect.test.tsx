@@ -128,4 +128,21 @@ describe('VisibilitySelect', () => {
     expect(mock).not.toHaveBeenCalled();
     expect(screen.getByRole('combobox', { name: '공개 범위' })).toHaveValue('PRIVATE');
   });
+
+  it('설정 화면의 기본 공개 범위도 같은 선택지·라벨 목록을 쓴다 (004 T057, 서버 값 검사와 같은 허용값)', async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    const mock = stubFetch({});
+    vi.stubGlobal('fetch', mock);
+    render(<VisibilitySelect label="새 글 기본 공개 범위" value="PUBLIC" onChange={onChange} />);
+
+    const select = screen.getByRole('combobox', { name: '새 글 기본 공개 범위' });
+    expect(Array.from((select as HTMLSelectElement).options).map((o) => o.textContent)).toEqual([
+      '🌐 전체 공개',
+      '🔒 나만 보기',
+    ]);
+    await user.selectOptions(select, 'PRIVATE');
+    expect(onChange).toHaveBeenCalledWith('PRIVATE');
+    expect(mock).not.toHaveBeenCalled();
+  });
 });
