@@ -33,10 +33,11 @@ describe('CommentInputGate', () => {
   });
   afterEach(() => vi.unstubAllGlobals());
 
-  it('비회원 → "로그인하고 댓글 쓰기" (지금 글로 돌아오는 로그인 링크), 입력창 없음', () => {
+  it('비회원 → "로그인하고 댓글을 남겨 보세요 [로그인]" (007 FR-023, 지금 글로 돌아오는 로그인 링크), 입력창 없음', () => {
     renderGate(flags({ loggedIn: false, emailVerified: false }));
 
-    expect(screen.getByRole('link', { name: '로그인하고 댓글 쓰기' })).toHaveAttribute(
+    expect(screen.getByText('로그인하고 댓글을 남겨 보세요')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: '로그인' })).toHaveAttribute(
       'href',
       '/login?returnTo=%2F%40kim%2Fposts%2F42',
     );

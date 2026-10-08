@@ -214,6 +214,22 @@ blog:
   site:
     # canonical 절대 주소 앞부분 (끝 / 없이). 운영은 서비스 주소
     base-url: ${BLOG_SITE_BASE_URL:http://localhost:8080}
+  # 댓글 (007 research R15). 내용 최대는 DB varchar(1000)보다 클 수 없고 깊이는 공통 1
+  comment:
+    page-size: 20
+    reply-preview: 3
+    reply-page-size: 20
+    content-max: 1000
+    dedupe-window: 10s
+    max-depth: 1
+    around-max-replies: 100
+    rate-limit:
+      create:
+        limit: 10
+        window: 1m
+      edit:
+        limit: 20
+        window: 1m
   policy:
     reserved-handles: classpath:policy/reserved-handles.txt
     reserved-nicknames: classpath:policy/reserved-nicknames.txt

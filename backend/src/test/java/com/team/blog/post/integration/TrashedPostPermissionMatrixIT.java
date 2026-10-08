@@ -5,6 +5,7 @@ import static com.team.blog.post.support.TrashApi.status;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.team.blog.discovery.support.ReadingApi;
+import com.team.blog.interaction.support.CommentApi;
 import com.team.blog.post.support.TrashApi;
 import com.team.blog.post.support.TrashFixtures;
 import com.team.blog.support.IntegrationTestBase;
@@ -161,9 +162,17 @@ class TrashedPostPermissionMatrixIT extends IntegrationTestBase {
         assumeHandler("GET", "/sitemap.xml", "005 sitemap");
     }
 
+    /** 007 T061: 휴지통 글의 댓글 목록은 누구에게나 같은 404다(작성자 포함). */
     @Test
-    void 댓글_목록은_404() {
-        assumeHandler("GET", "/api/posts/1/comments", "007 댓글");
+    void 댓글_목록은_404() throws Exception {
+        CommentApi comments = new CommentApi(mockMvc);
+        for (Map.Entry<String, Cookie> viewer : viewers.entrySet()) {
+            for (long id : trashed) {
+                MvcResult result = comments.list(viewer.getValue(), id);
+                assertThat(status(result)).as(viewer.getKey() + " 댓글 " + id).isEqualTo(404);
+                assertThat((String) read(result, "$.code")).isEqualTo("NOT_FOUND");
+            }
+        }
     }
 
     @Test

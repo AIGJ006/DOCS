@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { PostDetail } from '../../api/types/reading';
@@ -230,5 +230,43 @@ describe('PostDetailPage', () => {
     renderDetail('/kim755030/posts/7');
 
     expect(await screen.findByText('볼 수 없는 페이지예요')).toBeInTheDocument();
+  });
+  it('상세와 댓글 요청이 동시에 나간다 — 상세 응답이 늦어도 댓글 요청이 먼저 시작 (007 T019)', async () => {
+    let releaseDetail: () => void = () => {};
+    const mock = stubFetch({
+      'GET /api/posts/7': () =>
+        new Promise<Response>((resolve) => {
+          releaseDetail = () => resolve(json(200, detail()));
+        }),
+      'GET /api/posts/7/comments': () =>
+        json(200, { items: [], nextCursor: null, prevCursor: null, focusCommentId: null }),
+    });
+
+    renderDetail('/@kim755030/posts/7?comment=55');
+
+    await waitFor(() =>
+      expect(mock.mock.calls.map(([input]) => String(input))).toEqual([
+        '/api/posts/7',
+        '/api/posts/7/comments?around=55',
+      ]),
+    );
+    releaseDetail();
+    expect(await screen.findByText('첫 댓글을 남겨 보세요')).toBeInTheDocument();
+    expect(mock.mock.calls).toHaveLength(2);
+  });
+
+  it('댓글 요청이 실패해도 본문은 보인다 (007 T019, Clarifications Q1)', async () => {
+    stubFetch({
+      'GET /api/posts/7': () => json(200, detail()),
+      'GET /api/posts/7/comments': () =>
+        json(500, errorBody('INTERNAL_ERROR', '잠시 후 다시 시도해 주세요')),
+    });
+
+    renderDetail();
+
+    expect(await screen.findByTestId('post-content')).toBeInTheDocument();
+    const section = await screen.findByTestId('comment-section');
+    expect(await within(section).findByText('불러오지 못했어요')).toBeInTheDocument();
+    expect(section).toHaveTextContent('댓글 3');
   });
 });

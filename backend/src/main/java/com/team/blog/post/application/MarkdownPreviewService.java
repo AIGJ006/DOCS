@@ -1,13 +1,11 @@
 package com.team.blog.post.application;
 
-import com.team.blog.post.application.exception.RateLimitedException;
 import com.team.blog.post.config.PostAuthoringProperties;
 import com.team.blog.post.domain.PostReasonCode;
 import com.team.blog.shared.application.markdown.ContentRenderer;
 import com.team.blog.shared.application.markdown.ImageContext;
 import com.team.blog.shared.application.markdown.MarkdownProperties;
 import com.team.blog.shared.error.BusinessRuleException;
-import com.team.blog.shared.infra.ratelimit.RateLimitResult;
 import com.team.blog.shared.infra.ratelimit.RateLimiter;
 import org.springframework.stereotype.Service;
 
@@ -35,16 +33,14 @@ public class MarkdownPreviewService {
     }
 
     /**
-     * @throws RateLimitedException 사용자당 1분 60번 초과 (429 + {@code Retry-After})
+     * @throws com.team.blog.shared.error.TooManyRequestsException 사용자당 1분 60번 초과 (429 + {@code
+     *     Retry-After})
      * @throws BusinessRuleException 본문 100,000자 초과 (400 {@code CONTENT_TOO_LONG})
      * @throws com.team.blog.shared.application.markdown.ContentTooComplexException 중첩·시간 제한 (400)
      */
     public String preview(long memberId, String contentMd) {
         MarkdownProperties.RateLimit limit = markdownProperties.previewRateLimit();
-        if (rateLimiter.tryAcquire("ratelimit:preview:" + memberId, limit.limit(), limit.window())
-                instanceof RateLimitResult.Denied denied) {
-            throw new RateLimitedException(denied.retryAfterSeconds());
-        }
+        rateLimiter.acquireOrThrow("ratelimit:preview:" + memberId, limit.limit(), limit.window());
         String md = contentMd == null ? "" : contentMd;
         if (md.codePointCount(0, md.length()) > properties.post().contentMax()) {
             throw new BusinessRuleException(PostReasonCode.CONTENT_TOO_LONG);

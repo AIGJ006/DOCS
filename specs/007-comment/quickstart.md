@@ -66,15 +66,15 @@ docker compose up -d postgres redis minio
 
 ## 4. SC-008 측정
 
-시드: 글 1만 건, 댓글 10만 건(한 글에 최상위 2천 + 답글이 많은 최상위 몇 개 — 하나는 답글 5천), 회원 2천 명.
+측정: 2026-10-08, `CommentPerformanceIT`(`-Dblog.perf=true`, Testcontainers PostgreSQL 18, MockMvc). 시드: 글 1만 건, 댓글 10만 건(한 글에 최상위 2천 + 답글이 많은 최상위 몇 개 — 하나는 답글 5천), 회원 2천 명.
 
 | 측정 | 요청 | 기준 | 결과 |
 |---|---|---|---|
-| 첫 페이지 p95 (20회) | `GET /api/posts/{큰 글}/comments` | 300ms, SQL 4번 | |
-| 마지막 페이지 근처 | 커서 이어서 | 300ms | |
-| 답글 5천 최상위의 답글 펼치기 | `GET /api/comments/{root}/replies` | 300ms | |
-| around (깊은 답글) | `?around=` | 300ms | |
-| EXPLAIN | 최상위·LATERAL 답글 | `ix_comment_root`·`ix_comment_reply` 사용 | |
+| 첫 페이지 p95 (20회) | `GET /api/posts/{큰 글}/comments` | 300ms, SQL 4번 | p50 8.8ms · p95 13.4ms, SQL 5번(글 판정 1 + 댓글 4) |
+| 마지막 페이지 근처 | 커서 이어서 | 300ms | 96쪽: p50 9.3ms · p95 17.5ms, SQL 5번 |
+| 답글 5천 최상위의 답글 펼치기 | `GET /api/comments/{root}/replies` | 300ms | p50 8.3ms · p95 11.8ms, SQL 5번 |
+| around (깊은 답글) | `?around=` | 300ms | 상한 100을 넘는 답글: p50 9.3ms · p95 11.4ms, SQL 11번 |
+| EXPLAIN | 최상위·LATERAL 답글 | `ix_comment_root`·`ix_comment_reply` 사용 | 둘 다 Index Only Scan (최상위 0.05ms, 미리보기 0.16ms) |
 
 ## 5. 다른 기능 확인 (있을 때)
 
@@ -82,3 +82,11 @@ docker compose up -d postgres redis minio
 - 011: 댓글 작성 → 알림 생성, 자리로 남긴 삭제 → 그 알림 삭제
 - 014: 숨김 → 다른 회원에게 "운영 정책에 따라 숨겨진 댓글이에요", 작성자에게 원문 + "숨겨졌어요 (나만 보여요)", 댓글 수 −1
 - 015: 탈퇴 신청 → 그 회원 댓글 "탈퇴한 사용자의 댓글이에요", 수 그대로 → 30일 정리 → 남의 답글 있는 최상위만 자리, 수가 실제와 같다
+
+## 6. 실행 기록 (2026-10-08, 브랜치 `007-comment`, main 3961a76 합친 뒤)
+
+- §1: 임의 포트 PostgreSQL 18·Redis 7 + 빌드한 jar로 기동. Flyway는 V1·V2만 적용(새 마이그레이션 없음), `blog.comment.*` 기본값 그대로. 종단 시험만 `BLOG_COMMENT_RATELIMIT_CREATE_LIMIT=500`
+- §2: `./mvnw -q verify` 통과 — 단위 659, 통합 1,764(건너뜀 57: `@Tag("perf")`·환경 조건 시험), 실패 0. 화면 `npx vitest run` 88파일 656건 통과, `npm run build`·`npm run lint` 통과
+- §3: `e2e/comment.spec.ts`가 1~10번을 desktop·mobile(375px)로 자동화 — 4건 통과. 2번(인증 전 안내)은 `CommentForm.test.tsx`로 확인. 005·004·006 관련 종단 시험(visibility·manage-posts·reading·xss·site-header·tag) 14건 통과·10건 건너뜀(계정·환경 조건)
+- §4: 위 표 그대로
+- §5: 006 `PostPurgeIT`(CASCADE·`commentIdsOfPost`) 통과. 011·014·015는 아직 없음 — 015는 `CommentPurgeService.purgeByAuthor`(MANDATORY, order 20)를 부르면 된다(T060)
