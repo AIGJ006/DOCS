@@ -136,21 +136,21 @@ description: "Task list for 003-image-upload (이미지 업로드)"
 
 ### Tests for User Story 2 ⚠️
 
-- [ ] T036 [P] [US2] `T/media/integration/ImageLinkIT.java`: `US2_1_남의_사진은_연결되지_않고_링크` — A의 완료 사진 주소를 B 글에 넣어 발행 → `post_image` 0행, 렌더링 결과 `<a …>사진: …</a>`, A의 행 `status`·`detached_at` 그대로; `US2_2_남의_업로드번호_complete_404`(관리자 포함, 고정 본문); 완료 전(width NULL) 내 사진 주소는 연결되지 않음(R5); `US2_3_비공개글_사진_익명_GET_200`(저장소 컨테이너)·익명 목록 403
-- [ ] T037 [P] [US2] 프로필 사진 테스트 `T/media/integration/ProfileImageServiceIT.java`: PROFILE presign·complete(256×256 WebP) 뒤 `attach` → 현재 사진 1장(`uq_image_profile_current`), 교체 시 이전 사진 `detached_at` 기록, 남의 사진·POST 사진·완료 전 사진 → 400 `INVALID_PROFILE_IMAGE`, 255×256 → complete 400 `PROFILE_SIZE_INVALID`(research R14)
-- [ ] T038 [P] [US2] 대표 이미지 테스트 `T/media/OgImageResolverIntegrationTest.java`(005 기존 테스트 확장): 지금 주소·옛 주소의 `thumbnail_url` 모두 원본 주소로, GIF는 원본 GIF, 썸네일 없는 옛 사진은 그대로, NULL은 기본 이미지(research R15, FR-040)
+- [X] T036 [P] [US2] `T/media/integration/ImageLinkIT.java`: `US2_1_남의_사진은_연결되지_않고_링크` — A의 완료 사진 주소를 B 글에 넣어 발행 → `post_image` 0행, 렌더링 결과 `<a …>사진: …</a>`, A의 행 `status`·`detached_at` 그대로; `US2_2_남의_업로드번호_complete_404`(관리자 포함, 고정 본문); 완료 전(width NULL) 내 사진 주소는 연결되지 않음(R5); `US2_3_비공개글_사진_익명_GET_200`(저장소 컨테이너)·익명 목록 403 (구현 메모: 렌더러의 링크 글자는 '[이미지] 대체글'이다(002 AstTransformer). 002 시험 픽스처 중 '작성자 사진'으로 쓰는 image 행(PublishIT·ManualSaveIT·AutosaveFlushJobIT·PublishQueryCountIT·PreviewPublishParityIT·MarkdownPreviewIT·ContentRendererWiringIT)에 width·height를 넣어 완료된 사진으로 바꿨다)
+- [X] T037 [P] [US2] 프로필 사진 테스트 `T/media/integration/ProfileImageServiceIT.java`: PROFILE presign·complete(256×256 WebP) 뒤 `attach` → 현재 사진 1장(`uq_image_profile_current`), 교체 시 이전 사진 `detached_at` 기록, 남의 사진·POST 사진·완료 전 사진 → 400 `INVALID_PROFILE_IMAGE`, 255×256 → complete 400 `PROFILE_SIZE_INVALID`(research R14)
+- [X] T038 [P] [US2] 대표 이미지 테스트 `T/media/OgImageResolverIntegrationTest.java`(005 기존 테스트 확장): 지금 주소·옛 주소의 `thumbnail_url` 모두 원본 주소로, GIF는 원본 GIF, 썸네일 없는 옛 사진은 그대로, NULL은 기본 이미지(research R15, FR-040) (구현 메모: 옛 주소 경우는 시험 컨텍스트를 늘리지 않으려고 같은 Bean 재료(ImageUrls.of·ImageRepository)로 OgImageResolver를 직접 만들어 확인한다. 시험 키를 저장 키 모양(UUID)으로 바꿨다)
 
 ### Implementation for User Story 2
 
-- [ ] T039 [US2] `B/media/application/ImageService.java`를 최종 구현으로 확정한다: `attachPostImages`의 INSERT·UPDATE에 `AND i.width IS NOT NULL`(완료된 사진만) 조건을 더하고, 클래스 주석의 `TODO(003)`·교체 점검표를 "003 최종 규칙"과 회귀 테스트 목록으로 바꾼다. 002 회귀 `PublishIT`·`ManualSaveIT`·`AutosaveFlushJobIT`·`PublishQueryCountIT`·`PublishTransactionIT`와 T036이 함께 통과해야 한다(research R10)
-- [ ] T040 [US2] `B/media/application/OgImageResolver.java`를 최종 구현으로 바꾼다: 주소 판별은 `ImageUrls.keyOf`(옛 주소 포함), 원본 찾기는 `ImageRepository.findByThumbKey`, 클래스 주석의 "임시 구현" 문구를 지운다(T038 통과)
-- [ ] T041 [US2] 프로필 사진 연결 `B/media/application/ProfileImageService.java`(001 T116 포트가 있으면 그 인터페이스를 구현하고 `TemporaryProfileImageService`를 지운다. 없으면 같은 시그니처 `attach(memberId, imageId)`·`detach(memberId)`로 만들고 001 T116에 "003이 대신함"을 알린다): contracts/storage.md §3-3 SQL, `MemberLockService` 잠금 안에서 호출됨을 Javadoc에 적는다(T037 통과)
-- [ ] T042 [P] [US2] 렌더러 회귀 `T/shared/markdown/ContentRendererWiringIT.java`(002 기존)에 "완료 전 사진은 링크" 경우를 더하고 통과시킨다
-- [ ] T043 [US2] 002 `B/post/application/SavedContentImages.java`·발행 경로가 `ImageService`를 그대로 쓰는지 확인하고, 주석의 "003 FR-022" 참조를 최종 규칙 설명으로 고친다(코드 변경 없음이면 주석만)
-- [ ] T044 [P] [US2] 화면: 본문 미리보기·상세에서 남의 사진이 링크로 보이는 것은 서버 렌더링 결과라 화면 변경이 없음을 `F/components/editor/__tests__/PreviewPane.test.tsx`에 회귀 경우로 더한다(링크 글자 "사진: …")
-- [ ] T045 [US2] `T/media/integration/ImageReferenceResolverAdapterIT.java`(002 기존)의 판별 경우가 `ImageUrls` 위임 뒤에도 통과하는지 확인하고, 중복된 경우는 T008로 옮겨 정리한다
-- [ ] T046 [US2] **006 머지 후** `B/media/application/ImagePostPurgeStep.java`(006 T060 임시 구현)의 소유를 넘겨받는다: 주석의 "003 plan에서 소유·검토 후 교체" 문구를 "003 소유"로 바꾸고, `T/media/integration/ImagePostPurgeStepIT.java`(그 글에만 연결된 사진만 `detached_at`, 다른 글·휴지통 글과 함께 쓰는 사진은 그대로, 트랜잭션 롤백 시 되돌림)를 추가한다. SQL은 바꾸지 않는다(contracts/storage.md §3-1)
-- [ ] T047 [US2] 001 연결: `PATCH /api/me/profile {profileImageId}`(001 T118)가 T041을 부르는지 확인하고, 001 `T/account/integration/ProfileUpdateIntegrationTest.java`의 사진 경우를 실제 presign·complete 흐름으로 바꾸도록 001 담당에게 요청한다(001 T111·T116 교체 확인 작업)
+- [X] T039 [US2] `B/media/application/ImageService.java`를 최종 구현으로 확정한다: `attachPostImages`의 INSERT·UPDATE에 `AND i.width IS NOT NULL`(완료된 사진만) 조건을 더하고, 클래스 주석의 `TODO(003)`·교체 점검표를 "003 최종 규칙"과 회귀 테스트 목록으로 바꾼다. 002 회귀 `PublishIT`·`ManualSaveIT`·`AutosaveFlushJobIT`·`PublishQueryCountIT`·`PublishTransactionIT`와 T036이 함께 통과해야 한다(research R10)
+- [X] T040 [US2] `B/media/application/OgImageResolver.java`를 최종 구현으로 바꾼다: 주소 판별은 `ImageUrls.keyOf`(옛 주소 포함), 원본 찾기는 `ImageRepository.findByThumbKey`, 클래스 주석의 "임시 구현" 문구를 지운다(T038 통과)
+- [X] T041 [US2] 프로필 사진 연결 `B/media/application/ProfileImageService.java`(001 T116 포트가 있으면 그 인터페이스를 구현하고 `TemporaryProfileImageService`를 지운다. 없으면 같은 시그니처 `attach(memberId, imageId)`·`detach(memberId)`로 만들고 001 T116에 "003이 대신함"을 알린다): contracts/storage.md §3-3 SQL, `MemberLockService` 잠금 안에서 호출됨을 Javadoc에 적는다(T037 통과) (구현 메모: 001 포트 ProfileImageService가 있어 DefaultProfileImageService로 구현하고 TemporaryProfileImageService를 지웠다. isAttachable·attach에 width IS NOT NULL을 더했다)
+- [X] T042 [P] [US2] 렌더러 회귀 `T/shared/markdown/ContentRendererWiringIT.java`(002 기존)에 "완료 전 사진은 링크" 경우를 더하고 통과시킨다
+- [X] T043 [US2] 002 `B/post/application/SavedContentImages.java`·발행 경로가 `ImageService`를 그대로 쓰는지 확인하고, 주석의 "003 FR-022" 참조를 최종 규칙 설명으로 고친다(코드 변경 없음이면 주석만)
+- [X] T044 [P] [US2] 화면: 본문 미리보기·상세에서 남의 사진이 링크로 보이는 것은 서버 렌더링 결과라 화면 변경이 없음을 `F/components/editor/__tests__/PreviewPane.test.tsx`에 회귀 경우로 더한다(링크 글자 "사진: …")
+- [X] T045 [US2] `T/media/integration/ImageReferenceResolverAdapterIT.java`(002 기존)의 판별 경우가 `ImageUrls` 위임 뒤에도 통과하는지 확인하고, 중복된 경우는 T008로 옮겨 정리한다
+- [X] T046 [US2] **006 머지 후** `B/media/application/ImagePostPurgeStep.java`(006 T060 임시 구현)의 소유를 넘겨받는다: 주석의 "003 plan에서 소유·검토 후 교체" 문구를 "003 소유"로 바꾸고, `T/media/integration/ImagePostPurgeStepIT.java`(그 글에만 연결된 사진만 `detached_at`, 다른 글·휴지통 글과 함께 쓰는 사진은 그대로, 트랜잭션 롤백 시 되돌림)를 추가한다. SQL은 바꾸지 않는다(contracts/storage.md §3-1) (구현 메모: SQL은 그대로 두고 주석을 '003 소유'로 바꿨다)
+- [X] T047 [US2] 001 연결: `PATCH /api/me/profile {profileImageId}`(001 T118)가 T041을 부르는지 확인하고, 001 `T/account/integration/ProfileUpdateIntegrationTest.java`의 사진 경우를 실제 presign·complete 흐름으로 바꾸도록 001 담당에게 요청한다(001 T111·T116 교체 확인 작업) (구현 메모: PATCH /api/me/profile → DefaultProfileImageService.attach 연결을 ProfileImageServiceIT(실제 presign·저장소·complete 흐름)로 확인했다. 001 ProfileUpdateIntegrationTest는 width 256이 든 행을 직접 넣어 그대로 통과 — 실제 흐름으로 바꿀지는 001 담당 몫(보고에 적음). 001 quickstart §4-1(인증 전 presign 403)·§4-6(프로필 사진)도 같은 시험 범위)
 
 **Checkpoint**: US1 + US2로 사진 업로드와 소유 규칙이 완성된다(권장 MVP)
 

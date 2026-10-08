@@ -25,7 +25,7 @@ class ContentRendererWiringIT extends IntegrationTestBase {
         long other = members().member().create();
         jdbc.update(
                 "INSERT INTO image (uploader_id, storage_key, thumb_storage_key, content_type,"
-                        + " size_bytes) VALUES (?, ?, ?, 'image/webp', 1000)",
+                        + " size_bytes, width, height) VALUES (?, ?, ?, 'image/webp', 1000, 640, 480)",
                 author,
                 KEY,
                 THUMB);
@@ -42,5 +42,24 @@ class ContentRendererWiringIT extends IntegrationTestBase {
         RenderedContent others = renderer.render(md, new ImageContext(other));
         assertThat(others.html()).doesNotContain("<img").contains("[이미지] 사진");
         assertThat(others.thumbnailUrl()).isNull();
+    }
+
+    @Test
+    void 완료_전_사진은_내_사진이어도_링크() {
+        // 003 R5: complete를 통과하지 않은 사진(width NULL)은 작성자 사진으로 보지 않는다
+        long author = members().member().create();
+        jdbc.update(
+                "INSERT INTO image (uploader_id, storage_key, thumb_storage_key, content_type,"
+                        + " size_bytes) VALUES (?, ?, ?, 'image/webp', 1000)",
+                author,
+                KEY,
+                THUMB);
+
+        RenderedContent rendered =
+                renderer.render("![사진](" + BASE + "/" + KEY + ")", new ImageContext(author));
+
+        assertThat(rendered.html()).doesNotContain("<img").contains("[이미지] 사진");
+        assertThat(rendered.ownedImageKeys()).isEmpty();
+        assertThat(rendered.thumbnailUrl()).isNull();
     }
 }

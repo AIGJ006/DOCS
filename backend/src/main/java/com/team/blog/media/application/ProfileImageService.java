@@ -4,7 +4,7 @@ import java.util.Optional;
 
 /**
  * 프로필 사진 연결 포트 (001 T116, data-model §2-6, R-20). account의 프로필 저장 트랜잭션 안에서 부른다(회원 행 {@code FOR
- * UPDATE}로 같은 회원의 저장이 직렬화된다). 지금 구현은 {@link TemporaryProfileImageService} — specs/003이 소유하고 교체한다.
+ * UPDATE}로 같은 회원의 저장이 직렬화된다). 구현은 003 {@link DefaultProfileImageService}(001 T116 임시 구현을 대신함).
  *
  * <p>현재 사진 = {@code uq_image_profile_current} 조건({@code purpose = 'PROFILE' AND status = 'ATTACHED'
  * AND detached_at IS NULL})의 행 하나. 저장소 키 조회는 {@link ProfileImageQuery}가 맡는다.

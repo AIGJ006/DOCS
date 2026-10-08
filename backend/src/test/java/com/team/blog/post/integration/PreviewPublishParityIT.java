@@ -60,8 +60,8 @@ class PreviewPublishParityIT extends IntegrationTestBase {
         long me = members().member().create();
         if (OWNED.equals(name)) {
             jdbc.update(
-                    "INSERT INTO image (uploader_id, storage_key, content_type, size_bytes)"
-                            + " VALUES (?, ?, 'image/webp', 1000)",
+                    "INSERT INTO image (uploader_id, storage_key, content_type, size_bytes, width, height)"
+                            + " VALUES (?, ?, 'image/webp', 1000, 640, 480)",
                     me,
                     KEY);
         }

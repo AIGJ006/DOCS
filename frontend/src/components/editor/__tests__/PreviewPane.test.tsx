@@ -80,4 +80,21 @@ describe('PreviewPane', () => {
     await tick(0);
     expect(screen.getByRole('alert')).toHaveTextContent('미리보기 요청이 많아요');
   });
+
+  it('남이 올린 사진·완료 전 사진은 서버가 링크로 바꾼 그대로 보인다 (003 US2, 화면 변경 없음)', async () => {
+    const url =
+      'http://localhost:9000/blog/images/2026/10/3f1c2a9e-8d7b-4c1e-9a55-0b6f2a1d7e44.webp';
+    stubFetch({
+      'POST /api/markdown/preview': () =>
+        json(200, {
+          html: `<p><a href="${url}" rel="nofollow noopener noreferrer" target="_blank">[이미지] 남의 사진</a></p>`,
+        }),
+    });
+    render(<PreviewPane contentMd={`![남의 사진](${url})`} />);
+    await tick(500);
+    await tick(0);
+
+    expect(screen.getByRole('link', { name: '[이미지] 남의 사진' })).toHaveAttribute('href', url);
+    expect(document.querySelector('img')).toBeNull();
+  });
 });

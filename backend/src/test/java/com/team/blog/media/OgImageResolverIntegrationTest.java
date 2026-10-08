@@ -2,22 +2,29 @@ package com.team.blog.media;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.team.blog.media.application.ImageUrlResolver;
+import com.team.blog.media.application.ImageUrls;
 import com.team.blog.media.application.OgImageResolver;
+import com.team.blog.media.infra.ImageRepository;
 import com.team.blog.support.IntegrationTestBase;
 import com.team.blog.support.SqlCounter;
+import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 
 /**
- * 링크 미리보기 대표 이미지(원본) 찾기 (005 T061, research R-26). 테스트 설정의 저장소 공개 주소는 {@code
- * http://localhost:9000/blog}, 기본 이미지는 {@code http://localhost:8080/og-default.png}다.
+ * 링크 미리보기 대표 이미지(원본) 찾기 (005 T061, research R-26, 003 T038 research R15·FR-040). 테스트 설정의 저장소 공개 주소는
+ * {@code http://localhost:9000/blog}, 기본 이미지는 {@code http://localhost:8080/og-default.png}다.
  */
 class OgImageResolverIntegrationTest extends IntegrationTestBase {
 
     private static final String BASE = "http://localhost:9000/blog/";
 
+    private static final String OLD = "https://old-storage.example.com/blog/";
+
     @Autowired private OgImageResolver resolver;
+    @Autowired private ImageRepository images;
 
     @BeforeEach
     void image() {
@@ -25,7 +32,7 @@ class OgImageResolverIntegrationTest extends IntegrationTestBase {
         jdbc.update(
                 "INSERT INTO image (uploader_id, storage_key, thumb_storage_key, content_type,"
                         + " size_bytes, thumb_size_bytes, width, height, status, purpose)"
-                        + " VALUES (?, 'images/2026/10/abcd.gif', 'images/2026/10/abcd_thumb.webp',"
+                        + " VALUES (?, 'images/2026/10/3f1c2a9e-8d7b-4c1e-9a55-0b6f2a1d7e44.gif', 'images/2026/10/3f1c2a9e-8d7b-4c1e-9a55-0b6f2a1d7e44_thumb.webp',"
                         + " 'image/gif', 300000, 30000, 1200, 800, 'ATTACHED', 'POST')",
                 uploader);
     }
@@ -33,8 +40,11 @@ class OgImageResolverIntegrationTest extends IntegrationTestBase {
     @Test
     void 썸네일_키와_같은_사진의_원본_주소를_준다() {
         try (SqlCounter.Scope scope = SqlCounter.start()) {
-            assertThat(resolver.originalImageUrl(BASE + "images/2026/10/abcd_thumb.webp"))
-                    .isEqualTo(BASE + "images/2026/10/abcd.gif");
+            assertThat(
+                            resolver.originalImageUrl(
+                                    BASE
+                                            + "images/2026/10/3f1c2a9e-8d7b-4c1e-9a55-0b6f2a1d7e44_thumb.webp"))
+                    .isEqualTo(BASE + "images/2026/10/3f1c2a9e-8d7b-4c1e-9a55-0b6f2a1d7e44.gif");
             assertThat(scope.count()).as("uq_image_thumb_key 조회 1번").isEqualTo(1);
         }
     }
@@ -42,8 +52,10 @@ class OgImageResolverIntegrationTest extends IntegrationTestBase {
     @Test
     void 일치하는_사진이_없으면_썸네일_주소를_그대로_쓴다() {
         // 썸네일 없는 옛 사진 — thumbnail_url이 이미 원본이다
-        assertThat(resolver.originalImageUrl(BASE + "images/2026/10/old.png"))
-                .isEqualTo(BASE + "images/2026/10/old.png");
+        assertThat(
+                        resolver.originalImageUrl(
+                                BASE + "images/2026/10/7a2b4c6d-1e3f-4a5b-8c7d-9e0f1a2b3c4d.png"))
+                .isEqualTo(BASE + "images/2026/10/7a2b4c6d-1e3f-4a5b-8c7d-9e0f1a2b3c4d.png");
     }
 
     @Test
@@ -62,5 +74,36 @@ class OgImageResolverIntegrationTest extends IntegrationTestBase {
                     .isEqualTo("https://cdn.example.com/a_thumb.webp");
             assertThat(scope.count()).isZero();
         }
+    }
+
+    @Test
+    void 옛_공개_주소로_저장된_썸네일도_원본을_찾고_지금_주소로_준다() {
+        // 옛 주소 목록이 든 설정은 시험 컨텍스트를 늘리지 않으려고 같은 Bean 재료로 직접 만든다
+        OgImageResolver withLegacy =
+                new OgImageResolver(
+                        ImageUrls.of("http://localhost:9000/blog", List.of(OLD)),
+                        images,
+                        ImageUrlResolver.of("http://localhost:9000/blog"),
+                        "http://localhost:8080/og-default.png");
+
+        assertThat(
+                        withLegacy.originalImageUrl(
+                                OLD
+                                        + "images/2026/10/3f1c2a9e-8d7b-4c1e-9a55-0b6f2a1d7e44_thumb.webp"))
+                .isEqualTo(BASE + "images/2026/10/3f1c2a9e-8d7b-4c1e-9a55-0b6f2a1d7e44.gif");
+        assertThat(
+                        withLegacy.originalImageUrl(
+                                BASE
+                                        + "images/2026/10/3f1c2a9e-8d7b-4c1e-9a55-0b6f2a1d7e44_thumb.webp"))
+                .isEqualTo(BASE + "images/2026/10/3f1c2a9e-8d7b-4c1e-9a55-0b6f2a1d7e44.gif");
+    }
+
+    @Test
+    void GIF는_원본_GIF_주소를_준다() {
+        assertThat(
+                        resolver.originalImageUrl(
+                                BASE
+                                        + "images/2026/10/3f1c2a9e-8d7b-4c1e-9a55-0b6f2a1d7e44_thumb.webp"))
+                .endsWith(".gif");
     }
 }
