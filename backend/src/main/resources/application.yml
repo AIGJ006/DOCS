@@ -204,6 +204,9 @@ blog:
       rate-limit:
         limit: 60
         window: 1m
+  # 카테고리 (017 research R11). 회원당 최대 개수. 이름 30자는 DB 컬럼 길이라 설정값이 아님
+  category:
+    max-count: 100
   # 좋아요 (009 research R14). 좋아요·취소를 합쳐 회원당 제한, 매일 새벽 좋아요 수 보정
   like:
     rate-limit:

@@ -1,6 +1,7 @@
 package com.team.blog.post.application;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.team.blog.post.application.port.PostCategoryPathQuery.CategoryPath;
 import java.time.Instant;
 import java.util.List;
 
@@ -23,6 +24,7 @@ import java.util.List;
  * @param publishedAt 최초 발행 일자
  * @param editedAt 재발행 일자 (없으면 {@code null} — 공개 범위만 바꾼 글은 없다)
  * @param tags 태그 이름 (입력 순서; 조회 실패·미구현이면 빈 목록)
+ * @param category 카테고리 경로 (017 — 분류 없음·조회 실패면 {@code null})
  * @param likeCount 좋아요 수
  * @param viewCount 조회 수 (저장값 그대로 — 상세 조회가 올리지 않는다)
  * @param commentCount 댓글 수
@@ -44,6 +46,7 @@ public record PostDetailView(
         Instant publishedAt,
         Instant editedAt,
         List<String> tags,
+        CategoryPath category,
         int likeCount,
         long viewCount,
         int commentCount,

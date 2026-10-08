@@ -16,6 +16,7 @@ import com.team.blog.discovery.support.PostReadingFixture;
 import com.team.blog.discovery.support.ReadingApi;
 import com.team.blog.post.application.PostDraftQueryService;
 import com.team.blog.post.application.port.AuthorFollowStatusQuery;
+import com.team.blog.post.application.port.PostCategoryPathQuery;
 import com.team.blog.post.application.port.PostLikeStatusQuery;
 import com.team.blog.post.application.port.PostTagNamesQuery;
 import com.team.blog.support.IntegrationTestBase;
@@ -44,6 +45,8 @@ class PostDetailAuthorViewIntegrationTest extends IntegrationTestBase {
     @MockitoBean PostLikeStatusQuery likeStatus;
     @MockitoBean AuthorFollowStatusQuery followStatus;
     @MockitoSpyBean PostDraftQueryService draftQuery;
+    // 017 PostDetailCategoryIT와 같은 덮어쓰기 묶음 (실제 동작 그대로)
+    @MockitoSpyBean PostCategoryPathQuery categoryPaths;
     @Autowired TagService tagService;
 
     private PostReadingFixture fixture;

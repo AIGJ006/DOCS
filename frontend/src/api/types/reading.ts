@@ -1,3 +1,4 @@
+import type { PostCategoryPath } from '../categories';
 import type { ViewerFlags } from './viewerFlags';
 
 /**
@@ -93,6 +94,8 @@ export interface PostDetail {
   /** 값이 있을 때만 "수정됨 · M월 D일" */
   editedAt: string | null;
   tags: string[];
+  /** 017 카테고리 경로 (분류 없음이면 null, 017 이전 서버면 없음) */
+  category?: PostCategoryPath | null;
   likeCount: number;
   viewCount: number;
   commentCount: number;

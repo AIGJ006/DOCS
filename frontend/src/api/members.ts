@@ -18,9 +18,13 @@ export function listBlogPosts(
   handle: string,
   cursor?: string | null,
   tag?: string | null,
+  category?: string | null,
 ): Promise<PostCardPage> {
   const query: string[] = [];
-  if (tag) {
+  // 017: 카테고리 필터가 있으면 태그는 보내지 않는다 (둘은 함께 쓰지 않음)
+  if (category) {
+    query.push(`category=${encodeURIComponent(category)}`);
+  } else if (tag) {
     query.push(`tag=${encodeURIComponent(tag)}`);
   }
   if (cursor) {
