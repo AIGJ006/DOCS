@@ -3,10 +3,14 @@ package com.team.blog.account.web;
 import com.team.blog.account.application.EmailVerificationService;
 import com.team.blog.account.application.LoginOutcome;
 import com.team.blog.account.application.LoginService;
+import com.team.blog.account.application.PasswordResetService;
 import com.team.blog.account.application.SignedUpMember;
 import com.team.blog.account.application.SignupService;
 import com.team.blog.account.infra.security.SessionLogin;
 import com.team.blog.account.web.dto.EmailSignupRequest;
+import com.team.blog.account.web.dto.MessageOnly;
+import com.team.blog.account.web.dto.PasswordResetConfirmRequest;
+import com.team.blog.account.web.dto.PasswordResetRequest;
 import com.team.blog.account.web.dto.SignupResult;
 import com.team.blog.account.web.dto.TokenRequest;
 import com.team.blog.account.web.dto.VerificationResult;
@@ -14,6 +18,7 @@ import com.team.blog.shared.error.ApiException;
 import com.team.blog.shared.error.CommonReasonCode;
 import com.team.blog.shared.security.CurrentUser;
 import com.team.blog.shared.security.LoginRequired;
+import com.team.blog.shared.web.ClientIp;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.http.HttpStatus;
@@ -27,7 +32,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 /**
  * 인증 API (contracts/openapi.yaml). 로그인·로그아웃({@code POST /api/auth/login}·{@code /logout})은 Spring
- * Security가 처리한다({@code AccountSecurityCustomizer}). 비밀번호 재설정은 US4에서 더한다.
+ * Security가 처리한다({@code AccountSecurityCustomizer}).
  */
 @RestController
 @RequestMapping("/api/auth")
@@ -37,16 +42,19 @@ public class AuthController {
     private final EmailVerificationService emailVerificationService;
     private final LoginService loginService;
     private final SessionLogin sessionLogin;
+    private final PasswordResetService passwordResetService;
 
     public AuthController(
             SignupService signupService,
             EmailVerificationService emailVerificationService,
             LoginService loginService,
-            SessionLogin sessionLogin) {
+            SessionLogin sessionLogin,
+            PasswordResetService passwordResetService) {
         this.signupService = signupService;
         this.emailVerificationService = emailVerificationService;
         this.loginService = loginService;
         this.sessionLogin = sessionLogin;
+        this.passwordResetService = passwordResetService;
     }
 
     /**
@@ -100,4 +108,28 @@ public class AuthController {
         emailVerificationService.confirm(body.token());
         return new VerificationResult(true);
     }
+
+    /** 비밀번호 찾기 ({@code requestPasswordReset}) → 202, 가입 여부와 무관하게 같은 문구. 조회·발송은 비동기(FR-042·043). */
+    @PostMapping("/password-reset")
+    @ResponseStatus(HttpStatus.ACCEPTED)
+    public MessageOnly requestPasswordReset(
+            @RequestBody PasswordResetRequest body, HttpServletRequest request) {
+        if (body == null) {
+            throw new ApiException(CommonReasonCode.MALFORMED_REQUEST);
+        }
+        passwordResetService.request(body.email(), ClientIp.of(request));
+        return new MessageOnly(PASSWORD_RESET_ACCEPTED);
+    }
+
+    /** 재설정 링크로 새 비밀번호 저장 ({@code confirmPasswordReset}) → 204, 모든 세션 삭제(FR-044). */
+    @PostMapping("/password-reset/confirm")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void confirmPasswordReset(@RequestBody PasswordResetConfirmRequest body) {
+        if (body == null) {
+            throw new ApiException(CommonReasonCode.MALFORMED_REQUEST);
+        }
+        passwordResetService.confirm(body.token(), body.newPassword(), body.newPasswordConfirm());
+    }
+
+    static final String PASSWORD_RESET_ACCEPTED = "가입된 이메일이면 안내 메일을 보냈어요";
 }

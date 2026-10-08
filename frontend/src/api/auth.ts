@@ -130,3 +130,32 @@ export function socialLoginUrl(provider: SocialProvider, redirect: string): stri
   const query = redirect && redirect !== '/' ? `?redirect=${encodeURIComponent(redirect)}` : '';
   return `/oauth2/authorization/${id}${query}`;
 }
+
+// ---- 비밀번호 찾기·재설정·변경 (US4) ----
+
+/** 비밀번호 찾기. 가입 여부와 무관하게 같은 문구가 온다. */
+export function requestPasswordReset(email: string): Promise<{ message: string }> {
+  return apiPost<{ message: string }>('/api/auth/password-reset', { email });
+}
+
+/** 재설정 링크로 새 비밀번호 저장. 성공하면 모든 기기에서 로그아웃된다. */
+export function confirmPasswordReset(
+  token: string,
+  newPassword: string,
+  newPasswordConfirm: string,
+): Promise<void> {
+  return apiPost<void>('/api/auth/password-reset/confirm', {
+    token,
+    newPassword,
+    newPasswordConfirm,
+  });
+}
+
+/** 로그인 상태 비밀번호 변경 (이메일 가입만). 다른 기기는 로그아웃된다. */
+export function changePassword(
+  currentPassword: string,
+  newPassword: string,
+  newPasswordConfirm: string,
+): Promise<void> {
+  return apiPost<void>('/api/me/password', { currentPassword, newPassword, newPasswordConfirm });
+}

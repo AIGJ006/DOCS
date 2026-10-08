@@ -88,6 +88,26 @@ public class AuthTokenStore {
                 AuthTokenStore::unavailable);
     }
 
+    /** 토큰을 쓰지 않고 회원 번호만 본다(비밀번호 재설정: 새 비밀번호 규칙을 먼저 검사하고 실패하면 토큰을 남기기 위해). 최신 포인터와 다르면 빈 값. */
+    public Optional<Long> peek(TokenType type, String token) {
+        if (token == null || !TOKEN_FORMAT.matcher(token).matches()) {
+            return Optional.empty();
+        }
+        return redisGuard.call(
+                () -> {
+                    String memberValue = redis.opsForValue().get(type.tokenKey(token));
+                    if (memberValue == null) {
+                        return Optional.<Long>empty();
+                    }
+                    long memberId = Long.parseLong(memberValue);
+                    if (!Objects.equals(redis.opsForValue().get(type.latestKey(memberId)), token)) {
+                        return Optional.<Long>empty();
+                    }
+                    return Optional.of(memberId);
+                },
+                AuthTokenStore::unavailable);
+    }
+
     private Duration ttl(TokenType type) {
         return switch (type) {
             case VERIFY -> settings.verify().tokenTtl();

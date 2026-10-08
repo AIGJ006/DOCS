@@ -163,4 +163,16 @@ public class AuthIdentity {
         lastLoginAt = Objects.requireNonNull(now, "now");
         return previous;
     }
+
+    /** 이메일 가입 계정의 비밀번호를 바꾼다(재설정·변경, FR-044·045). 소셜 계정은 비밀번호가 없다. */
+    public void changePassword(String newPasswordHash) {
+        if (provider != Provider.LOCAL) {
+            throw new IllegalStateException("소셜 계정은 비밀번호가 없습니다");
+        }
+        this.passwordHash = Objects.requireNonNull(newPasswordHash, "newPasswordHash");
+    }
+
+    public boolean isLocal() {
+        return provider == Provider.LOCAL;
+    }
 }

@@ -4,6 +4,7 @@ import { onNotFound } from './api/client';
 import { SessionProvider } from './features/auth/SessionProvider';
 import DetailDeleteButton from './features/manage-posts/DetailDeleteButton';
 import SessionBar from './features/auth/SessionBar';
+import ForgotPasswordPage from './pages/ForgotPasswordPage';
 import HomePage from './pages/HomePage';
 import LoginPage from './pages/LoginPage';
 import ManagePostsPage from './pages/ManagePostsPage';
@@ -11,6 +12,7 @@ import BlogPage from './pages/BlogPage';
 import NotFoundPage from './pages/NotFoundPage';
 import PostDetailPage from './pages/PostDetailPage';
 import PrivacyPage from './pages/PrivacyPage';
+import ResetPasswordPage from './pages/ResetPasswordPage';
 import SignupPage from './pages/SignupPage';
 import SocialSignupPage from './pages/SocialSignupPage';
 import TermsPage from './pages/TermsPage';
@@ -64,8 +66,8 @@ export default function App() {
           <Route path="/signup/social" element={<SocialSignupPage />} />
           <Route path="/login" element={<LoginPage />} />
           <Route path="/verify-email" element={<VerifyEmailPage />} />
-          <Route path="/forgot-password" element={<Placeholder name="forgot-password" />} />
-          <Route path="/reset-password" element={<Placeholder name="reset-password" />} />
+          <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+          <Route path="/reset-password" element={<ResetPasswordPage />} />
           <Route path="/reagree" element={<Placeholder name="reagree" />} />
           <Route path="/settings" element={<Placeholder name="settings" />} />
           <Route path="/terms" element={<TermsPage />} />
