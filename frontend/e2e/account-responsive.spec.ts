@@ -111,6 +111,11 @@ test.describe('계정 화면 375px·입력 칸·로그아웃 정리', () => {
     await idb(page, 'put', `draft:${me.memberId + 100000}:other`);
     expect(await idb(page, 'keys')).toContain(`draft:${me.memberId}:e2e-1`);
 
+    // 로그아웃은 공통 머리말의 계정 메뉴 안에 있다
+    await page
+      .getByRole('banner')
+      .getByRole('button', { name: /계정 메뉴/ })
+      .click();
     await page.getByRole('button', { name: '로그아웃' }).click();
     await expect(page.getByRole('button', { name: '로그아웃' })).toHaveCount(0);
     await expect

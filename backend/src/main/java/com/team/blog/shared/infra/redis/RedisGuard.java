@@ -163,20 +163,30 @@ public class RedisGuard {
                 });
     }
 
-    /** 지금 Redis가 응답하는가: 회로가 열려 있지 않고 PING이 PONG. */
+    /**
+     * 지금 Redis가 응답하는가: 회로가 허락하고 PING이 PONG. PING도 회로 차단기로 세므로, 열린 회로는 대기 시간이 지나면 이 확인만 들어와도 반열림으로
+     * 넘어가 복구된다(자동 전환이 꺼져 있어 다른 Redis 호출이 없으면 계속 열려 있던 문제).
+     */
     public boolean isAvailable() {
-        CircuitBreaker.State state = breaker.getState();
-        if (state == CircuitBreaker.State.OPEN || state == CircuitBreaker.State.FORCED_OPEN) {
+        if (!breaker.tryAcquirePermission()) {
             return false;
         }
+        long start = System.nanoTime();
         try {
             String pong = redis.execute((RedisCallback<String>) connection -> connection.ping());
+            breaker.onSuccess(System.nanoTime() - start, TimeUnit.NANOSECONDS);
             return "PONG".equalsIgnoreCase(pong);
         } catch (RuntimeException e) {
-            if (isRedisFailure(e)) {
-                return false;
+            if (!isRedisFailure(e)) {
+                breaker.releasePermission();
+                throw e;
             }
-            throw e;
+            if (isConnectionFailureOrTimeout(e)) {
+                breaker.onError(System.nanoTime() - start, TimeUnit.NANOSECONDS, e);
+            } else {
+                breaker.releasePermission();
+            }
+            return false;
         }
     }
 

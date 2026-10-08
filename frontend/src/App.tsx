@@ -2,9 +2,8 @@ import { lazy, Suspense, useEffect, useState } from 'react';
 import { Route, Routes, useLocation } from 'react-router-dom';
 import { onNotFound } from './api/client';
 import { ReagreementGate } from './features/auth/ReagreementGate';
-import { SessionProvider } from './features/auth/SessionProvider';
+import AppLayout from './components/AppLayout';
 import DetailDeleteButton from './features/manage-posts/DetailDeleteButton';
-import SessionBar from './features/auth/SessionBar';
 import ForgotPasswordPage from './pages/ForgotPasswordPage';
 import HomePage from './pages/HomePage';
 import LoginPage from './pages/LoginPage';
@@ -69,8 +68,8 @@ export default function App() {
   useEffect(() => onNotFound(() => setNotFoundAt(location.key)), [location.key]);
 
   return (
-    <SessionProvider>
-      <SessionBar />
+    // 세션 + 공통 머리말로 모든 경로를 한 번에 감싼다 (AppLayout)
+    <AppLayout>
       <ReagreementGate>
         {notFoundAt !== null && notFoundAt === location.key ? (
           <NotFoundPage />
@@ -129,6 +128,6 @@ export default function App() {
           </Routes>
         )}
       </ReagreementGate>
-    </SessionProvider>
+    </AppLayout>
   );
 }

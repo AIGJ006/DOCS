@@ -1,0 +1,174 @@
+/* 공통 머리말 (SiteHeader). 색은 토큰만 쓴다(016 FR-011). 375px에서 가로로 넘치지 않는다. */
+.site-header {
+  background: var(--color-surface);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.site-header-inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  width: 100%;
+  max-width: var(--page-max-width, 72rem);
+  min-height: var(--header-height, 3.5rem);
+  margin: 0 auto;
+  padding: 0 1rem;
+}
+
+.site-header-logo {
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--color-text);
+  font-size: 1.25rem;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.site-header-actions {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.site-header-link {
+  color: var(--color-text);
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.site-header-link:hover,
+.site-header-logo:hover {
+  text-decoration: underline;
+}
+
+/* 흰 글자가 올라가는 단추 모양 링크 ([글쓰기], [회원 가입]) */
+.site-header-write {
+  display: inline-block;
+  padding: 0.3rem 0.85rem;
+  border-radius: 999px;
+  background: var(--color-brand-fill);
+  color: #ffffff; /* raw-color-ok: --color-brand-fill 위 흰 글자 (45 §3) */
+  font-weight: 600;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.site-header-write:hover {
+  text-decoration: underline;
+}
+
+.site-account {
+  position: relative;
+}
+
+.site-account-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  max-width: 12rem;
+  padding: 0.2rem 0.4rem;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  background: transparent;
+}
+
+.site-account-button:hover,
+.site-account-button[aria-expanded='true'] {
+  border-color: var(--color-border);
+}
+
+.site-avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.site-account-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.site-account-caret {
+  color: var(--color-text-muted);
+  font-size: 0.75rem;
+}
+
+.site-account-menu {
+  position: absolute;
+  top: calc(100% + 0.4rem);
+  right: 0;
+  z-index: 5;
+  min-width: 10rem;
+  margin: 0;
+  padding: 0.35rem 0;
+  list-style: none;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 0.5rem;
+  box-shadow: 0 4px 16px rgb(0 0 0 / 12%); /* raw-color-ok: 그림자 */
+}
+
+.site-account-menu a,
+.site-account-menu button {
+  display: block;
+  width: 100%;
+  padding: 0.5rem 1rem;
+  border: 0;
+  background: transparent;
+  color: var(--color-text);
+  text-align: left;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.site-account-menu a:hover,
+.site-account-menu button:hover {
+  background: var(--thumb-empty);
+}
+
+.site-account-error {
+  position: absolute;
+  top: calc(100% + 0.4rem);
+  right: 0;
+  z-index: 6;
+  width: max-content;
+  max-width: min(18rem, calc(100vw - 2rem));
+  margin: 0;
+  padding: 0.5rem 0.75rem;
+  background: var(--color-surface);
+  border: 1px solid var(--color-danger);
+  border-radius: 0.5rem;
+  color: var(--color-danger);
+  font-size: 0.875rem;
+}
+
+.site-header-narrow-only {
+  display: none;
+}
+
+/* 좁은 화면: 내 블로그·닉네임은 계정 메뉴 안으로 접는다 */
+@media (max-width: 599px) {
+  .site-header-inner {
+    gap: 0.5rem;
+  }
+
+  .site-header-actions {
+    gap: 0.5rem;
+  }
+
+  .site-header-wide-only {
+    display: none;
+  }
+
+  .site-header-narrow-only {
+    display: block;
+  }
+}
