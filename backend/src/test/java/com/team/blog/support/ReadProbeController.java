@@ -8,6 +8,9 @@ import java.util.Map;
 import org.springframework.context.annotation.Profile;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
@@ -46,5 +49,15 @@ public class ReadProbeController {
         body.put("status", post.status());
         body.put("visibility", post.visibility());
         return body;
+    }
+
+    /** 받은 본문과 매개변수를 그대로 돌려준다 (004 T045 {@code OwnerFieldInjector}가 실제 요청에 작성자 번호를 끼워 넣는지 확인용). */
+    @PostMapping("/api/__test/echo")
+    public Map<String, Object> echo(
+            @RequestBody(required = false) String body, @RequestParam Map<String, String> params) {
+        Map<String, Object> echoed = new LinkedHashMap<>();
+        echoed.put("body", body);
+        echoed.put("params", params);
+        return echoed;
     }
 }
