@@ -4,11 +4,17 @@ import static com.team.blog.interaction.support.CommentApi.id;
 import static com.team.blog.interaction.support.CommentApi.read;
 import static com.team.blog.interaction.support.CommentApi.status;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.catchThrowable;
 
+import com.team.blog.account.domain.MemberStatus;
+import com.team.blog.account.domain.Role;
+import com.team.blog.interaction.application.CommentService;
 import com.team.blog.interaction.support.CommentApi;
 import com.team.blog.interaction.support.CommentEventProbe;
 import com.team.blog.interaction.support.CommentFixtures;
+import com.team.blog.shared.error.ApiException;
 import com.team.blog.shared.event.CommentCreated;
+import com.team.blog.shared.security.Viewer;
 import com.team.blog.support.IntegrationTestBase;
 import com.team.blog.support.TestLogin;
 import com.team.blog.support.fixture.PostFixtures;
@@ -16,10 +22,12 @@ import jakarta.servlet.http.Cookie;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.Map;
+import java.util.Properties;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.redis.core.RedisCallback;
 import org.springframework.test.web.servlet.MvcResult;
 
 /** 댓글·답글 쓰기 (007 T026, US2, FR-009~013). */
@@ -253,5 +261,48 @@ class CommentWriteIT extends IntegrationTestBase {
 
         assertThat(status(result)).isEqualTo(201);
         assertThat(id(result)).isNotEqualTo(old);
+    }
+
+    @Autowired CommentService service;
+
+    private void redisConfig(String name, String value) {
+        redis.execute(
+                (RedisCallback<Void>)
+                        c -> {
+                            c.serverCommands().setConfig(name, value);
+                            return null;
+                        });
+    }
+
+    private String redisConfig(String name) {
+        Properties p =
+                redis.execute((RedisCallback<Properties>) c -> c.serverCommands().getConfig(name));
+        return p.getProperty(name);
+    }
+
+    /**
+     * T057, research R17: Redis 메모리 부족이면 요청 제한이 쓰기 거부를 받아 503 {@code AUTOSAVE_UNAVAILABLE}이 되고 댓글은
+     * 저장되지 않는다(세션도 Redis라 서비스를 직접 부른다). 공용 동작이므로 고치지 않고 기록만 한다.
+     */
+    @Test
+    void Redis_메모리_부족이면_503_AUTOSAVE_UNAVAILABLE이고_저장하지_않는다() {
+        Viewer viewer = new Viewer(me, Role.USER, MemberStatus.ACTIVE, true);
+        String maxmemory = redisConfig("maxmemory");
+        String policy = redisConfig("maxmemory-policy");
+        Throwable thrown;
+        try {
+            redisConfig("maxmemory-policy", "noeviction");
+            redisConfig("maxmemory", "1");
+            thrown = catchThrowable(() -> service.create(postId, me, "메모리 부족", null, viewer));
+        } finally {
+            redisConfig("maxmemory", maxmemory);
+            redisConfig("maxmemory-policy", policy);
+        }
+
+        assertThat(thrown).isInstanceOf(ApiException.class);
+        ApiException e = (ApiException) thrown;
+        assertThat(e.reasonCode().code()).isEqualTo("AUTOSAVE_UNAVAILABLE");
+        assertThat(e.status().value()).isEqualTo(503);
+        assertThat(comments().normalCount(postId)).isZero();
     }
 }

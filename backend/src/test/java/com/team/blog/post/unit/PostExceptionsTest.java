@@ -8,7 +8,6 @@ import com.team.blog.post.application.exception.NotPublishedException;
 import com.team.blog.post.application.exception.PayloadTooLargeException;
 import com.team.blog.post.application.exception.PublishInProgressException;
 import com.team.blog.post.application.exception.PublishValidationException;
-import com.team.blog.post.application.exception.RateLimitedException;
 import com.team.blog.post.application.exception.VersionConflictException;
 import com.team.blog.post.domain.PostReasonCode;
 import com.team.blog.post.domain.ServerCopy;
@@ -80,14 +79,6 @@ class PostExceptionsTest {
                 HttpStatus.BAD_REQUEST,
                 "CONTENT_TOO_COMPLEX",
                 "글 구조가 너무 복잡해요 (목록·인용은 20단계까지)");
-    }
-
-    @Test
-    void 요청_과다는_429_RATE_LIMITED와_Retry_After() {
-        RateLimitedException e = new RateLimitedException(4);
-        assertResponse(e, HttpStatus.TOO_MANY_REQUESTS, "RATE_LIMITED", "잠시 후 다시 시도해 주세요");
-        assertThat(e.headers()).containsEntry("Retry-After", "4");
-        assertThat(new RateLimitedException(0).headers()).containsEntry("Retry-After", "1");
     }
 
     @Test

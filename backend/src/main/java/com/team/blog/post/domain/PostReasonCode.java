@@ -45,8 +45,6 @@ public enum PostReasonCode implements ReasonCode {
     INVALID_IDEMPOTENCY_KEY(HttpStatus.BAD_REQUEST, "요청 키 형식이 올바르지 않아요"),
     /** 발행하지 않은 글의 변경 취소. */
     NOT_PUBLISHED(HttpStatus.CONFLICT, "발행한 글만 변경을 취소할 수 있어요"),
-    /** 자동 저장·미리보기 요청 과다. {@code Retry-After} (research B-2 제안). */
-    RATE_LIMITED(HttpStatus.TOO_MANY_REQUESTS, "잠시 후 다시 시도해 주세요"),
     /** 자동 저장 요청 본문 1MB 초과 (research B-2 제안). */
     PAYLOAD_TOO_LARGE(HttpStatus.CONTENT_TOO_LARGE, "요청이 너무 커요"),
     /** Redis 메모리 부족으로 자동 저장을 받지 못함 (FR-018: 밀어내지 않음, 브라우저가 재시도). */
