@@ -158,8 +158,8 @@ description: "Task list for 012-trending-search (트렌딩·검색)"
 
 **Purpose**: 검색 엔진용 `/sitemap.xml` (Clarifications Q2로 이 기능 소유)
 
-- [ ] T038 [P] `T/discovery/integration/SitemapIT.java` — 공개 글·블로그·첫 화면 주소만, 비공개·친구 공개(적용자)·휴지통·숨김·유예 작성자 글과 공개 글 없는 블로그 없음, 휴지통으로 보낸 직후 다음 요청에서 빠짐, `lastmod` = `edited_at ?? first_public_at`, 주소 XML 이스케이프, `Content-Type: application/xml`, `Cache-Control: no-cache`, 탈퇴 유예 회원 요청도 200(게이트 밖), 글 1만 개 2초 이내·메모리에 전체를 모으지 않음(1,000개씩 읽는지 `SqlCounter`)
-- [ ] T039 `B/discovery/infra/SitemapRepository.java`(research R13 — 글은 `p.id > :after` 1,000개씩, 블로그는 `GROUP BY` 1번), `B/discovery/application/SitemapService.java`(흘려 쓰기, 50,000개 한도 WARN), `B/discovery/web/SitemapController.java`(`StreamingResponseBody`) (T038 통과)
+- [X] T038 [P] `T/discovery/integration/SitemapIT.java` — 공개 글·블로그·첫 화면 주소만, 비공개·친구 공개(적용자)·휴지통·숨김·유예 작성자 글과 공개 글 없는 블로그 없음, 휴지통으로 보낸 직후 다음 요청에서 빠짐, `lastmod` = `edited_at ?? first_public_at`, 주소 XML 이스케이프, `Content-Type: application/xml`, `Cache-Control: no-cache`, 탈퇴 유예 회원 요청도 200(게이트 밖), 글 1만 개 2초 이내·메모리에 전체를 모으지 않음(1,000개씩 읽는지 `SqlCounter`) (구현 메모: lastmod는 초 단위 ISO-8601 UTC. 1만 개는 글 SQL 11번(1,000개씩 + 마지막 빈 확인) + 블로그 1번. 008 태그 페이지는 팀 결정(008 T074 '포함하지 않음')대로 넣지 않았다)
+- [X] T039 `B/discovery/infra/SitemapRepository.java`(research R13 — 글은 `p.id > :after` 1,000개씩, 블로그는 `GROUP BY` 1번), `B/discovery/application/SitemapService.java`(흘려 쓰기, 50,000개 한도 WARN), `B/discovery/web/SitemapController.java`(`StreamingResponseBody`) (T038 통과) (구현 메모: StreamingResponseBody 대신 응답 스트림에 요청 스레드에서 바로 흘려 쓴다(비동기 디스패치 없음, 메모리에 모으지 않는 것은 같음))
 
 ---
 
