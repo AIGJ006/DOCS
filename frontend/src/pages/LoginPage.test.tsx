@@ -45,6 +45,24 @@ describe('LoginPage', () => {
     expect(String(body)).toBe('email=kim755030%40naver.com&password=Blog%232026a');
   });
 
+  it('탈퇴 유예 계정이면 돌아갈 곳·재동의 대신 복구 화면으로 간다 (015)', async () => {
+    stubFetch({
+      'POST /api/auth/login': () =>
+        json(200, {
+          redirectTo: '/write/new',
+          reagreementRequired: true,
+          accountStatus: 'WITHDRAWN',
+        }),
+    });
+    const user = userEvent.setup();
+    renderPage('/login?returnTo=%2Fwrite%2Fnew');
+    await user.type(screen.getByLabelText('이메일'), 'kim755030@naver.com');
+    await user.type(screen.getByLabelText('비밀번호'), 'Blog#2026a');
+    await user.click(screen.getByRole('button', { name: '로그인' }));
+    await waitFor(() => expect(assign).toHaveBeenCalledWith('/account/restore'));
+    expect(assign).toHaveBeenCalledTimes(1);
+  });
+
   it('재동의가 필요하면 재동의 화면으로 간다', async () => {
     stubFetch({
       'POST /api/auth/login': () =>

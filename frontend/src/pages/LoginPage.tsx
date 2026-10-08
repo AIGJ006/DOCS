@@ -10,6 +10,7 @@ import {
 } from '../api/auth';
 import { formatWait } from '../features/auth/fieldErrors';
 import { redirectFromSearch } from '../features/auth/safeRedirect';
+import { RESTORE_PATH } from '../features/auth-gate/authGate';
 import '../features/auth/auth.css';
 
 const INVALID_CREDENTIALS_MESSAGE = '이메일 또는 비밀번호가 올바르지 않아요';
@@ -76,6 +77,11 @@ export default function LoginPage() {
     try {
       const result = await login(email, password, redirect);
       const target = result.redirectTo || '/';
+      // 015: 탈퇴 유예 계정은 어디서 왔든 복구 화면으로 (재동의보다 먼저)
+      if (result.accountStatus === 'WITHDRAWN') {
+        window.location.assign(RESTORE_PATH);
+        return;
+      }
       window.location.assign(
         result.reagreementRequired
           ? target === '/'

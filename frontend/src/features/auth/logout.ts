@@ -48,6 +48,16 @@ async function flushWithin(
 }
 
 /**
+ * 이 브라우저에 남은 그 회원의 계정 데이터를 지운다(로그아웃 정리 ②만 — 등록된 `clearMemberDrafts`). 미전송 작업 전송(①)과
+ * 로그아웃 요청(③)은 하지 않는다. 015 탈퇴 신청 성공 뒤에도 쓴다(서버가 이미 세션을 끊었고, 글은 어차피 가려진다).
+ */
+export async function clearLocalAccountData(memberId: number): Promise<void> {
+  if (cleanup.clearMemberDrafts) {
+    await cleanup.clearMemberDrafts(memberId);
+  }
+}
+
+/**
  * 로그아웃한다. 사용자가 미전송 작업 삭제를 취소하면 아무것도 하지 않고 false를 돌려준다.
  * 이미 로그아웃된 세션(401)이어도 홈으로 간다. 그 밖의 서버 오류는 던진다.
  */
@@ -58,9 +68,7 @@ export async function logout(memberId: number): Promise<boolean> {
       return false;
     }
   }
-  if (cleanup.clearMemberDrafts) {
-    await cleanup.clearMemberDrafts(memberId);
-  }
+  await clearLocalAccountData(memberId);
   try {
     await postLogout();
   } catch (error) {

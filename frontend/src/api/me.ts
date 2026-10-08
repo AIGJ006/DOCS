@@ -12,6 +12,10 @@ export interface MeSummary {
   emailVerified: boolean;
   reagreementRequired: boolean;
   profileImageUrl: string | null;
+  /** 015: 탈퇴 유예 중(WITHDRAWN)일 때 복구 기한(ISO-8601 UTC). 그 밖에는 null */
+  restoreDeadline: string | null;
+  /** 015: 복구 기한이 지났는가. WITHDRAWN이 아니면 false */
+  restoreExpired: boolean;
 }
 
 export function getMe(options?: { signal?: AbortSignal }): Promise<MeSummary> {

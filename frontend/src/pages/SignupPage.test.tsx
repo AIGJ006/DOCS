@@ -116,6 +116,34 @@ describe('SignupPage', () => {
     expect(screen.getByLabelText('이메일')).toHaveAttribute('aria-invalid', 'true');
   });
 
+  it('탈퇴 유예 중인 이메일이면 복구 안내와 로그인 링크를 준다 (015 FR-022)', async () => {
+    stubFetch({
+      'GET /api/agreements/current': () => json(200, CURRENT_AGREEMENTS),
+      'POST /api/auth/signup': () =>
+        json(
+          400,
+          errorBody('VALIDATION_FAILED', '입력값을 확인해 주세요', [
+            {
+              field: 'email',
+              code: 'EMAIL_WITHDRAWAL_PENDING',
+              message: '탈퇴 신청한 계정이 있어요. 로그인하면 복구할 수 있어요',
+            },
+          ]),
+        ),
+    });
+    const user = userEvent.setup();
+    renderPage();
+    await fillForm(user);
+    await user.click(screen.getByRole('button', { name: '가입하기' }));
+
+    expect(
+      await screen.findByText(/탈퇴 신청한 계정이 있어요. 로그인하면 복구할 수 있어요/),
+    ).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: '로그인' })).toHaveAttribute('href', '/login');
+    expect(screen.queryByRole('link', { name: '비밀번호 찾기' })).not.toBeInTheDocument();
+    expect(screen.getByLabelText('이메일')).toHaveAttribute('aria-invalid', 'true');
+  });
+
   it('블로그 주소가 이미 쓰이면 서버가 준 추천 주소를 버튼으로 넣을 수 있다', async () => {
     stubFetch({
       'GET /api/agreements/current': () => json(200, CURRENT_AGREEMENTS),
