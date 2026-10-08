@@ -58,7 +58,9 @@ public record WithdrawalProperties(
                         "ratelimit:comment-edit:{memberId}",
                         "ratelimit:image:{memberId}",
                         "ratelimit:tag-suggest:{memberId}",
-                        "ratelimit:follow:{memberId}"
+                        "ratelimit:follow:{memberId}",
+                        "rl:reset:email:{emailHash}",
+                        "member:active-touch:{memberId}"
                     })
                     List<String> redisKeyTemplates) {
 

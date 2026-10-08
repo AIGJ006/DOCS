@@ -39,7 +39,7 @@ class WithdrawalPropertiesBindingTest {
                     assertThat(p.purge().redisKeyTemplates())
                             .contains(
                                     "auth:pw-change-fail:{memberId}", "auth:login-fail:{emailHash}")
-                            .hasSize(11);
+                            .hasSize(13);
                 });
     }
 

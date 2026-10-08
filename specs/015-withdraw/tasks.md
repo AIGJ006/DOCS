@@ -167,24 +167,24 @@ description: "Task list for 015-withdraw (회원 탈퇴·복구)"
 
 ### Tests for User Story 3 ⚠️
 
-- [ ] T042 [P] [US3] 통합 테스트 `T/account/integration/WithdrawPurgeJobIT.java`(테스트 설정 `required-orders`를 그때 있는 단계로 맞춤): `US3_1_개인정보_없음_주소_남음`(contracts §2-2 불변식 — 닉네임·소개·최근 활동·닉네임 변경 시각 NULL, `deleted_at` 기록, `handle` 그대로, `auth_identity` 0행, 동의·정지 이력 행 수 그대로) · `US3_2_답글_달린_댓글만_자리`(007 있을 때)와 모든 글의 `comment_count`·`like_count` = 실제 행 수(SC-004) · `US3_3_한_단계_실패하면_전부_취소`(테스트용 order 85 단계가 예외 → 그 회원 모든 테이블이 정리 전과 같음, 다른 대상 회원은 정리됨, 다음 실행에서 정상 단계면 정리됨 — SC-003) · `US3_4_신고`(014 있을 때) · `US3_5_사진_표시`(003 있을 때 `detached_at ≤ now - 7일`) · `US3_6_옛_주소_404` · 단계 실행 순서가 order 순(테스트 단계가 호출 순서 기록) · 필수 단계가 빠지면 아무 회원도 처리 안 하고 ERROR 로그 · 그 사이 복구한 회원은 건너뜀 · `withdrawn_at`이 정확히 30일 전이면 대상 아님 · 이벤트는 `PostPurged`(글마다)만 · 로그에 이메일·닉네임 없음
-- [ ] T043 [P] [US3] 통합 테스트 `T/account/integration/WithdrawPurgeConcurrencyIT.java`: 기한 정각 근처 회원에 대해 `POST /api/me/restore`와 `purgeOne`을 동시에 20회 → 매번 둘 중 하나만 반영(복구 200 + 정리 건너뜀, 또는 정리 + 복구 401/409), 반쯤 정리된 회원 0
-- [ ] T044 [P] [US3] 통합 테스트 `T/account/integration/SuspendedPurgeIT.java`(FR-008): 열린 영구 정지 1년+1일 → `status = WITHDRAWN`·`withdrawn_at = now`·`deleted_at` 기록·정지 행 그대로(`lifted_at` NULL), 1년-1일·기간 정지(`ends_at` 있음)·해제된 정지·관리자 → 그대로, 이벤트·메일 없음
-- [ ] T045 [P] [US3] 통합 테스트 `T/account/integration/WithdrawalRedisCleanerIT.java`: 커밋 뒤 세션·`auth:verify-latest`·`auth:reset-latest`와 가리키던 토큰·`redis-key-templates` 키(`{emailHash}` 포함)가 없음, 롤백되면 키가 그대로, Redis 정지 중에도 정리 트랜잭션은 커밋되고 WARN만
-- [ ] T046 [P] [US3] 단계별 통합 테스트 `T/account/integration/AccountWithdrawalPurgeStepsIT.java`: order 50(`auth_identity` 삭제, 같은 이메일 재가입 가능), 60(내가 요청한·받은·수락한 친구 행 모두 삭제, 남의 친구 관계 그대로), 90(contracts §2-1, 1행이 아니면 예외), 모두 `MANDATORY`(트랜잭션 밖 호출 예외)
+- [X] T042 [P] [US3] 통합 테스트 `T/account/integration/WithdrawPurgeJobIT.java`(테스트 설정 `required-orders`를 그때 있는 단계로 맞춤): `US3_1_개인정보_없음_주소_남음`(contracts §2-2 불변식 — 닉네임·소개·최근 활동·닉네임 변경 시각 NULL, `deleted_at` 기록, `handle` 그대로, `auth_identity` 0행, 동의·정지 이력 행 수 그대로) · `US3_2_답글_달린_댓글만_자리`(007 있을 때)와 모든 글의 `comment_count`·`like_count` = 실제 행 수(SC-004) · `US3_3_한_단계_실패하면_전부_취소`(테스트용 order 85 단계가 예외 → 그 회원 모든 테이블이 정리 전과 같음, 다른 대상 회원은 정리됨, 다음 실행에서 정상 단계면 정리됨 — SC-003) · `US3_4_신고`(014 있을 때) · `US3_5_사진_표시`(003 있을 때 `detached_at ≤ now - 7일`) · `US3_6_옛_주소_404` · 단계 실행 순서가 order 순(테스트 단계가 호출 순서 기록) · 필수 단계가 빠지면 아무 회원도 처리 안 하고 ERROR 로그 · 그 사이 복구한 회원은 건너뜀 · `withdrawn_at`이 정확히 30일 전이면 대상 아님 · 이벤트는 `PostPurged`(글마다)만 · 로그에 이메일·닉네임 없음 (구현 메모: 시계 Bean을 바꾸지 않으려고 withdrawn_at을 과거로 옮기고 run(now)을 직접 부름. 테스트 단계는 T/account/support/WithdrawalPurgeProbe(@Profile test, order 85). 필수 단계 누락은 required-orders만 바꾼 WithdrawPurgeJob을 직접 만들어 확인(새 컨텍스트 없음). 010·011·014 사례는 015 임시 단계로 확인)
+- [X] T043 [P] [US3] 통합 테스트 `T/account/integration/WithdrawPurgeConcurrencyIT.java`: 기한 정각 근처 회원에 대해 `POST /api/me/restore`와 `purgeOne`을 동시에 20회 → 매번 둘 중 하나만 반영(복구 200 + 정리 건너뜀, 또는 정리 + 복구 401/409), 반쯤 정리된 회원 0 (구현 메모: 기한 정각 ±50ms로 신청 시각을 옮겨 20회. 정리가 이기면 복구 401/409, 복구 쪽이면 정리 SKIPPED)
+- [X] T044 [P] [US3] 통합 테스트 `T/account/integration/SuspendedPurgeIT.java`(FR-008): 열린 영구 정지 1년+1일 → `status = WITHDRAWN`·`withdrawn_at = now`·`deleted_at` 기록·정지 행 그대로(`lifted_at` NULL), 1년-1일·기간 정지(`ends_at` 있음)·해제된 정지·관리자 → 그대로, 이벤트·메일 없음
+- [X] T045 [P] [US3] 통합 테스트 `T/account/integration/WithdrawalRedisCleanerIT.java`: 커밋 뒤 세션·`auth:verify-latest`·`auth:reset-latest`와 가리키던 토큰·`redis-key-templates` 키(`{emailHash}` 포함)가 없음, 롤백되면 키가 그대로, Redis 정지 중에도 정리 트랜잭션은 커밋되고 WARN만 (구현 메모: redis-key-templates에 rl:reset:email:{emailHash}·member:active-touch:{memberId} 두 줄을 더함(001이 회원·이메일 해시로 만드는 키))
+- [X] T046 [P] [US3] 단계별 통합 테스트 `T/account/integration/AccountWithdrawalPurgeStepsIT.java`: order 50(`auth_identity` 삭제, 같은 이메일 재가입 가능), 60(내가 요청한·받은·수락한 친구 행 모두 삭제, 남의 친구 관계 그대로), 90(contracts §2-1, 1행이 아니면 예외), 모두 `MANDATORY`(트랜잭션 밖 호출 예외) (구현 메모: MANDATORY 확인은 등록된 단계 전체(임시 단계·테스트 단계 포함)를 트랜잭션 밖에서 불러 IllegalTransactionStateException)
 
 ### Implementation for User Story 3
 
-- [ ] T047 [P] [US3] `B/account/application/purge/AuthIdentityWithdrawalPurgeStep.java`(order 50)
-- [ ] T048 [P] [US3] `B/account/application/purge/FriendshipWithdrawalPurgeStep.java`(order 60, 항상 실행 — M1)
-- [ ] T049 [P] [US3] `B/account/application/purge/MemberWithdrawalPurgeStep.java`(order 90, `WithdrawalMemberRepository.anonymize`) (T046 통과)
-- [ ] T050 [P] [US3] `B/post/application/PostWithdrawalPurgeStep.java`(order 10 → 006 `PostPurgeService.purgeAllByAuthor`, 지운 글 수 INFO) — **006 머지 후**
-- [ ] T051 [P] [US3] `B/interaction/application/CommentWithdrawalPurgeStep.java`(order 20 → 007 `CommentPurgeService.purgeByAuthor`) — **007 머지 후**, 007 T060 인계 확인과 짝
-- [ ] T052 [P] [US3] `B/interaction/application/LikeWithdrawalPurgeStep.java`(order 30 → 009 `LikePurgeService.purgeByMember`) — **009 머지 후**, 009 T045 인계 확인과 짝
-- [ ] T053 [P] [US3] `B/media/application/ImageWithdrawalPurgeStep.java`(order 40 → 003 `ImagePurgeService.detachAllByUploader`) — **003 머지 후**, 003 T094 인계 확인과 짝
-- [ ] T054 [US3] 001 `B/account/infra/redis/AuthTokenStore.java`에 `revokeLatest(TokenType, memberId)`(최신 포인터가 가리키는 토큰 키와 포인터 삭제)를 더하고 `B/account/application/purge/WithdrawalRedisCleaner.java`(contracts §4, `SCAN` 없음, 실패 WARN)를 구현한다 (T045 통과)
-- [ ] T055 [US3] `B/account/application/purge/WithdrawalPurgeRunner.java`(`purgeOne(memberId, reason)` `REQUIRES_NEW`: 잠금·재확인 → 영구 정지면 상태 전이 → 이메일 해시 → 단계 실행(`WithdrawalPurgeStepException(order, 이름)`로 감쌈) → `afterCommit` Redis 정리)를 구현한다
-- [ ] T056 [US3] `B/account/application/purge/WithdrawPurgeJob.java`(`@Scheduled` + `@SchedulerLock(name = "withdrawPurge", lockAtMostFor = "PT1H")`, 필수 단계 확인 → 두 종류 대상 → 회원별 `purgeOne` + 실패 ERROR·다음 회원 → 처리·실패 수 INFO)를 구현한다 (T042·T043·T044 통과)
+- [X] T047 [P] [US3] `B/account/application/purge/AuthIdentityWithdrawalPurgeStep.java`(order 50)
+- [X] T048 [P] [US3] `B/account/application/purge/FriendshipWithdrawalPurgeStep.java`(order 60, 항상 실행 — M1)
+- [X] T049 [P] [US3] `B/account/application/purge/MemberWithdrawalPurgeStep.java`(order 90, `WithdrawalMemberRepository.anonymize`) (T046 통과) (구현 메모: anonymize 시각은 WithdrawalPolicy.now())
+- [X] T050 [P] [US3] `B/post/application/PostWithdrawalPurgeStep.java`(order 10 → 006 `PostPurgeService.purgeAllByAuthor`, 지운 글 수 INFO) — **006 머지 후**
+- [X] T051 [P] [US3] `B/interaction/application/CommentWithdrawalPurgeStep.java`(order 20 → 007 `CommentPurgeService.purgeByAuthor`) — **007 머지 후**, 007 T060 인계 확인과 짝
+- [X] T052 [P] [US3] `B/interaction/application/LikeWithdrawalPurgeStep.java`(order 30 → 009 `LikePurgeService.purgeByMember`) — **009 머지 후**, 009 T045 인계 확인과 짝 (구현 메모: 009 머지(f1e7fb6) 뒤 LikePurgeService.purgeByMember에 위임)
+- [X] T053 [P] [US3] `B/media/application/ImageWithdrawalPurgeStep.java`(order 40 → 003 `ImagePurgeService.detachAllByUploader`) — **003 머지 후**, 003 T094 인계 확인과 짝
+- [X] T054 [US3] 001 `B/account/infra/redis/AuthTokenStore.java`에 `revokeLatest(TokenType, memberId)`(최신 포인터가 가리키는 토큰 키와 포인터 삭제)를 더하고 `B/account/application/purge/WithdrawalRedisCleaner.java`(contracts §4, `SCAN` 없음, 실패 WARN)를 구현한다 (T045 통과) (구현 메모: revokeLatest는 RedisGuard.runWrite(커밋 뒤에만 부름)로 최신 포인터 GETDEL 후 토큰 키 삭제. 클리너는 세션·토큰·키 묶음을 각각 시도하고 실패하면 WARN)
+- [X] T055 [US3] `B/account/application/purge/WithdrawalPurgeRunner.java`(`purgeOne(memberId, reason)` `REQUIRES_NEW`: 잠금·재확인 → 영구 정지면 상태 전이 → 이메일 해시 → 단계 실행(`WithdrawalPurgeStepException(order, 이름)`로 감쌈) → `afterCommit` Redis 정리)를 구현한다 (구현 메모: Reason GRACE_EXPIRED·SUSPENDED_PERMANENT, Outcome PURGED·SKIPPED. 이메일 해시는 001 LoginFailureCounter와 같은 정규화 이메일 SHA-256 hex. order 65·70·80은 015 임시 구현(interaction.InterimFollowWithdrawalPurgeStep, notification.application.InterimNotificationWithdrawalPurgeStep, moderation.application.InterimReportWithdrawalPurgeStep — 각 Javadoc에 주인 기능, @ConditionalOnMissingClass로 진짜 단계 클래스가 생기면 빠짐). 010은 FollowWithdrawalPurgeStep을 만들지 않고 FollowPurgeService.purgeByMember만 두기로 함 → 010 머지 뒤 임시 65를 FollowWithdrawalPurgeStep(위임)으로 바꿔야 함. 011 SQL의 = ANY(:ids)는 JdbcClient가 목록을 펼쳐 IN (:ids)로 씀)
+- [X] T056 [US3] `B/account/application/purge/WithdrawPurgeJob.java`(`@Scheduled` + `@SchedulerLock(name = "withdrawPurge", lockAtMostFor = "PT1H")`, 필수 단계 확인 → 두 종류 대상 → 회원별 `purgeOne` + 실패 ERROR·다음 회원 → 처리·실패 수 INFO)를 구현한다 (T042·T043·T044 통과) (구현 메모: run(Instant) 오버로드는 잠금 없이 테스트·운영 도구용, 예약 실행은 scheduled())
 
 **Checkpoint**: 정리 작업이 단계가 다 있을 때 끝까지 동작한다
 
@@ -198,11 +198,11 @@ description: "Task list for 015-withdraw (회원 탈퇴·복구)"
 
 ### Tests for User Story 4 ⚠️
 
-- [ ] T057 [P] [US4] 통합 테스트 `T/account/integration/RejoinAfterPurgeIT.java`: `US4_1_같은_이메일_새_계정`(새 `member.id`, 옛 행 그대로) · `US4_2_옛_주소는_다른_값`(가입 화면 주소 확인 API·가입 요청에서 `kim755030` 중복 → `kim755030_2` 제안 — 001 `HandleSuggester`) · `US4_3_옛_닉네임_즉시_사용`(다른 회원이 익명 처리 직후 그 닉네임으로 변경 가능 — `uq_member_nickname` NULL 무시) · 같은 소셜 계정(`provider_user_id`)으로 다시 로그인 → 새 가입 흐름
+- [X] T057 [P] [US4] 통합 테스트 `T/account/integration/RejoinAfterPurgeIT.java`: `US4_1_같은_이메일_새_계정`(새 `member.id`, 옛 행 그대로) · `US4_2_옛_주소는_다른_값`(가입 화면 주소 확인 API·가입 요청에서 `kim755030` 중복 → `kim755030_2` 제안 — 001 `HandleSuggester`) · `US4_3_옛_닉네임_즉시_사용`(다른 회원이 익명 처리 직후 그 닉네임으로 변경 가능 — `uq_member_nickname` NULL 무시) · 같은 소셜 계정(`provider_user_id`)으로 다시 로그인 → 새 가입 흐름 (구현 메모: 소셜 재로그인은 SocialSignupIntegrationTest의 OAuth 흐름을 줄여 옮김)
 
 ### Implementation for User Story 4
 
-- [ ] T058 [US4] T057가 실패하는 항목만 001 담당과 함께 고친다(설계상 001 코드 변경 없이 통과해야 한다 — research R13). 결과를 Notes에 적는다
+- [X] T058 [US4] T057가 실패하는 항목만 001 담당과 함께 고친다(설계상 001 코드 변경 없이 통과해야 한다 — research R13). 결과를 Notes에 적는다 (구현 메모: T057 4건 모두 001 코드 변경 없이 통과)
 
 **Checkpoint**: 모든 user story 완료
 
