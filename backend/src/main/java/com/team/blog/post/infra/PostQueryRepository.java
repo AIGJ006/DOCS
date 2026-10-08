@@ -75,7 +75,8 @@ public class PostQueryRepository {
                                p.first_public_at, p.edited_at, p.deleted_at, p.hidden_at,
                                p.hidden_reason, p.thumbnail_url, p.excerpt,
                                m.handle, m.nickname, m.bio, m.withdrawn_at,
-                               COALESCE(pi.thumb_storage_key, pi.storage_key) AS profile_key
+                               COALESCE(pi.thumb_storage_key, pi.storage_key) AS profile_key,
+                               p.category_id
                           FROM post p
                           JOIN member m ON m.id = p.author_id
                           LEFT JOIN image pi ON pi.uploader_id = m.id AND pi.purpose = 'PROFILE'
@@ -110,7 +111,8 @@ public class PostQueryRepository {
                 rs.getString("nickname"),
                 rs.getString("bio"),
                 instant(rs.getTimestamp("withdrawn_at")),
-                rs.getString("profile_key"));
+                rs.getString("profile_key"),
+                rs.getObject("category_id", Long.class));
     }
 
     private static PostView toPostView(ResultSet rs, int rowNum) throws SQLException {

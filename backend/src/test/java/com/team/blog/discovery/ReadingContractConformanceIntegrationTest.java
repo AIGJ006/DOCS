@@ -41,6 +41,10 @@ class ReadingContractConformanceIntegrationTest extends IntegrationTestBase {
     private static final Path FOLLOW_CONTRACT =
             Path.of("..", "specs", "010-follow-feed", "contracts", "openapi.yaml");
 
+    /** 017이 상세에 더한 한 칸 ({@code PostDetailCategoryFields}, 분류 없음이면 {@code null}). */
+    private static final Path CATEGORY_CONTRACT =
+            Path.of("..", "specs", "017-category", "contracts", "openapi.yaml");
+
     private static Map<String, Object> schemas;
 
     private PostReadingFixture fixture;
@@ -73,6 +77,24 @@ class ReadingContractConformanceIntegrationTest extends IntegrationTestBase {
                                     Map.of(
                                             "$ref",
                                             "#/components/schemas/BlogHeaderFollowFields"))));
+        }
+        // 017 확장: PostDetail = 005 PostDetail + 017 PostDetailCategoryFields
+        try (InputStream in = Files.newInputStream(CATEGORY_CONTRACT)) {
+            Map<String, Object> root = new Yaml().load(in);
+            Map<String, Object> components = (Map<String, Object>) root.get("components");
+            Map<String, Object> category = (Map<String, Object>) components.get("schemas");
+            schemas.put("PostDetail005", schemas.get("PostDetail"));
+            schemas.put("PostDetailCategoryFields", category.get("PostDetailCategoryFields"));
+            schemas.put("PostDetailCategory", category.get("PostDetailCategory"));
+            schemas.put(
+                    "PostDetail",
+                    Map.of(
+                            "allOf",
+                            List.of(
+                                    Map.of("$ref", "#/components/schemas/PostDetail005"),
+                                    Map.of(
+                                            "$ref",
+                                            "#/components/schemas/PostDetailCategoryFields"))));
         }
     }
 

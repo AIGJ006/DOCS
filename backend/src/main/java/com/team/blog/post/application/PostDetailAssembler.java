@@ -77,7 +77,7 @@ public class PostDetailAssembler {
                 row.publishedAt(),
                 row.editedAt(),
                 tags(row.id()),
-                category(row.id()),
+                category(row),
                 row.likeCount(),
                 row.viewCount(),
                 row.commentCount(),
@@ -118,9 +118,12 @@ public class PostDetailAssembler {
         return names == null ? List.of() : names;
     }
 
-    /** 017 카테고리 경로. 분류 없음·조회 실패면 {@code null}(원칙 V). */
-    private CategoryPath category(long postId) {
-        Optional<CategoryPath> path = guard(() -> categoryPaths.pathOf(postId), "카테고리");
+    /** 017 카테고리 경로. 분류 없음이면 조회 없이 {@code null}(005 SQL 수 유지), 조회 실패도 {@code null}(원칙 V). */
+    private CategoryPath category(PostDetailRow row) {
+        if (row.categoryId() == null) {
+            return null;
+        }
+        Optional<CategoryPath> path = guard(() -> categoryPaths.pathOf(row.id()), "카테고리");
         return path == null ? null : path.orElse(null);
     }
 

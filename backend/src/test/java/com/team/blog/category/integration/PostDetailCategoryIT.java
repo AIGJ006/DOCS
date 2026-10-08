@@ -9,18 +9,29 @@ import static org.mockito.Mockito.when;
 
 import com.team.blog.category.support.CategoryApi;
 import com.team.blog.category.support.CategoryFixtures;
+import com.team.blog.post.application.PostDraftQueryService;
+import com.team.blog.post.application.port.AuthorFollowStatusQuery;
 import com.team.blog.post.application.port.PostCategoryPathQuery;
+import com.team.blog.post.application.port.PostLikeStatusQuery;
+import com.team.blog.post.application.port.PostTagNamesQuery;
 import com.team.blog.support.IntegrationTestBase;
 import com.team.blog.support.fixture.PostFixtures;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.test.web.servlet.MvcResult;
 
 /** 글 상세 카테고리 경로 (017 US4 #1~#4, FR-040). */
 class PostDetailCategoryIT extends IntegrationTestBase {
 
-    @MockitoSpyBean private PostCategoryPathQuery paths;
+    // 005 PostDetailFallbackIntegrationTest·PostDetailAuthorViewIntegrationTest와 같은 덮어쓰기 묶음으로 둬
+    // 테스트 컨텍스트를 함께 쓴다(컨텍스트가 늘면 DB 연결이 모자란다). 태그·좋아요·팔로우는 여기서 쓰지 않는다.
+    @MockitoBean PostTagNamesQuery tagNames;
+    @MockitoBean PostLikeStatusQuery likeStatus;
+    @MockitoBean AuthorFollowStatusQuery followStatus;
+    @MockitoSpyBean PostDraftQueryService draftQuery;
+    @MockitoSpyBean PostCategoryPathQuery paths;
 
     private MvcResult detail(long postId) throws Exception {
         return new CategoryApi(mockMvc).getRaw(null, "/api/posts/" + postId);
@@ -57,6 +68,8 @@ class PostDetailCategoryIT extends IntegrationTestBase {
     void US4_4_조회가_실패해도_상세는_보인다() throws Exception {
         long owner = members().member().create();
         long post = new PostFixtures(jdbc).create(owner, PostFixtures.State.PUBLISHED_PUBLIC);
+        CategoryFixtures categories = new CategoryFixtures(jdbc);
+        categories.assign(post, categories.create(owner, null, "개발"));
         when(paths.pathOf(anyLong())).thenThrow(new IllegalStateException("db down"));
 
         MvcResult result = detail(post);

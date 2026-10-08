@@ -112,7 +112,7 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/PostCategory' }
-        '400': { description: INVALID_CATEGORY (errors[0].field = categoryId) }
+        '400': { description: "INVALID_CATEGORY (errors[0].field = categoryId)" }
         '401': { $ref: '#/components/responses/Error' }
         '403': { description: EMAIL_NOT_VERIFIED · ACCOUNT_SUSPENDED · ACCOUNT_WITHDRAWN }
         '404': { description: 없음·남의 글·휴지통 }
@@ -201,3 +201,8 @@ components:
           properties:
             id: { type: integer }
             name: { type: string }
+    PostDetailCategoryFields:
+      type: object
+      description: 005 PostDetail에 더하는 칸 (x-extends getPostDetail, 태그 다음). 임시 글(DRAFT) 응답에는 없다
+      properties:
+        category: { $ref: '#/components/schemas/PostDetailCategory' }
