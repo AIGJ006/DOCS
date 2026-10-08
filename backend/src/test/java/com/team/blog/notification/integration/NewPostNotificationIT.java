@@ -117,6 +117,8 @@ class NewPostNotificationIT extends NotificationTestBase {
                         + " SELECT id, ? FROM member WHERE handle LIKE 'np%'",
                 author);
         long postId = posts.create(author, State.PUBLISHED_PUBLIC);
+        // 운영 DB처럼 통계를 맞춘다 — 방금 1만 줄을 넣은 표를 통계 없이 재면 실행 계획이 운에 맡겨진다
+        jdbc.execute("ANALYZE member, follow, notification, notification_mute");
 
         // 같은 기계에서 다른 빌드가 함께 돌아 한 번의 측정이 흔들린다 — 세 번까지 재고 가장 빠른 값으로 판정한다
         long best = Long.MAX_VALUE;
