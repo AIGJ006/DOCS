@@ -192,4 +192,43 @@ public class NotificationRepository {
                 .param("now", Timestamp.from(now))
                 .update();
     }
+
+    // ---- 읽음·삭제 (contracts §9) ----
+
+    /** 읽음 (이미 읽음이면 그대로). 내 알림이 아니면 {@code false}. */
+    public boolean markRead(long id, long me, Instant now) {
+        return !jdbc.sql(
+                        """
+                        UPDATE notification SET read_at = COALESCE(read_at, :now)
+                         WHERE id = :id AND receiver_id = :me
+                        RETURNING id
+                        """)
+                .param("id", id)
+                .param("me", me)
+                .param("now", Timestamp.from(now))
+                .query(Long.class)
+                .list()
+                .isEmpty();
+    }
+
+    /** 지금 시각까지 갱신된 안 읽은 알림을 모두 읽음으로. */
+    public int markAllRead(long me, Instant now) {
+        return jdbc.sql(
+                        """
+                        UPDATE notification SET read_at = :now
+                         WHERE receiver_id = :me AND read_at IS NULL AND updated_at <= :now
+                        """)
+                .param("me", me)
+                .param("now", Timestamp.from(now))
+                .update();
+    }
+
+    /** 내 알림 삭제. 0행이면 {@code false}. */
+    public boolean delete(long id, long me) {
+        return jdbc.sql("DELETE FROM notification WHERE id = :id AND receiver_id = :me")
+                        .param("id", id)
+                        .param("me", me)
+                        .update()
+                > 0;
+    }
 }
