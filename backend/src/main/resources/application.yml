@@ -191,6 +191,19 @@ blog:
     empty-draft-cron: "0 30 3 * * *"
     zone: Asia/Seoul
     empty-draft-age: 24h
+  # 태그 (008 data-model §5, research R16). 한 글의 태그 최대 수는 blog.post.max-tags
+  tag:
+    # 전체 태그 목록(/tags) 개수. 요청마다 계산한다(캐시 없음, 008 Clarifications Q1)
+    top-limit: 100
+    blog-strip:
+      # 블로그 태그 줄 API 최대 개수 / 처음 보이는 개수
+      limit: 100
+      initial: 10
+    suggest:
+      limit: 10
+      rate-limit:
+        limit: 60
+        window: 1m
   # 글 읽기 (005 data-model §6). 클라이언트의 size는 무시하고 이 값으로 고정 (10 L-2)
   list:
     page-size: 9

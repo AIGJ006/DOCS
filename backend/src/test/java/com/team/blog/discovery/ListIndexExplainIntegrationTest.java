@@ -4,6 +4,7 @@ import static com.team.blog.discovery.support.ReadingApi.nextCursor;
 import static com.team.blog.discovery.support.ReadingApi.status;
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.team.blog.discovery.application.CardFilter;
 import com.team.blog.discovery.application.PostListCursor.CursorKey;
 import com.team.blog.discovery.infra.PostCardQueryRepository;
 import com.team.blog.discovery.infra.PostCardQueryRepository.CardQuery;
@@ -100,11 +101,11 @@ class ListIndexExplainIntegrationTest extends IntegrationTestBase {
 
     @Test
     void 홈_목록은_ix_post_feed와_uq_image_profile_current를_탄다() {
-        String first = explain(cards.cardQuery(Viewer.anonymous(), null, null, 10));
+        String first = explain(cards.cardQuery(Viewer.anonymous(), CardFilter.all(), null, 10));
         assertThat(first).contains("\"ix_post_feed\"").contains("\"uq_image_profile_current\"");
 
         CursorKey after = new CursorKey(OffsetDateTime.parse("2026-03-01T00:00:00Z"), 5_000L);
-        String next = explain(cards.cardQuery(Viewer.anonymous(), null, after, 10));
+        String next = explain(cards.cardQuery(Viewer.anonymous(), CardFilter.all(), after, 10));
         assertThat(next).contains("\"ix_post_feed\"");
     }
 
@@ -112,7 +113,8 @@ class ListIndexExplainIntegrationTest extends IntegrationTestBase {
     void 블로그_목록은_ix_post_blog를_탄다() {
         long author = authorId("author07");
 
-        String plan = explain(cards.cardQuery(Viewer.anonymous(), author, null, 10));
+        String plan =
+                explain(cards.cardQuery(Viewer.anonymous(), CardFilter.author(author), null, 10));
 
         assertThat(plan).contains("\"ix_post_blog\"").contains("\"uq_image_profile_current\"");
     }

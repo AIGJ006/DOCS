@@ -17,6 +17,7 @@ import org.springframework.web.bind.annotation.RestController;
  * 개인 블로그 머리말·글 목록 (005 T049, contracts {@code getBlogHeader}·{@code listBlogPosts}).
  *
  * <ul>
+ *   <li>{@code tag}(008): 정규화된 태그 이름이면 그 태그 글만, 아니면 404.
  *   <li>{@code size}는 받아도 무시한다 — 서버가 설정값으로 고정(원칙 VII).
  *   <li>API는 대문자 주소를 리다이렉트하지 않고 404다(research R-23) — 301은 화면 경로({@link PageShellController})만 한다.
  *   <li>두 응답 모두 {@code Cache-Control: private, no-cache}(research R-31).
@@ -44,11 +45,12 @@ public class BlogController {
     @GetMapping("/api/members/{handle}/posts")
     public ResponseEntity<CursorPage<PostCardView>> listBlogPosts(
             @PathVariable String handle,
+            @RequestParam(required = false) String tag,
             @RequestParam(required = false) String cursor,
             @RequestParam(required = false) String size,
             Viewer viewer) {
         return ResponseEntity.ok()
                 .header(HttpHeaders.CACHE_CONTROL, CacheControlPolicy.NO_CACHE)
-                .body(blogQueryService.listPosts(handle, cursor, viewer));
+                .body(blogQueryService.listPosts(handle, tag, cursor, viewer));
     }
 }

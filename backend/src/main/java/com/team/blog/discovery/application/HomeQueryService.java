@@ -20,6 +20,6 @@ public class HomeQueryService {
      * @param cursor 이전 응답의 {@code nextCursor} (첫 페이지면 {@code null})
      */
     public CursorPage<PostCardView> listHome(String cursor, Viewer viewer) {
-        return lists.page(ListScope.home(), null, cursor, viewer);
+        return lists.page(ListScope.home(), CardFilter.all(), cursor, viewer);
     }
 }

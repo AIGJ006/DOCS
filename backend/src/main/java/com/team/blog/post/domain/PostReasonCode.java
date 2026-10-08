@@ -26,10 +26,11 @@ public enum PostReasonCode implements ReasonCode {
     CONTENT_TOO_LONG(HttpStatus.BAD_REQUEST, "본문은 100,000자까지예요"),
     /** 본문에 업로드가 끝나지 않은 {@code local:} 사진이 있음 (발행만). */
     PENDING_IMAGES(HttpStatus.BAD_REQUEST, "업로드가 끝나지 않은 사진이 있어요"),
-    /** 태그 수 초과 (정규화·형식 판정은 008 {@code TagService}). */
+    /**
+     * 태그 수 초과 (중복 제거 후 {@code blog.post.max-tags} 초과, field {@code tags}). 칸별 태그 거부 코드({@code
+     * INVALID_TAG} 등)는 008 {@code tag.domain.TagReasonCode}에 있다.
+     */
     TOO_MANY_TAGS(HttpStatus.BAD_REQUEST, "태그가 너무 많아요"),
-    /** 쓸 수 없는 태그 (정규화·형식 판정은 008). */
-    INVALID_TAG(HttpStatus.BAD_REQUEST, "쓸 수 없는 글자가 있어요"),
 
     // ---- 002 응답 코드 ----
     /** 기준 버전이 현재 버전과 다름. {@code details.server = ServerCopy}. */

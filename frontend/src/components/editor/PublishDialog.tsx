@@ -1,15 +1,18 @@
-import { useRef, useState, type FormEvent, type KeyboardEvent } from 'react';
+import { useRef, useState, type FormEvent } from 'react';
 import type { FieldError } from '../../api/client';
 import type { PublishResponse, ServerCopy, Visibility } from '../../api/posts';
 import { EDITOR_CONFIG } from '../../features/editor/editorConfig';
 import { PUBLISH_FAILED, publishOnce } from '../../features/editor/publish';
 import VisibilitySelect from '../../features/visibility/VisibilitySelect';
 import AltTextPanel from './AltTextPanel';
+import TagInput from './TagInput';
 
 /**
  * 발행 설정 창 (002 T055, FR-026·038, US1 #2·#3).
  *
- * - 태그: 임시 칩 입력(최대 `maxTags`, 008 화면이 교체). Enter·쉼표로 넣는다.
+ * - 태그: 008 `TagInput`(정규화한 칩·순서 바꾸기·"2 / 10"·오류 칩). 보내는 `tags`는 칩의 정규화된 이름 배열(순서 그대로)이다.
+ *   태그는 발행할 때만 확정된다(자동 저장 대상 아님) — 발행하지 않고 닫으면 `onTagsChange`로 받은 칩을 에디터 화면이 들고 있다가
+ *   다시 열 때 넘긴다(그 브라우저 화면에만, 008 FR-014).
  * - 공개 범위: 004 `VisibilitySelect`의 값만 고르는 모드(서버는 발행 때 함께 받는다, 초기값 = working copy `visibility`).
  * - [발행]을 누를 때마다 `crypto.randomUUID()`로 새 `Idempotency-Key`를 만든다. 409 `IN_PROGRESS`만 같은 키로 1초 뒤 다시
  *   (`features/editor/publish.ts`, US6 T112). 응답 전에는 버튼을 끄고 "발행 중…"으로 보인다.
@@ -27,6 +30,8 @@ interface Props {
   /** 발행 직전의 에디터 내용 (자동 저장을 멈추고 기준 버전을 확정한 뒤 돌려준다). */
   getContent: () => Promise<PublishContent>;
   initialTags: string[];
+  /** 칩이 바뀔 때마다 (발행하지 않고 닫아도 다시 열 때 그대로 보이게, 008 FR-014) */
+  onTagsChange?: (tags: string[]) => void;
   initialVisibility: Visibility;
   onPublished: (response: PublishResponse) => void;
   onFieldErrors: (errors: FieldError[]) => void;
@@ -43,6 +48,7 @@ export default function PublishDialog({
   postId,
   getContent,
   initialTags,
+  onTagsChange,
   initialVisibility,
   onPublished,
   onFieldErrors,
@@ -53,7 +59,6 @@ export default function PublishDialog({
   onContentChange,
 }: Props) {
   const [tags, setTags] = useState<string[]>(initialTags);
-  const [tagInput, setTagInput] = useState('');
   const [visibility, setVisibility] = useState<Visibility>(initialVisibility);
   const [errors, setErrors] = useState<FieldError[]>([]);
   const [message, setMessage] = useState<string | null>(null);
@@ -61,29 +66,11 @@ export default function PublishDialog({
   /** 다시 그리기 전에 들어온 두 번째 제출도 막는다. */
   const inFlight = useRef(false);
 
-  const full = tags.length >= EDITOR_CONFIG.maxTags;
-
-  function addTag(raw: string) {
-    const tag = raw.trim();
-    if (tag === '' || full) {
-      return;
-    }
-    if (!tags.some((t) => t.toLowerCase() === tag.toLowerCase())) {
-      setTags([...tags, tag]);
-    }
-    setTagInput('');
-  }
-
-  function removeTag(index: number) {
-    setTags(tags.filter((_, i) => i !== index));
-    setErrors(errors.filter((e) => !e.field.startsWith('tags')));
-  }
-
-  function onTagKeyDown(event: KeyboardEvent<HTMLInputElement>) {
-    if (event.key === 'Enter' || event.key === ',') {
-      event.preventDefault();
-      addTag(tagInput);
-    }
+  function changeTags(next: string[]) {
+    setTags(next);
+    // 칩이 바뀌면 칸 번호가 어긋나므로 태그 칸 오류를 지운다
+    setErrors((current) => current.filter((e) => !e.field.startsWith('tags')));
+    onTagsChange?.(next);
   }
 
   function errorFor(field: string): FieldError | undefined {
@@ -148,31 +135,12 @@ export default function PublishDialog({
 
         <fieldset>
           <legend>태그</legend>
-          <ul className="tag-chips">
-            {tags.map((tag, index) => {
-              const error = errorFor(`tags[${index}]`);
-              return (
-                <li key={tag} aria-invalid={error ? 'true' : undefined}>
-                  <span>{tag}</span>
-                  <button
-                    type="button"
-                    aria-label={`${tag} 태그 빼기`}
-                    onClick={() => removeTag(index)}
-                  >
-                    ×
-                  </button>
-                  {error ? <span className="field-error">{error.message}</span> : null}
-                </li>
-              );
-            })}
-          </ul>
-          <input
-            aria-label="태그 입력"
-            value={tagInput}
-            disabled={full}
-            placeholder={full ? `태그는 ${EDITOR_CONFIG.maxTags}개까지예요` : 'Enter로 추가'}
-            onChange={(e) => setTagInput(e.target.value)}
-            onKeyDown={onTagKeyDown}
+          <TagInput
+            value={tags}
+            onChange={changeTags}
+            max={EDITOR_CONFIG.maxTags}
+            errors={errors}
+            disabled={busy}
           />
           {tagsError ? <p className="field-error">{tagsError.message}</p> : null}
         </fieldset>

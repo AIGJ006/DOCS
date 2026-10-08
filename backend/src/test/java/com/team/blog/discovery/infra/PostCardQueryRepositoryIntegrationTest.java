@@ -2,6 +2,7 @@ package com.team.blog.discovery.infra;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.team.blog.discovery.application.CardFilter;
 import com.team.blog.discovery.application.PostListCursor.CursorKey;
 import com.team.blog.discovery.support.PostReadingFixture;
 import com.team.blog.discovery.support.SqlCapture;
@@ -42,14 +43,16 @@ class PostCardQueryRepositoryIntegrationTest extends IntegrationTestBase {
 
     @Test
     void 공개_노출_글만_최신순으로() {
-        List<PostCardRow> rows = repository.findCards(Viewer.anonymous(), null, null, 50);
+        List<PostCardRow> rows =
+                repository.findCards(Viewer.anonymous(), CardFilter.all(), null, 50);
 
         assertThat(titles(rows)).containsExactlyElementsOf(PostReadingFixture.HOME_TITLES);
     }
 
     @Test
     void limit만큼만_읽는다() {
-        List<PostCardRow> rows = repository.findCards(Viewer.anonymous(), null, null, 10);
+        List<PostCardRow> rows =
+                repository.findCards(Viewer.anonymous(), CardFilter.all(), null, 10);
 
         assertThat(titles(rows))
                 .containsExactlyElementsOf(PostReadingFixture.HOME_TITLES.subList(0, 10));
@@ -58,14 +61,15 @@ class PostCardQueryRepositoryIntegrationTest extends IntegrationTestBase {
     @Test
     void 커서_이후만_읽고_같은_마이크로초_두_글이_경계에서_빠지지_않는다() {
         // 9번째("B 같은 시각 1") 뒤부터 → 10번째("B 같은 시각 2")가 같은 시각이어도 나와야 한다
-        List<PostCardRow> first = repository.findCards(Viewer.anonymous(), null, null, 9);
+        List<PostCardRow> first =
+                repository.findCards(Viewer.anonymous(), CardFilter.all(), null, 9);
         PostCardRow last = first.get(8);
         assertThat(last.title()).isEqualTo("B 같은 시각 1");
 
         List<PostCardRow> next =
                 repository.findCards(
                         Viewer.anonymous(),
-                        null,
+                        CardFilter.all(),
                         new CursorKey(last.firstPublicAt(), last.id()),
                         50);
 
@@ -79,7 +83,8 @@ class PostCardQueryRepositoryIntegrationTest extends IntegrationTestBase {
         List<String> seen = new ArrayList<>();
         CursorKey after = null;
         for (int page = 0; page < 10; page++) {
-            List<PostCardRow> rows = repository.findCards(Viewer.anonymous(), null, after, 3);
+            List<PostCardRow> rows =
+                    repository.findCards(Viewer.anonymous(), CardFilter.all(), after, 3);
             if (rows.isEmpty()) {
                 break;
             }
@@ -94,7 +99,8 @@ class PostCardQueryRepositoryIntegrationTest extends IntegrationTestBase {
     void 작성자_조건이면_그_사람의_공개_글만() {
         long a = fixture.memberId("A");
 
-        List<PostCardRow> rows = repository.findCards(Viewer.anonymous(), a, null, 50);
+        List<PostCardRow> rows =
+                repository.findCards(Viewer.anonymous(), CardFilter.author(a), null, 50);
 
         assertThat(titles(rows)).containsExactlyElementsOf(PostReadingFixture.A_BLOG_TITLES);
         assertThat(rows).allSatisfy(r -> assertThat(r.handle()).isEqualTo("kim755030"));
@@ -105,15 +111,16 @@ class PostCardQueryRepositoryIntegrationTest extends IntegrationTestBase {
         long a = fixture.memberId("A");
         Viewer author = new Viewer(a, com.team.blog.account.domain.Role.USER, null, true);
 
-        assertThat(titles(repository.findCards(author, a, null, 50)))
+        assertThat(titles(repository.findCards(author, CardFilter.author(a), null, 50)))
                 .containsExactlyElementsOf(PostReadingFixture.A_BLOG_TITLES);
-        assertThat(titles(repository.findCards(author, null, null, 50)))
+        assertThat(titles(repository.findCards(author, CardFilter.all(), null, 50)))
                 .containsExactlyElementsOf(PostReadingFixture.HOME_TITLES);
     }
 
     @Test
     void 카드_값과_프로필_사진은_썸네일_키() {
-        List<PostCardRow> rows = repository.findCards(Viewer.anonymous(), null, null, 50);
+        List<PostCardRow> rows =
+                repository.findCards(Viewer.anonymous(), CardFilter.all(), null, 50);
 
         PostCardRow republished = rows.get(0);
         assertThat(republished.title()).isEqualTo("JPA N+1 정리");
@@ -140,7 +147,8 @@ class PostCardQueryRepositoryIntegrationTest extends IntegrationTestBase {
     void 썸네일이_없는_옛_프로필_사진은_원본_키() {
         jdbc.update("UPDATE image SET thumb_storage_key = NULL WHERE purpose = 'PROFILE'");
 
-        PostCardRow first = repository.findCards(Viewer.anonymous(), null, null, 1).get(0);
+        PostCardRow first =
+                repository.findCards(Viewer.anonymous(), CardFilter.all(), null, 1).get(0);
 
         assertThat(first.profileKey()).isEqualTo(PostReadingFixture.A_PROFILE_ORIGINAL_KEY);
     }
@@ -149,7 +157,8 @@ class PostCardQueryRepositoryIntegrationTest extends IntegrationTestBase {
     void 떼어낸_프로필_사진은_쓰지_않는다() {
         jdbc.update("UPDATE image SET detached_at = now() WHERE purpose = 'PROFILE'");
 
-        PostCardRow first = repository.findCards(Viewer.anonymous(), null, null, 1).get(0);
+        PostCardRow first =
+                repository.findCards(Viewer.anonymous(), CardFilter.all(), null, 1).get(0);
 
         assertThat(first.profileKey()).isNull();
     }
@@ -157,7 +166,7 @@ class PostCardQueryRepositoryIntegrationTest extends IntegrationTestBase {
     @Test
     void 요청_한_번에_SQL_한_번이고_본문_컬럼을_읽지_않는다() {
         try (SqlCounter.Scope scope = SqlCounter.start()) {
-            repository.findCards(Viewer.anonymous(), null, null, 10);
+            repository.findCards(Viewer.anonymous(), CardFilter.all(), null, 10);
             assertThat(scope.count()).isEqualTo(1);
         }
 
@@ -167,7 +176,7 @@ class PostCardQueryRepositoryIntegrationTest extends IntegrationTestBase {
         CursorKey after =
                 new CursorKey(
                         java.time.OffsetDateTime.parse("2026-09-20T10:00:00.123456Z"), 1_000_000);
-        captured.findCards(Viewer.anonymous(), fixture.memberId("A"), after, 10);
+        captured.findCards(Viewer.anonymous(), CardFilter.author(fixture.memberId("A")), after, 10);
 
         assertThat(capture.statements()).hasSize(1);
         String sql = capture.statements().get(0);

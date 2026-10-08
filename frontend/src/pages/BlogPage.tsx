@@ -1,8 +1,11 @@
 import { useCallback, useEffect, useState, type ReactNode } from 'react';
-import { Link, useNavigationType, useParams } from 'react-router-dom';
+import { Link, useNavigationType, useParams, useSearchParams } from 'react-router-dom';
 import { ApiError } from '../api/client';
 import { getBlogHeader, listBlogPosts } from '../api/members';
+import { getBlogTags } from '../api/tags';
 import type { BlogHeader } from '../api/types/reading';
+import type { BlogTags } from '../api/types/tags';
+import BlogTagStrip from '../components/BlogTagStrip';
 import DefaultAvatar from '../components/DefaultAvatar';
 import LoadMoreButton, { INITIAL_LOAD_FAILED_TEXT } from '../components/LoadMoreButton';
 import PostCard from '../components/PostCard';
@@ -13,6 +16,8 @@ import NotFoundPage from './NotFoundPage';
 /** 글이 없을 때 (FR-023). */
 export const EMPTY_BLOG_TEXT = '아직 공개한 글이 없어요';
 export const EMPTY_MY_BLOG_TEXT = '첫 글을 써 보세요';
+/** 태그 필터 결과가 없을 때 (008) */
+export const EMPTY_TAG_FILTER_TEXT = '이 태그로 공개한 글이 없어요';
 
 type HeaderStatus = 'loading' | 'ready' | 'not-found' | 'error';
 
@@ -30,6 +35,10 @@ const LOADING: HeaderState = { status: 'loading', header: null };
  * 첫 목록 실패 문구와 뒤로 가기 복원(`blog:{handle}`)은 홈과 같다(005 T071).
  *
  * (구현 메모) 라우트는 `/:handle`이고 `@`는 화면이 떼어 낸다 — react-router 7은 한 구간의 일부만 파라미터로 받지 못한다.
+ * 008: 머리말 아래 태그 줄(`BlogTagStrip`, 실패하면 줄 없이 계속)과 `?tag=` 필터. 필터 중이면 "#jpa 글 5개 [필터 해제]"
+ * (태그 줄 밖 태그면 수 없이 "#이름 [필터 해제]")를 보이고 `listBlogPosts(handle, cursor, tag)`로 부르며 복원 키는
+ * `blog:{handle}:tag:{tag}`다. 정규화되지 않은 `?tag=`는 서버 첫 응답이 이미 301·404로 처리했다.
+ *
  * 001 `FriendButton`(T132)·`LastActiveBadge`(T142)와 개인 확장(카테고리·시리즈)은 아직 없어 `headerSlot`·
  * `sidebarSlot` prop 자리만 둔다.
  */
@@ -47,6 +56,30 @@ export default function BlogPage({ headerSlot = null, sidebarSlot = null }: Blog
   const handle = blogAddress ? rawHandle.slice(1) : '';
 
   const [state, setState] = useState<HeaderState>(LOADING);
+  const [searchParams] = useSearchParams();
+  const tag = searchParams.get('tag');
+  /** 태그 줄 (어느 블로그의 결과인지 함께 둔다) */
+  const [strip, setStrip] = useState<{ handle: string; tags: BlogTags } | null>(null);
+
+  useEffect(() => {
+    if (!blogAddress) {
+      return undefined;
+    }
+    let cancelled = false;
+    getBlogTags(handle).then(
+      (tags) => {
+        if (!cancelled) {
+          setStrip({ handle, tags });
+        }
+      },
+      () => {
+        // 태그 줄을 못 불러와도 블로그는 그대로 보인다
+      },
+    );
+    return () => {
+      cancelled = true;
+    };
+  }, [handle, blogAddress]);
 
   useEffect(() => {
     if (!blogAddress) {
@@ -72,10 +105,13 @@ export default function BlogPage({ headerSlot = null, sidebarSlot = null }: Blog
   }, [handle, blogAddress]);
 
   const navigationType = useNavigationType();
-  const load = useCallback((cursor?: string | null) => listBlogPosts(handle, cursor), [handle]);
+  const load = useCallback(
+    (cursor?: string | null) => listBlogPosts(handle, cursor, tag),
+    [handle, tag],
+  );
   // 뒤로 가기로 돌아오면 30분 안의 보관값으로 복원한다 (005 T071, FR-018)
   const list = useCursorList(load, {
-    listKey: `blog:${handle}`,
+    listKey: tag === null ? `blog:${handle}` : `blog:${handle}:tag:${tag}`,
     restore: navigationType === 'POP',
   });
 
@@ -83,6 +119,9 @@ export default function BlogPage({ headerSlot = null, sidebarSlot = null }: Blog
     return <NotFoundPage />;
   }
   const header = state.header;
+  const stripTags = strip !== null && strip.handle === handle ? strip.tags : null;
+  const activeCount =
+    tag === null ? undefined : stripTags?.items.find((item) => item.name === tag)?.postCount;
 
   return (
     <main
@@ -145,6 +184,25 @@ export default function BlogPage({ headerSlot = null, sidebarSlot = null }: Blog
         </header>
       )}
 
+      {stripTags !== null ? (
+        <BlogTagStrip
+          handle={handle}
+          items={stripTags.items}
+          initialVisible={stripTags.initialVisible}
+          active={tag}
+        />
+      ) : null}
+
+      {tag !== null ? (
+        <div role="status" aria-label="태그 필터" className="tag-filter-header">
+          <strong style={{ overflowWrap: 'anywhere', minWidth: 0 }}>
+            #{tag}
+            {activeCount !== undefined ? ` 글 ${activeCount.toLocaleString('ko-KR')}개` : ''}
+          </strong>
+          <Link to={`/@${handle}`}>필터 해제</Link>
+        </div>
+      ) : null}
+
       {sidebarSlot}
 
       <PostCardGrid>
@@ -162,7 +220,9 @@ export default function BlogPage({ headerSlot = null, sidebarSlot = null }: Blog
         </p>
       ) : list.loadedOnce && list.items.length === 0 ? (
         <div style={{ textAlign: 'center', padding: '3rem 1rem' }}>
-          {header?.isMe ? (
+          {tag !== null ? (
+            <p style={{ margin: 0 }}>{EMPTY_TAG_FILTER_TEXT}</p>
+          ) : header?.isMe ? (
             <p style={{ margin: 0 }}>
               {EMPTY_MY_BLOG_TEXT} <Link to="/write/new">글쓰기</Link>
             </p>

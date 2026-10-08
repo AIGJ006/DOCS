@@ -10,6 +10,8 @@ import com.team.blog.post.support.TrashFixtures;
 import com.team.blog.support.IntegrationTestBase;
 import com.team.blog.support.TestLogin;
 import com.team.blog.support.fixture.PostFixtures;
+import com.team.blog.tag.support.TagApi;
+import com.team.blog.tag.support.TagFixtures;
 import jakarta.servlet.http.Cookie;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -28,8 +30,8 @@ import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandl
  * "휴지통 글" 목록 누출 확인 (006 T019 ②, US1-1, FR-021·039, SC-001, 42 §5-1). 상세 판정 행 자체는 004 {@code
  * post-read.csv}의 {@code TRASHED} 행이 다루므로 여기서는 지운 뒤 목록·글 수·다른 기능 진입점에서 빠지는지를 행위자별로 본다.
  *
- * <p>태그·검색·sitemap·댓글·좋아요(008·012·005 sitemap·007·009)는 아직 없어 {@link Assumptions}로 건너뛴다(quickstart
- * §0).
+ * <p>태그(008)는 태그별 목록·글 수·전체 태그·블로그 태그 줄을 확인한다. 검색·sitemap·댓글·좋아요(012·005 sitemap·007·009)는 아직 없어
+ * {@link Assumptions}로 건너뛴다(quickstart §0).
  */
 class TrashedPostPermissionMatrixIT extends IntegrationTestBase {
 
@@ -123,9 +125,30 @@ class TrashedPostPermissionMatrixIT extends IntegrationTestBase {
                 .contains((int) remaining);
     }
 
+    /** 008 T072: 태그별 목록·머리말 글 수·전체 태그·블로그 태그 줄 모두에서 휴지통 글이 빠진다. */
     @Test
-    void 태그_목록에_없다() {
-        assumeHandler("GET", "/api/tags/spring/posts", "008 태그별 글 목록");
+    void 태그_목록에_없다() throws Exception {
+        TagFixtures tags = new TagFixtures(jdbc);
+        for (long id : trashed) {
+            tags.attach(id, "trash-tag");
+        }
+        tags.attach(remaining, "trash-tag");
+        TagApi api = new TagApi(mockMvc);
+        for (Map.Entry<String, Cookie> viewer : viewers.entrySet()) {
+            Cookie session = viewer.getValue();
+            List<Integer> ids = read(api.posts(session, "trash-tag", null), "$.items[*].id");
+            assertThat(ids).as(viewer.getKey() + " 태그 목록").containsExactly((int) remaining);
+            Number count = read(api.summary(session, "trash-tag"), "$.postCount");
+            assertThat(count.longValue()).as(viewer.getKey() + " 태그 글 수").isEqualTo(1);
+            List<Integer> top =
+                    read(api.top(session), "$.items[?(@.name == 'trash-tag')].postCount");
+            assertThat(top).as(viewer.getKey() + " 전체 태그").containsExactly(1);
+            List<Integer> strip =
+                    read(
+                            api.blogTags(session, handle),
+                            "$.items[?(@.name == 'trash-tag')].postCount");
+            assertThat(strip).as(viewer.getKey() + " 블로그 태그 줄").containsExactly(1);
+        }
     }
 
     @Test
