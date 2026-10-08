@@ -153,6 +153,27 @@ public class PageShellController {
         return html(shell.render(metaFactory.forBlog(owner)), CacheControlPolicy.NO_CACHE);
     }
 
+    /**
+     * 팔로워·팔로잉 목록 주소의 첫 응답 (010 T036, research R9): 블로그 셸과 같은 규칙 — ① 대문자 handle → 301 소문자(쿼리 유지) → ②
+     * 없는 블로그·탈퇴 유예·익명 처리 → 공통 404 화면 → ③ 200 셸 + 블로그 미리보기 메타.
+     */
+    @GetMapping({"/@{handle}/followers", "/@{handle}/following"})
+    public ResponseEntity<byte[]> followListShell(
+            @PathVariable String handle, HttpServletRequest request) {
+        String normalized = MemberQueryService.normalizeHandle(handle);
+        String tail = request.getRequestURI().endsWith("/following") ? "/following" : "/followers";
+        if (!handle.equals(normalized)) {
+            return movedPermanently("/@" + normalized + tail, request);
+        }
+        BlogOwner owner;
+        try {
+            owner = blogQueryService.requireOwner(handle);
+        } catch (NotFoundException e) {
+            return notFoundPage.render();
+        }
+        return html(shell.render(metaFactory.forBlog(owner)), CacheControlPolicy.NO_CACHE);
+    }
+
     @GetMapping("/@{handle}/posts/{postId}")
     public ResponseEntity<byte[]> postDetailShell(
             @PathVariable String handle,

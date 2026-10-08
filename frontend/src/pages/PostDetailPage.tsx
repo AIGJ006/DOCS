@@ -6,6 +6,7 @@ import { getPostDetail } from '../api/posts';
 import type { CommentPage } from '../api/types/comments';
 import type { PostDetail } from '../api/types/reading';
 import AuthorCard from '../components/AuthorCard';
+import FollowButton from '../features/follow/FollowButton';
 import AuthorChip from '../components/AuthorChip';
 import LikeButton from '../components/LikeButton';
 import ReactionBar from '../components/ReactionBar';
@@ -42,6 +43,7 @@ export const UNAVAILABLE_TITLE = '볼 수 없는 글이에요';
  * - 응답의 `canonicalPath`가 지금 주소와 다르면 쿼리·#조각을 유지해 바꿔 끼운다(FR-027 — 화면 안 링크로 다른 블로그 주소를 연 경우.
  *   첫 응답은 서버가 301로 처리한다). 문서 제목은 `{제목} - {닉네임}`, 볼 수 없는 글은 "볼 수 없는 글이에요"(T065).
  * - 조회수는 응답 값을 그대로 보여주고(이번 방문의 +1을 기다리지 않음), 기록은 `useViewBeacon`이 따로 보낸다(FR-041).
+ * - 작성자 카드의 [팔로우]는 010 `FollowButton`이 `AuthorCard`의 `followButton` 자리를 채운다(처음 상태 `viewer.followingAuthor`).
  * - 좋아요는 009 `LikeButton`이 `ReactionBar`의 `likeButton` 자리를 채운다(처음 상태 `viewer.likedByMe`·`likeCount`).
  *   작성자 본인에게는 버튼 없이 ♥ + 수.
  *
@@ -239,7 +241,20 @@ export default function PostDetailPage({
           }
         />
       </article>
-      <AuthorCard author={detail.author} isMe={isAuthor} />
+      <AuthorCard
+        author={detail.author}
+        isMe={isAuthor}
+        followButton={
+          // 010: 작성자 카드의 [팔로우] — 처음 상태는 상세의 viewer.followingAuthor
+          <FollowButton
+            key={`${detail.id}-${detail.author.handle}`}
+            handle={detail.author.handle}
+            initialFollowing={detail.viewer.followingAuthor}
+            isMe={isAuthor}
+            loggedIn={detail.viewer.loggedIn}
+          />
+        }
+      />
       <CommentSectionSlot
         key={`${detail.id}-${reloadKey}`}
         postId={detail.id}

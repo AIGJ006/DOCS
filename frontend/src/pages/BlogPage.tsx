@@ -10,6 +10,8 @@ import DefaultAvatar from '../components/DefaultAvatar';
 import LoadMoreButton, { INITIAL_LOAD_FAILED_TEXT } from '../components/LoadMoreButton';
 import PostCard from '../components/PostCard';
 import PostCardGrid from '../components/PostCardGrid';
+import FollowButton from '../features/follow/FollowButton';
+import FollowCounts from '../features/follow/FollowCounts';
 import { useCursorList } from '../features/post-list/useCursorList';
 import NotFoundPage from './NotFoundPage';
 
@@ -39,6 +41,9 @@ const LOADING: HeaderState = { status: 'loading', header: null };
  * (태그 줄 밖 태그면 수 없이 "#이름 [필터 해제]")를 보이고 `listBlogPosts(handle, cursor, tag)`로 부르며 복원 키는
  * `blog:{handle}:tag:{tag}`다. 정규화되지 않은 `?tag=`는 서버 첫 응답이 이미 301·404로 처리했다.
  *
+ * 010: 머리말의 "공개 글 N" 줄을 `FollowCounts`("공개 글 · 팔로워 · 팔로잉", 목록 링크)로 바꾸고 옆에 `FollowButton`(내 블로그면
+ * 없음, `followedByMe`로 시작)을 둔다. 버튼을 누르면 팔로워 수가 바로 바뀐다(`onCountChange`).
+ *
  * 001 `FriendButton`(T132)·`LastActiveBadge`(T142)와 개인 확장(카테고리·시리즈)은 아직 없어 `headerSlot`·
  * `sidebarSlot` prop 자리만 둔다.
  */
@@ -56,6 +61,9 @@ export default function BlogPage({ headerSlot = null, sidebarSlot = null }: Blog
   const handle = blogAddress ? rawHandle.slice(1) : '';
 
   const [state, setState] = useState<HeaderState>(LOADING);
+  /** 팔로우 버튼이 알려 준 팔로워 수 (어느 블로그의 값인지 함께 둔다) */
+  const [followers, setFollowers] = useState<{ handle: string; count: number } | null>(null);
+  const onFollowerCount = useCallback((count: number) => setFollowers({ handle, count }), [handle]);
   const [searchParams] = useSearchParams();
   const tag = searchParams.get('tag');
   /** 태그 줄 (어느 블로그의 결과인지 함께 둔다) */
@@ -176,9 +184,24 @@ export default function BlogPage({ headerSlot = null, sidebarSlot = null }: Blog
                 {header.bio}
               </p>
             ) : null}
-            <p style={{ margin: '0.5rem 0 0', color: 'var(--muted, #868e96)' }}>
-              공개 글 {header.publicPostCount.toLocaleString('ko-KR')}
-            </p>
+            <FollowCounts
+              handle={header.handle}
+              publicPostCount={header.publicPostCount}
+              followerCount={
+                followers !== null && followers.handle === handle
+                  ? followers.count
+                  : header.followerCount
+              }
+              followingCount={header.followingCount}
+            />
+            <FollowButton
+              key={header.handle}
+              handle={header.handle}
+              initialFollowing={header.followedByMe}
+              initialCount={header.followerCount}
+              onCountChange={onFollowerCount}
+              isMe={header.isMe}
+            />
             {headerSlot}
           </div>
         </header>

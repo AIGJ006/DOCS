@@ -60,3 +60,12 @@ docker compose up -d postgres redis minio
 - 011: A가 B를 팔로우하면 B에게 새 팔로워 알림 1개, 7일 안에 다시 팔로우해도 새 알림 없음. B가 글을 처음 공개하면 A에게 새 글 알림
 - 015: A가 탈퇴 신청 → B 머리말 팔로워 수 −1, B 팔로워 목록에서 A 빠짐 → A 복구 → 돌아옴. 정리 뒤 `SELECT count(*) FROM follow WHERE follower_id = :a OR followee_id = :a` = 0
 - 008: 태그 목록·블로그 태그 목록이 `CardFilter` 변경 뒤에도 그대로
+
+## 실행 기록 (2026-10-08, T049)
+
+main ce11144(015 머지)를 합친 `010-follow` 브랜치에서 실행했다.
+
+- §1 기동: 새 Flyway 마이그레이션 없음(V1 `follow` 표 그대로). `application.yml`에 `blog.follow.rate-limit`(30회/1분)·`list-page-size`(20). 시작 로그의 탈퇴 정리 단계 order 65는 010 `FollowWithdrawalPurgeStep`(015 임시 단계는 지움)
+- §2 자동 테스트: `./mvnw -q verify`(Spotless 포함) 통과 — 2,890개 중 실패 0·건너뜀 56(기존 `@Disabled`·조건부). 010 시험: `FollowApiIT` 17, `FollowConcurrencyIT` 2, `FollowListApiIT` 10, `FollowCountPerformanceIT` 2, `FollowWithdrawalIT` 4, `FollowRepositoryIT` 9, `FeedApiIT` 12, `BlogHeaderFollowIT` 4, `PostCardFollowFilterIT` 5, `FollowListPageShellIT` 3, `FollowPermissionMatrixIT` 75행, 단위 9. 화면 `npm test` 750개 통과, `npm run build`·`lint`·`format:check` 통과
+- §3 화면: `e2e/follow-feed.spec.ts`가 1~12번을 한 시험으로 확인(회원 넷 + 비로그인, 네트워크 끊기는 `page.route` abort, 375px). 설치된 Chromium(`E2E_CHROMIUM_PATH`)·`--workers=1`로 통과
+- §4: 015 — 유예 회원은 팔로워 수·목록에서 빠지고 행은 남는다(015 `WithdrawalGraceIT`), 정리 order 65 뒤 양방향 0행(`FollowWithdrawalIT`). 008 — `PostCardTagFilterIT`·태그 목록 회귀 통과. 011은 아직 없음(이벤트 필드는 011 data-model §3과 같음)

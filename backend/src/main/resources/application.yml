@@ -211,6 +211,12 @@ blog:
       limit: 60
       window: 1m
     reconcile-cron: "0 10 4 * * *"
+  # 팔로우 (010 research R12). 팔로우·언팔로우 합산 요청 제한, 팔로워·팔로잉 목록 크기. 피드 카드 수는 blog.list.page-size
+  follow:
+    rate-limit:
+      limit: 30
+      window: 1m
+    list-page-size: 20
   # 조회수 (009 research R14, FR-022). 중복 기준을 바꾸면 화면 안내 문구(005 VIEW_COUNT_NOTICE)도 함께 바꾼다
   view:
     dedupe-window: 24h

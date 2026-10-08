@@ -15,7 +15,6 @@ import com.team.blog.support.fixture.PostFixtures;
 import jakarta.servlet.http.Cookie;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.MediaType;
 
@@ -37,7 +36,7 @@ class WithdrawalGraceIT extends IntegrationTestBase {
     @BeforeEach
     void setUp() throws Exception {
         me = members().member().handle("leaving01").create();
-        other = members().member().create();
+        other = members().member().handle("staying01").create();
         PostFixtures posts = new PostFixtures(jdbc);
         myPost = posts.create(me, PostFixtures.State.PUBLISHED_PUBLIC);
         othersPost = posts.create(other, PostFixtures.State.PUBLISHED_PUBLIC);
@@ -53,6 +52,10 @@ class WithdrawalGraceIT extends IntegrationTestBase {
                 tag);
         jdbc.update("INSERT INTO post_like (post_id, member_id) VALUES (?, ?)", othersPost, me);
         jdbc.update("UPDATE post SET like_count = 1 WHERE id = ?", othersPost);
+        jdbc.update(
+                "INSERT INTO follow (follower_id, followee_id, created_at) VALUES (?, ?, now())",
+                me,
+                other);
         mockMvc.perform(
                         TestLogin.withCsrf(
                                 post("/api/me/withdraw")
@@ -166,6 +169,19 @@ class WithdrawalGraceIT extends IntegrationTestBase {
     }
 
     @Test
-    @Disabled("010 머지 후 — 팔로워·팔로잉 수에서 유예 회원 제외(FR-012)")
-    void 팔로워_수에서_빠진다() {}
+    void 팔로워_수와_목록에서_빠지고_행은_그대로() throws Exception {
+        mockMvc.perform(get("/api/members/staying01"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.followerCount").value(0));
+        mockMvc.perform(get("/api/members/staying01/followers"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.items.length()").value(0));
+        // 복구하면 돌아오도록 행은 남긴다 (정리는 30일 뒤 order 65)
+        assertThat(
+                        jdbc.queryForObject(
+                                "SELECT count(*) FROM follow WHERE follower_id = ?",
+                                Long.class,
+                                me))
+                .isEqualTo(1);
+    }
 }

@@ -8,7 +8,8 @@ import java.util.Objects;
  *
  * <p>값 규칙: {@code home}, {@code blog:{handle}}, {@code me:friends}, {@code me:friend-requests},
  * {@code manage:{tab}[:{filter}]}(006), {@code tag:{name}}·{@code blog:{handle}:tag:{name}}(008 —
- * 정규화된 태그 이름에는 공백·{@code :}이 없다) 등. 기능은 {@link #of(String)}로 자기 값을 만든다.
+ * 정규화된 태그 이름에는 공백·{@code :}이 없다), {@code feed}·{@code followers:{handle}}·{@code
+ * following:{handle}}(010) 등. 기능은 {@link #of(String)}로 자기 값을 만든다.
  */
 public record ListScope(String value) {
 
@@ -41,6 +42,21 @@ public record ListScope(String value) {
     /** 블로그 안 태그 필터 목록 (008). handle은 소문자, name은 정규화된 태그 이름. */
     public static ListScope blogTag(String handle, String name) {
         return new ListScope("blog:" + handle + ":tag:" + name);
+    }
+
+    /** 팔로잉 피드 (010). 보는 사람마다 내용이 다르지만 커서 값은 같은 범위다 — 피드 커서는 로그인한 본인만 쓴다. */
+    public static ListScope feed() {
+        return new ListScope("feed");
+    }
+
+    /** 팔로워 목록 (010). handle은 소문자. */
+    public static ListScope followers(String handle) {
+        return new ListScope("followers:" + handle);
+    }
+
+    /** 팔로잉 목록 (010). handle은 소문자. */
+    public static ListScope following(String handle) {
+        return new ListScope("following:" + handle);
     }
 
     /** 내 친구 목록 (001 US7). */

@@ -37,6 +37,10 @@ class ReadingContractConformanceIntegrationTest extends IntegrationTestBase {
     private static final Path CONTRACT =
             Path.of("..", "specs", "005-post-reading", "contracts", "openapi.yaml");
 
+    /** 010이 머리말에 더한 세 칸 ({@code BlogHeaderFollowFields}, {@code x-extends getBlogHeader}). */
+    private static final Path FOLLOW_CONTRACT =
+            Path.of("..", "specs", "010-follow-feed", "contracts", "openapi.yaml");
+
     private static Map<String, Object> schemas;
 
     private PostReadingFixture fixture;
@@ -48,7 +52,27 @@ class ReadingContractConformanceIntegrationTest extends IntegrationTestBase {
         try (InputStream in = Files.newInputStream(CONTRACT)) {
             Map<String, Object> root = new Yaml().load(in);
             Map<String, Object> components = (Map<String, Object>) root.get("components");
-            schemas = (Map<String, Object>) components.get("schemas");
+            schemas = new LinkedHashMap<>((Map<String, Object>) components.get("schemas"));
+        }
+        // 010 확장: BlogHeader = 005 BlogHeader + 010 BlogHeaderFollowFields
+        try (InputStream in = Files.newInputStream(FOLLOW_CONTRACT)) {
+            Map<String, Object> root = new Yaml().load(in);
+            Map<String, Object> components = (Map<String, Object>) root.get("components");
+            Map<String, Object> follow =
+                    (Map<String, Object>)
+                            ((Map<String, Object>) components.get("schemas"))
+                                    .get("BlogHeaderFollowFields");
+            schemas.put("BlogHeader005", schemas.get("BlogHeader"));
+            schemas.put("BlogHeaderFollowFields", follow);
+            schemas.put(
+                    "BlogHeader",
+                    Map.of(
+                            "allOf",
+                            List.of(
+                                    Map.of("$ref", "#/components/schemas/BlogHeader005"),
+                                    Map.of(
+                                            "$ref",
+                                            "#/components/schemas/BlogHeaderFollowFields"))));
         }
     }
 
