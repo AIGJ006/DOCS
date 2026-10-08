@@ -68,7 +68,19 @@ public enum AccountReasonCode implements ReasonCode {
     INVALID_PROFILE_IMAGE(HttpStatus.BAD_REQUEST, "사용할 수 없는 사진이에요"),
 
     // ---- 친구 (06 §6-2, R-27)
-    CANNOT_FRIEND_SELF(HttpStatus.BAD_REQUEST, "자기 자신에게는 친구 요청을 보낼 수 없어요");
+    CANNOT_FRIEND_SELF(HttpStatus.BAD_REQUEST, "자기 자신에게는 친구 요청을 보낼 수 없어요"),
+
+    // ---- 회원 탈퇴·복구 (015 data-model §4). 잠금은 비밀번호 변경과 같은 PASSWORD_CHANGE_TEMPORARILY_LOCKED
+    /** 관리자 권한이 있는 회원의 탈퇴 신청 (W-6). */
+    ADMIN_CANNOT_WITHDRAW(HttpStatus.CONFLICT, "관리자 권한을 해제한 뒤 탈퇴할 수 있어요"),
+    /** 안내 확인 체크({@code confirmed})가 없는 신청 (FR-002, 제안 코드·문구). */
+    WITHDRAW_CONFIRM_REQUIRED(HttpStatus.BAD_REQUEST, "안내 내용을 확인하고 체크해 주세요"),
+    /** 소셜 가입 회원의 확인 문구가 "탈퇴"와 다름 (제안 문구). */
+    CONFIRM_TEXT_MISMATCH(HttpStatus.BAD_REQUEST, "'탈퇴'를 정확히 입력해 주세요"),
+    /** 복구 기한(신청 + 30일)이 지난 복구 요청 (FR-021a). */
+    RESTORE_PERIOD_EXPIRED(HttpStatus.CONFLICT, "복구 기한이 지났어요"),
+    /** 가입 email 칸 오류: 같은 이메일의 이메일 가입 계정이 탈퇴 유예 중 (FR-022). 응답은 400 VALIDATION_FAILED. */
+    EMAIL_WITHDRAWAL_PENDING(HttpStatus.BAD_REQUEST, "탈퇴 신청한 계정이 있어요. 로그인하면 복구할 수 있어요");
 
     private final HttpStatus status;
     private final String defaultMessage;
