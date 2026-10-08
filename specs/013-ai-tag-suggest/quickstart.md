@@ -8,6 +8,7 @@
 
 - Docker와 Docker Compose v2, JDK 21, Node.js LTS. 자체 AI를 실제로 돌리려면 Docker에 메모리 4GB 이상 여유
 - 선행 기능: 001(`AccountStatusGuard`·`MemberAgreementRepository`·`AccountProperties`·설정 화면·`SensitiveParamMasking`), 002(commonmark·`RedisGuard`·`blog.post.*`·자동 저장/발행 API), 004(권한 하네스 `post-write.csv`), 008(`TagNormalizer`·`TagQueryService.top`·`PublishDialog`·`TagInput`)
+- 배포 확인(T005, 배포 담당 답 전 가정값): Ollama용 메모리 2~4GB 추가 가능, `num-thread` 4(`BLOG_AI_TAG_SUGGEST_OLLAMA_NUM_THREAD`, 성능 코어 수 이하), Gemini 하루 한도 초기화는 태평양 시간 0시(`quota-zone`), 모델 `gemini-flash-lite`(`BLOG_AI_TAG_SUGGEST_GEMINI_MODEL`로 콘솔 값에 맞춤). 배포 서버에서 2,000자 입력 시간(SC-006)을 다시 재 여기 적는다
 - Gemini 키는 선택이다. 없으면(`GEMINI_API_KEY` 비어 있음) 공개 글도 자체 AI로 간다. 키는 `.env`에만 넣고 저장소에 올리지 않는다
 
 ## 1. 기동

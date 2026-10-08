@@ -154,6 +154,10 @@ blog:
     privacy:
       version: ${BLOG_AGREEMENT_PRIVACY_VERSION:2026-10-07}
       effective-date: ${BLOG_AGREEMENT_PRIVACY_EFFECTIVE_DATE:2026-10-07}
+    # 013 AI 외부 전송 동의 문구 버전. 화면 features/ai-suggest/aiConsentText.ts의 상수와 같아야 한다 (research R10)
+    ai:
+      version: ${BLOG_AGREEMENT_AI_VERSION:2026-10-08}
+      effective-date: ${BLOG_AGREEMENT_AI_EFFECTIVE_DATE:2026-10-08}
   # 글 작성·자동 저장·발행 (002 plan Constraints, data-model §4)
   autosave:
     redis-ttl: 24h
@@ -307,6 +311,45 @@ blog:
     banned-words: classpath:policy/banned-words.txt
     banned-words-exceptions: classpath:policy/banned-words-exceptions.txt
     common-passwords: classpath:policy/common-passwords.txt
+
+  # AI 태그 추천 (013 research R15, data-model §6). 키는 환경 변수 GEMINI_API_KEY로만 — 비어 있으면 공개 글도 자체 AI(Ollama)로 간다.
+  # 배포 확인 (T005, 배포 담당 답 전 가정값): Ollama용 메모리 2~4GB 추가 가능, num-thread는 배포 서버 성능 코어 수 이하(기본 4),
+  # Gemini 무료 등급 하루 한도는 태평양 시간 0시 초기화(quota-zone), 모델 이름은 콘솔 값으로 바꾼다. 배포 서버 측정 뒤 다시 적는다
+  ai:
+    tag-suggest:
+      enabled: ${BLOG_AI_TAG_SUGGEST_ENABLED:true}
+      prompt-version: 1                 # 지시문을 바꾸면 올린다 (같은 내용 재사용 키가 바뀜)
+      min-input-chars: 100
+      max-suggestions: 5
+      daily-limit-per-member: 20
+      cache:
+        exact-ttl: 30d
+        post-ttl: 7d
+        similarity-threshold: 0.9
+        post-input-chars: 8000
+      popular:
+        size: 50
+        ttl: 1d
+      gemini:
+        base-url: https://generativelanguage.googleapis.com
+        model: ${BLOG_AI_TAG_SUGGEST_GEMINI_MODEL:gemini-flash-lite}
+        api-key: ${GEMINI_API_KEY:}
+        daily-limit: 450
+        quota-zone: America/Los_Angeles
+        connect-timeout: 3s
+        timeout: 10s
+        cooldown: 60s
+        unknown-429-exhaust-count: 3
+        max-input-chars: 8000
+      ollama:
+        enabled: ${BLOG_AI_TAG_SUGGEST_OLLAMA_ENABLED:true}
+        base-url: ${BLOG_AI_TAG_SUGGEST_OLLAMA_BASE_URL:http://localhost:11434}
+        model: ${OLLAMA_MODEL:qwen2.5:1.5b}
+        num-thread: ${BLOG_AI_TAG_SUGGEST_OLLAMA_NUM_THREAD:4}
+        connect-timeout: 3s
+        timeout: 30s
+        max-input-chars: 2000
+        max-concurrency: 1
 
 # ---------------------------------------------------------------------------
 # Redis 회로 차단기 (002 research B-5): 연결 실패·시간 초과 비율 50%/최근 20회 → 30초 열림 → 반열림 5회 시험

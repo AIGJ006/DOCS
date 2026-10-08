@@ -96,8 +96,14 @@ public record AccountProperties(
         public record LastActive(@NotNull Duration touchInterval) {}
     }
 
-    /** 07 §3-1: 약관·처리방침 현재 버전과 시행일. */
-    public record Agreement(@Valid @NotNull Document terms, @Valid @NotNull Document privacy) {
+    /**
+     * 07 §3-1: 약관·처리방침 현재 버전과 시행일. {@code ai}는 013 AI 외부 전송 동의 문구 버전({@code AiConsentService} —
+     * 가입·로그인 재동의 대상이 아니다).
+     */
+    public record Agreement(
+            @Valid @NotNull Document terms,
+            @Valid @NotNull Document privacy,
+            @Valid @NotNull Document ai) {
 
         public record Document(@NotBlank String version, @NotNull LocalDate effectiveDate) {}
     }
