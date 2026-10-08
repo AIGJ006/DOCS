@@ -21,6 +21,7 @@ import { useViewBeacon } from '../features/post-detail/useViewBeacon';
 import { formatMonthDay } from '../features/time/dateFormat';
 import NotFoundPage from './NotFoundPage';
 import '../features/post-detail/postDetail.css';
+import CategoryPath from '../features/category/CategoryPath';
 
 type LoadStatus = 'loading' | 'ready' | 'not-found' | 'error' | 'redirecting';
 
@@ -198,6 +199,8 @@ export default function PostDetailPage({
         </>
       ) : null}
       <article>
+        {/* 017 제목 위 카테고리 경로 */}
+        <CategoryPath handle={detail.author.handle} category={detail.category} />
         <h1 style={{ fontSize: '1.75rem', lineHeight: 1.3, margin: '0 0 0.75rem' }}>
           {detail.title}
         </h1>

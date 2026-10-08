@@ -39,7 +39,7 @@
 
 ## R7. 카테고리 필터는 `CardFilter.categoryIds`
 
-- **Decision**: `GET /api/members/{handle}/posts?category={id}` — category 모듈이 `{id}`가 그 블로그 카테고리인지 확인하고 자기 + 하위 번호 목록을 준다(SQL 1번). discovery는 `CardFilter`에 `categoryIds`를 더해 카드 SQL에 `AND p.category_id IN (:categoryIds)`를 붙인다. 커서 범위 `blog:{handle}:category:{id}`. 형식 오류(숫자 아님·1 미만)·없음·다른 블로그는 같은 404. 태그와 함께 오면 카테고리를 우선하지 않고 400 대신 둘 다 적용한다(화면은 둘을 함께 보내지 않음).
+- **Decision**: `GET /api/members/{handle}/posts?category={id}` — category 모듈이 `{id}`가 그 블로그 카테고리인지 확인하고 자기 + 하위 번호 목록을 준다(SQL 1번). discovery는 `CardFilter`에 `categoryIds`를 더해 카드 SQL에 `AND p.category_id IN (:categoryIds)`를 붙인다. 커서 범위 `blog:{handle}:category:{id}`. 형식 오류(숫자 아님·1 미만)·없음·다른 블로그는 같은 404. 태그와 함께 오면 카테고리 조건만 쓴다(화면은 둘을 함께 보내지 않음).
 - **Rationale**: discovery가 `category` 테이블을 읽지 않는다(번호 목록만 받음). 카드 SQL·정렬·커서를 그대로 쓴다.
 - **인덱스**: `ix_post_category (category_id, first_public_at DESC, id DESC) WHERE category_id IS NOT NULL AND deleted_at IS NULL`.
 
