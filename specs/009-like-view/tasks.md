@@ -186,14 +186,14 @@ description: "Task list for 009-like-view (좋아요와 조회수)"
 **Purpose**: 탈퇴 정리 Service, 종단 확인, 처리방침, 인계
 
 - [X] T040 [P] 탈퇴 정리 통합 테스트 `T/interaction/integration/LikePurgeServiceIT.java`: 그 회원 좋아요 전부 삭제, 글별 `like_count` 감소, 이벤트 없음, 다른 회원 좋아요 그대로, MANDATORY
-- [ ] T041 [P] 종단 확인 `E/like-view.spec.ts`(Playwright): quickstart §3의 1~9번(두 회원·비로그인 컨텍스트, 네트워크 끊기, 탭 숨김은 `page.evaluate`로 `visibilityState` 흉내)
-- [ ] T042 [P] 375px·접근성 확인: 좋아요 버튼 크기 44px 이상, 포커스 표시, 안내 문구 `role="status"`
+- [X] T041 [P] 종단 확인 `E/like-view.spec.ts`(Playwright): quickstart §3의 1~9번(두 회원·비로그인 컨텍스트, 네트워크 끊기, 탭 숨김은 `page.evaluate`로 `visibilityState` 흉내) (구현 메모: 회원 셋(작성자·독자·인증 전)을 환경 변수로 받음. 헤드리스 UA의 headlesschrome이 봇 단어라 일반 Chrome UA로 바꿈. 반영 주기는 앱에 BLOG_VIEW_FLUSH_INTERVAL=3s를 주고 E2E_VIEW_FLUSH_MS로 맞춤. 10번(Redis 정지)은 ViewRedisOutageIT가 맡음. 2개 통과)
+- [X] T042 [P] 375px·접근성 확인: 좋아요 버튼 크기 44px 이상, 포커스 표시, 안내 문구 `role="status"` (구현 메모: like-view.spec.ts 안에서 375px 버튼 44px 이상·가로 스크롤 없음·키보드 포커스 outline·role=status 확인)
 - [X] T043 `B/interaction/application/LikePurgeService.java`(contracts §6, `MANDATORY`)를 구현하고(T040 통과) 015가 부를 서명을 클래스 주석에 적는다
 - [X] T044 Redis OOM 경로 확인(research R13): OOM을 흉내 내 좋아요가 503을 받는지, 조회 기록은 204인지 기록하고 화면이 되돌림 + 안내인지 확인한다. 결과를 ANALYSIS-tier-bc 팀 결정 항목에 보탠다 (구현 메모: OOM은 003 ImageRedisOomIT처럼 maxmemory를 잠깐 1로 낮춰 서비스 직접 호출(LikeViewRedisOomIT). 좋아요 503 AUTOSAVE_UNAVAILABLE·DB 불변, 조회 기록 SKIPPED_REDIS(204). 화면은 useLikeToggle 503 시험으로 되돌림+안내 확인. ANALYSIS-tier-bc 팀 결정 1에 결과 한 줄 보탬(공유 문서))
 - [X] T045 [P] 015 인계: `specs/015-withdraw/tasks.md`의 `LikeWithdrawalPurgeStep`이 `LikePurgeService.purgeByMember`와 order 30을 쓰는지 확인한다 (구현 메모: 015 tasks T052가 order 30·LikePurgeService.purgeByMember를 쓴다 — 확인만, 수정 없음)
 - [X] T046 [P] 처리방침 문단(T002 결과가 "공개 전"일 때): `F/pages/PrivacyPage.tsx`에 research R15 문단을 더한다(001 소유 화면 — 001 담당에게 알림, 버전 값은 바꾸지 않음) (구현 메모: 기존 절 번호를 바꾸지 않으려고 '5. 조회수 집계' 절을 끝에 더함. 001 소유 화면이라 보고에 적음, 버전 값은 그대로)
 - [X] T047 `grep -rn "009 좋아요\|009에서 교체\|009가 넘겨받\|TODO(009)" backend/src frontend/src`가 0건인지 확인하고 남은 표시를 정리한다(005 T033·T039·T040 구현 메모) (구현 메모: 남은 것은 설명 문구(009 소유 표시)뿐이고 교체 대기 표시(009에서 교체·TODO(009))는 0건. 004 PostActions의 onLike 자리는 상세 화면이 쓰지 않아 그대로 두고 ReactionBar likeButton 자리를 채움)
-- [ ] T048 quickstart.md §1~§5를 처음부터 끝까지 실행하고 결과를 기록한다
+- [X] T048 quickstart.md §1~§5를 처음부터 끝까지 실행하고 결과를 기록한다 (구현 메모: §1 임의 포트 컨테이너+jar로 기동(새 마이그레이션 없음), §2 자동 테스트 전부 통과, §3 1~9는 like-view.spec.ts로 통과, §4는 ViewPrivacyIT(Redis·DB·로그 IP·vid 0건), §5는 006 CASCADE(ViewDailyRetentionJobIT)·015 LikePurgeServiceIT로 확인. 011·012는 아직 없음)
 - [ ] T049 전체 회귀: `./mvnw -pl backend verify`(004·005 테스트 포함)와 `npm test`·`npm run build`·`npm run lint`
 
 ---
