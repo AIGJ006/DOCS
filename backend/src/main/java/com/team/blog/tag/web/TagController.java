@@ -3,9 +3,14 @@ package com.team.blog.tag.web;
 import com.team.blog.discovery.application.CursorPage;
 import com.team.blog.discovery.application.PostCardView;
 import com.team.blog.discovery.application.TagPostQueryService;
+import com.team.blog.shared.security.CurrentUser;
+import com.team.blog.shared.security.LoginRequired;
 import com.team.blog.shared.web.CacheControlPolicy;
 import com.team.blog.tag.application.TagQueryService;
+import com.team.blog.tag.application.TagSuggestService;
+import com.team.blog.tag.application.TagSuggestionView;
 import com.team.blog.tag.application.TagSummaryView;
+import java.util.List;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -29,10 +34,23 @@ public class TagController {
 
     private final TagQueryService tagQueryService;
     private final TagPostQueryService tagPostQueryService;
+    private final TagSuggestService tagSuggestService;
 
-    public TagController(TagQueryService tagQueryService, TagPostQueryService tagPostQueryService) {
+    public TagController(
+            TagQueryService tagQueryService,
+            TagPostQueryService tagPostQueryService,
+            TagSuggestService tagSuggestService) {
         this.tagQueryService = tagQueryService;
         this.tagPostQueryService = tagPostQueryService;
+        this.tagSuggestService = tagSuggestService;
+    }
+
+    /** 자동완성 (로그인한 회원만, 이메일 인증 전 허용). 현재 사용자는 세션에서만 얻는다. */
+    @LoginRequired
+    @GetMapping("/api/tags/suggest")
+    public ResponseEntity<List<TagSuggestionView>> suggest(
+            @RequestParam(required = false) String q, @CurrentUser Long memberId) {
+        return ok(tagSuggestService.suggest(q, memberId));
     }
 
     @GetMapping("/api/tags/{name}/summary")

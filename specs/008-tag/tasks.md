@@ -155,16 +155,16 @@ description: "Task list for 008-tag (태그와 태그별 글 목록)"
 
 ### Tests for User Story 3 ⚠️
 
-- [ ] T040 [P] [US3] 자동완성 통합 테스트 `T/tag/integration/TagSuggestIT.java`: `내_태그가_먼저_그다음_공개_글_수_순`(US3 #1, 최대 10, `mine` 값), `남의_비공개_전용_태그는_제안하지_않는다`(US3 #2), `내_비공개_글_태그는_제안한다`, `비회원은_401_인증_전은_허용`(US3 #3), `검색어_정리_결과가_비면_빈_목록`(`#`·`🔥`·공백), `밑줄은_와일드카드가_아니다`(`a_` 검색에 `ab` 없음, research R11), `금칙어_검색어도_거부하지_않는다`, `1분_61번째는_429`(code `TOO_MANY_REQUESTS`, `Retry-After`), `Redis_장애면_제한_없이_응답`(`RedisOutage`), `탈퇴_신청·숨김·휴지통_글만_쓴_태그는_공개_수_0`
-- [ ] T041 [P] [US3] 화면 훅 테스트 `F/features/tag/__tests__/useTagSuggest.test.ts`(가짜 타이머): 0.3초 멈춤 전 호출 없음, `compositionstart`~`compositionend` 사이 호출 없음(US3 #4), 늦게 온 이전 응답 버림, 실패·429·빈 결과·불러오는 중에는 목록 없음(US3 #5). `TagInput.test.tsx`에 추가: 목록 `role="listbox"`·↑↓·Enter 선택·Esc 닫기, 제안이 있어도 Enter가 입력값을 그대로 새 태그로 넣는 경우(선택 없음)
-- [ ] T042 [P] [US3] 권한 실행기 `T/tag/integration/permission/TagSuggestAction.java`(`tag.suggest`, 대상 글 태그 이름의 앞 두 글자로 검색해 포함 여부) — `tag-list.csv` `tag.suggest` 행(AUTHOR는 모든 상태 `INCLUDED`, ANONYMOUS 401)
+- [X] T040 [P] [US3] 자동완성 통합 테스트 `T/tag/integration/TagSuggestIT.java`: `내_태그가_먼저_그다음_공개_글_수_순`(US3 #1, 최대 10, `mine` 값), `남의_비공개_전용_태그는_제안하지_않는다`(US3 #2), `내_비공개_글_태그는_제안한다`, `비회원은_401_인증_전은_허용`(US3 #3), `검색어_정리_결과가_비면_빈_목록`(`#`·`🔥`·공백), `밑줄은_와일드카드가_아니다`(`a_` 검색에 `ab` 없음, research R11), `금칙어_검색어도_거부하지_않는다`, `1분_61번째는_429`(code `TOO_MANY_REQUESTS`, `Retry-After`), `Redis_장애면_제한_없이_응답`(`RedisOutage`), `탈퇴_신청·숨김·휴지통_글만_쓴_태그는_공개_수_0` (구현 메모: 세션 저장소도 Redis라 장애 중에는 로그인 요청이 401이 된다 — Redis_장애면_제한_없이_응답은 TagSuggestService를 직접 61번 불러 확인했다. 정리 결과가 빈 검색어는 요청 제한을 세지 않는 시험을 더했다)
+- [X] T041 [P] [US3] 화면 훅 테스트 `F/features/tag/__tests__/useTagSuggest.test.ts`(가짜 타이머): 0.3초 멈춤 전 호출 없음, `compositionstart`~`compositionend` 사이 호출 없음(US3 #4), 늦게 온 이전 응답 버림, 실패·429·빈 결과·불러오는 중에는 목록 없음(US3 #5). `TagInput.test.tsx`에 추가: 목록 `role="listbox"`·↑↓·Enter 선택·Esc 닫기, 제안이 있어도 Enter가 입력값을 그대로 새 태그로 넣는 경우(선택 없음) (구현 메모: useTagSuggest(text, composing, load) — 결과를 검색어에 묶어 두고 지금 검색어와 같을 때만 보여 effect 안 동기 setState 없이 '불러오는 중 빈 목록'을 만든다)
+- [X] T042 [P] [US3] 권한 실행기 `T/tag/integration/permission/TagSuggestAction.java`(`tag.suggest`, 대상 글 태그 이름의 앞 두 글자로 검색해 포함 여부) — `tag-list.csv` `tag.suggest` 행(AUTHOR는 모든 상태 `INCLUDED`, ANONYMOUS 401) (구현 메모: tag.top·blog.tags 실행기도 같은 모양으로 함께 만들었다(T048·T056))
 
 ### Implementation for User Story 3
 
-- [ ] T043 [US3] `B/tag/infra/TagQueryRepository.java`에 `suggest(prefix, me, limit)`(research R11 SQL 한 번, `LIKE :prefix ESCAPE '\'`, 후보 상한 200 상수 + 주석)를 더한다
-- [ ] T044 [US3] `B/tag/application/TagSuggestService.java`: `normalizeQuery(q)` → 빈 값이면 `[]` → `RateLimiter.acquireOrThrow("ratelimit:tag-suggest:" + memberId, limit, window)`(판정 순서 맨 끝 — 검색어 정리 뒤, SQL 앞) → `suggest`. `TagController`에 `@LoginRequired GET /api/tags/suggest`(현재 사용자는 세션에서만)를 더한다(T040 통과)
-- [ ] T045 [US3] `F/features/tag/useTagSuggest.ts`(요청 번호 `useRef`, `AbortController`, 300ms 상수 `TAG_SUGGEST_DEBOUNCE_MS`)와 `TagInput.tsx`의 제안 목록(`role="listbox"`, `aria-activedescendant`, 후보 표시 "#spring-boot · 3 · 내 태그")을 구현한다(T041 통과)
-- [ ] T046 [US3] T042 행 통과 확인
+- [X] T043 [US3] `B/tag/infra/TagQueryRepository.java`에 `suggest(prefix, me, limit)`(research R11 SQL 한 번, `LIKE :prefix ESCAPE '\'`, 후보 상한 200 상수 + 주석)를 더한다 (구현 메모: LIKE 이스케이프는 역슬래시·_·% 세 글자. 결과 줄은 TagSuggestionRow)
+- [X] T044 [US3] `B/tag/application/TagSuggestService.java`: `normalizeQuery(q)` → 빈 값이면 `[]` → `RateLimiter.acquireOrThrow("ratelimit:tag-suggest:" + memberId, limit, window)`(판정 순서 맨 끝 — 검색어 정리 뒤, SQL 앞) → `suggest`. `TagController`에 `@LoginRequired GET /api/tags/suggest`(현재 사용자는 세션에서만)를 더한다(T040 통과) (구현 메모: 트랜잭션 없이 Service에서 Redis 카운트 → SQL 한 문장. 응답 TagSuggestionView)
+- [X] T045 [US3] `F/features/tag/useTagSuggest.ts`(요청 번호 `useRef`, `AbortController`, 300ms 상수 `TAG_SUGGEST_DEBOUNCE_MS`)와 `TagInput.tsx`의 제안 목록(`role="listbox"`, `aria-activedescendant`, 후보 표시 "#spring-boot · 3 · 내 태그")을 구현한다(T041 통과) (구현 메모: 입력칸은 role=combobox(aria-expanded·aria-controls·aria-activedescendant). 이미 붙인 태그는 후보에서 빼고, 초점을 잃으면 닫는다. 시험용 loadSuggestions prop)
+- [X] T046 [US3] T042 행 통과 확인 (구현 메모: tag.suggest 28행 통과)
 
 **Checkpoint**: 자동완성이 붙어도 실패·제한 때 입력과 발행이 막히지 않는다(SC-008)
 

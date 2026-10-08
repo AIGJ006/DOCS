@@ -3,18 +3,24 @@ import userEvent from '@testing-library/user-event';
 import { useState } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 import type { FieldError } from '../../../api/client';
+import type { TagSuggestion } from '../../../api/types/tags';
+import type { SuggestLoader } from '../../../features/tag/useTagSuggest';
 import TagInput from '../TagInput';
+
+const noSuggestions: SuggestLoader = () => Promise.resolve([]);
 
 function Harness({
   initialTags = [],
   max = 10,
   errors = [],
   onChange,
+  loadSuggestions = noSuggestions,
 }: {
   initialTags?: string[];
   max?: number;
   errors?: FieldError[];
   onChange?: (tags: string[]) => void;
+  loadSuggestions?: SuggestLoader;
 }) {
   const [tags, setTags] = useState(initialTags);
   return (
@@ -22,6 +28,7 @@ function Harness({
       value={tags}
       max={max}
       errors={errors}
+      loadSuggestions={loadSuggestions}
       onChange={(next) => {
         setTags(next);
         onChange?.(next);
@@ -195,5 +202,95 @@ describe('TagInput (008 US1)', () => {
     } finally {
       vi.useRealTimers();
     }
+  });
+});
+
+describe('TagInput 자동완성 (008 US3)', () => {
+  const SUGGESTIONS: TagSuggestion[] = [
+    { name: 'spring-boot', postCount: 3, mine: true },
+    { name: 'spring', postCount: 30, mine: false },
+    { name: 'spring-data', postCount: 2, mine: false },
+  ];
+
+  function loader() {
+    return vi.fn<SuggestLoader>(() => Promise.resolve(SUGGESTIONS));
+  }
+
+  it('0.3초 멈추면 listbox에 "#이름 · 수 · 내 태그"로 보이고 ↑↓·Enter로 고른다', async () => {
+    const load = loader();
+    const user = userEvent.setup();
+    render(<Harness loadSuggestions={load} />);
+    const input = screen.getByRole('combobox', { name: '태그 입력' });
+
+    await user.type(input, 'spr');
+    const listbox = await screen.findByRole('listbox', { name: '태그 추천' });
+    const options = within(listbox).getAllByRole('option');
+    expect(options.map((o) => o.textContent)).toEqual([
+      '#spring-boot · 3 · 내 태그',
+      '#spring · 30',
+      '#spring-data · 2',
+    ]);
+    expect(input).toHaveAttribute('aria-expanded', 'true');
+    expect(load).toHaveBeenCalledWith('spr', expect.anything());
+
+    await user.keyboard('{ArrowDown}{ArrowDown}');
+    expect(options[1]).toHaveAttribute('aria-selected', 'true');
+    expect(input).toHaveAttribute('aria-activedescendant', options[1].id);
+    await user.keyboard('{ArrowUp}');
+    expect(options[0]).toHaveAttribute('aria-selected', 'true');
+    await user.keyboard('{ArrowDown}{Enter}');
+
+    expect(chips()).toEqual(['spring']);
+    expect(input).toHaveValue('');
+    expect(screen.queryByRole('listbox')).not.toBeInTheDocument();
+  });
+
+  it('Esc로 닫고, 고르지 않은 Enter는 입력값을 그대로 새 태그로 넣는다', async () => {
+    const user = userEvent.setup();
+    render(<Harness loadSuggestions={loader()} />);
+    const input = screen.getByRole('combobox', { name: '태그 입력' });
+
+    await user.type(input, 'spr');
+    await screen.findByRole('listbox');
+    await user.keyboard('{Escape}');
+    expect(screen.queryByRole('listbox')).not.toBeInTheDocument();
+    expect(input).toHaveAttribute('aria-expanded', 'false');
+
+    await user.type(input, 'ing');
+    await screen.findByRole('listbox');
+    await user.keyboard('{Enter}');
+    expect(chips()).toEqual(['spring']);
+  });
+
+  it('클릭으로 고르고, 이미 붙인 태그는 후보에서 뺀다', async () => {
+    const user = userEvent.setup();
+    render(<Harness initialTags={['spring-boot']} loadSuggestions={loader()} />);
+
+    await user.type(screen.getByRole('combobox', { name: '태그 입력' }), 'spr');
+    const listbox = await screen.findByRole('listbox');
+    const options = within(listbox).getAllByRole('option');
+    expect(options.map((o) => o.textContent)).toEqual(['#spring · 30', '#spring-data · 2']);
+
+    await user.click(options[1]);
+    expect(chips()).toEqual(['spring-boot', 'spring-data']);
+  });
+
+  it('한글 조합 중에는 부르지 않는다', async () => {
+    const load = loader();
+    render(<Harness loadSuggestions={load} />);
+    const input = screen.getByRole('combobox', { name: '태그 입력' });
+
+    fireEvent.compositionStart(input);
+    fireEvent.change(input, { target: { value: '스프' } });
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 400));
+    });
+    expect(load).not.toHaveBeenCalled();
+
+    fireEvent.compositionEnd(input);
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 400));
+    });
+    expect(load).toHaveBeenCalledWith('스프', expect.anything());
   });
 });
