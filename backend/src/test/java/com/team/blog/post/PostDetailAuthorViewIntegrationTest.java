@@ -6,6 +6,7 @@ import static com.team.blog.discovery.support.ReadingApi.read;
 import static com.team.blog.discovery.support.ReadingApi.status;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -16,12 +17,15 @@ import com.team.blog.discovery.support.ReadingApi;
 import com.team.blog.post.application.PostDraftQueryService;
 import com.team.blog.post.application.port.AuthorFollowStatusQuery;
 import com.team.blog.post.application.port.PostLikeStatusQuery;
+import com.team.blog.post.application.port.PostTagNamesQuery;
 import com.team.blog.support.IntegrationTestBase;
 import com.team.blog.support.SqlCounter;
+import com.team.blog.tag.application.TagService;
 import jakarta.servlet.http.Cookie;
 import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.test.web.servlet.MvcResult;
@@ -34,9 +38,13 @@ import org.springframework.test.web.servlet.MvcResult;
  */
 class PostDetailAuthorViewIntegrationTest extends IntegrationTestBase {
 
+    // PostDetailFallbackIntegrationTest와 같은 덮어쓰기 묶음 — Spring 테스트 컨텍스트를 함께 쓴다(컨텍스트마다 DB 연결 풀이 생겨
+    // 통합 테스트 전체가 PostgreSQL 최대 연결 수를 넘지 않게). 태그는 실제 TagService로 넘겨 SQL 수 측정에 그대로 들어간다.
+    @MockitoBean PostTagNamesQuery tagNames;
     @MockitoBean PostLikeStatusQuery likeStatus;
     @MockitoBean AuthorFollowStatusQuery followStatus;
     @MockitoSpyBean PostDraftQueryService draftQuery;
+    @Autowired TagService tagService;
 
     private PostReadingFixture fixture;
     private Cookie author;
@@ -45,6 +53,8 @@ class PostDetailAuthorViewIntegrationTest extends IntegrationTestBase {
     void load() {
         fixture = PostReadingFixture.load(jdbc);
         author = fixture.loginAs(mockMvc, "A");
+        given(tagNames.namesInOrder(anyLong()))
+                .willAnswer(call -> tagService.tagNamesOf(call.getArgument(0)));
     }
 
     private ReadingApi api() {

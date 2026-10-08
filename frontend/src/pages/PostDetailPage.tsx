@@ -16,6 +16,7 @@ import { loadHighlighter } from '../features/post-detail/loadHighlighter';
 import { useViewBeacon } from '../features/post-detail/useViewBeacon';
 import { formatMonthDay } from '../features/time/dateFormat';
 import NotFoundPage from './NotFoundPage';
+import '../features/post-detail/postDetail.css';
 
 type LoadStatus = 'loading' | 'ready' | 'not-found' | 'error' | 'redirecting';
 
@@ -205,8 +206,9 @@ export default function PostDetailPage({
         </div>
         <div
           data-testid="post-content"
+          className="post-detail-content"
           ref={contentRef}
-          style={{ marginTop: '1.5rem', overflowWrap: 'anywhere' }}
+          style={{ marginTop: '1.5rem' }}
           // 서버가 발행 때 정화한 HTML만 넣는다 (FR-031·037, 원칙 IV)
           dangerouslySetInnerHTML={{ __html: detail.contentHtml }}
         />

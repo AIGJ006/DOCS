@@ -9,6 +9,7 @@ import static org.mockito.BDDMockito.given;
 
 import com.team.blog.discovery.support.PostReadingFixture;
 import com.team.blog.discovery.support.ReadingApi;
+import com.team.blog.post.application.PostDraftQueryService;
 import com.team.blog.post.application.port.AuthorFollowStatusQuery;
 import com.team.blog.post.application.port.PostLikeStatusQuery;
 import com.team.blog.post.application.port.PostTagNamesQuery;
@@ -17,6 +18,7 @@ import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.test.web.servlet.MvcResult;
 
 /** 부가 정보가 실패해도 상세는 보인다 (005 T026, 원칙 V, research R-30). */
@@ -25,6 +27,8 @@ class PostDetailFallbackIntegrationTest extends IntegrationTestBase {
     @MockitoBean PostTagNamesQuery tagNames;
     @MockitoBean PostLikeStatusQuery likeStatus;
     @MockitoBean AuthorFollowStatusQuery followStatus;
+    // PostDetailAuthorViewIntegrationTest와 같은 덮어쓰기 묶음으로 둬 테스트 컨텍스트를 함께 쓴다(여기서는 실제 동작 그대로)
+    @MockitoSpyBean PostDraftQueryService draftQuery;
 
     private PostReadingFixture fixture;
 
