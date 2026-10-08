@@ -2,6 +2,7 @@ package com.team.blog.discovery.application;
 
 import com.team.blog.account.application.BlogOwner;
 import com.team.blog.account.application.MemberQueryService;
+import com.team.blog.category.application.CategoryQueryService;
 import com.team.blog.interaction.application.FollowQueryService;
 import com.team.blog.interaction.application.FollowQueryService.HeaderStats;
 import com.team.blog.media.application.ImageUrlResolver;
@@ -43,6 +44,7 @@ public class BlogQueryService {
     private final TagQueryService tags;
     private final PostListCursor cursors;
     private final FollowQueryService follows;
+    private final CategoryQueryService categories;
 
     public BlogQueryService(
             MemberQueryService members,
@@ -52,7 +54,8 @@ public class BlogQueryService {
             PostListService lists,
             TagQueryService tags,
             PostListCursor cursors,
-            FollowQueryService follows) {
+            FollowQueryService follows,
+            CategoryQueryService categories) {
         this.members = members;
         this.postQueries = postQueries;
         this.profileImages = profileImages;
@@ -61,6 +64,7 @@ public class BlogQueryService {
         this.tags = tags;
         this.cursors = cursors;
         this.follows = follows;
+        this.categories = categories;
     }
 
     /**
@@ -113,6 +117,25 @@ public class BlogQueryService {
             return new CursorPage<>(List.of(), null);
         }
         return lists.page(scope, new CardFilter(owner.id(), tagId.get()), cursor, viewer);
+    }
+
+    /**
+     * 블로그 글 목록, 카테고리 필터 (017 FR-030~FR-032). {@code category}가 이 블로그의 카테고리 번호가 아니면(형식 오류·없음·다른 블로그)
+     * 404. 최상위 카테고리는 하위 글을 포함한다. 커서 범위는 {@code blog:{handle}:category:{id}}. SQL은 주인 1번 + 카테고리 1번 +
+     * 카드 1번.
+     *
+     * @throws NotFoundException 없는 블로그, 이 블로그의 카테고리가 아닌 값
+     */
+    public CursorPage<PostCardView> listCategoryPosts(
+            String handle, String category, String cursor, Viewer viewer) {
+        BlogOwner owner = requireOwner(handle);
+        List<Long> ids =
+                categories
+                        .findSubtreeIds(owner.id(), category)
+                        .orElseThrow(
+                                () -> new NotFoundException("category not found: " + category));
+        ListScope scope = ListScope.blogCategory(owner.handle(), Long.parseLong(category));
+        return lists.page(scope, CardFilter.authorInCategories(owner.id(), ids), cursor, viewer);
     }
 
     /** 작은 프로필 사진 키 (썸네일, 없으면 원본). 사진이 없으면 {@code null}. */

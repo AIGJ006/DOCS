@@ -1,0 +1,208 @@
+openapi: 3.1.0
+info:
+  title: 017 카테고리 API
+  version: 1.0.0
+  description: |
+    2단계 카테고리 관리·글 지정·블로그 카테고리 목록. 공통 오류 본문 `{code, message, errors, details}`,
+    `errors`는 항상 목록, 메시지 끝 마침표 없음. 상태를 바꾸는 요청은 CSRF 헤더가 필요하다.
+    모든 응답은 `Cache-Control: private, no-store`(내 것) 또는 `private, no-cache`(블로그).
+paths:
+  /api/me/categories:
+    get:
+      operationId: listMyCategories
+      summary: 내 카테고리 나무 (로그인 필요)
+      responses:
+        '200':
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MyCategories' }
+        '401': { $ref: '#/components/responses/Error' }
+    post:
+      operationId: createCategory
+      summary: 카테고리 만들기 (상위 맨 아래에 붙음)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CategoryWrite' }
+      responses:
+        '201':
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Category' }
+        '400':
+          description: VALIDATION_FAILED(name - CATEGORY_NAME_REQUIRED·CATEGORY_NAME_TOO_LONG), INVALID_CATEGORY(상위 없음·남의 것), CATEGORY_DEPTH_EXCEEDED, TOO_MANY_CATEGORIES
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { description: EMAIL_NOT_VERIFIED · ACCOUNT_SUSPENDED · ACCOUNT_WITHDRAWN }
+        '409': { description: CATEGORY_NAME_DUPLICATED }
+  /api/me/categories/{categoryId}:
+    parameters:
+      - { name: categoryId, in: path, required: true, schema: { type: string } }
+    patch:
+      operationId: updateCategory
+      summary: 이름·상위 바꾸기 (보낸 칸만). 상위가 바뀌면 새 상위의 맨 아래로
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name: { type: string }
+                parentId: { type: [integer, 'null'], description: '보내면 바꾼다. null = 최상위' }
+      responses:
+        '200':
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Category' }
+        '400': { description: VALIDATION_FAILED · INVALID_CATEGORY · CATEGORY_DEPTH_EXCEEDED }
+        '404': { description: 없음·남의 카테고리 (같은 본문) }
+        '409': { description: CATEGORY_NAME_DUPLICATED }
+    delete:
+      operationId: deleteCategory
+      summary: 지우기 — 글은 분류 없음이 된다
+      responses:
+        '204': { description: 지움 }
+        '404': { description: 없음·남의 카테고리 }
+        '409': { description: CATEGORY_HAS_CHILDREN }
+  /api/me/categories/order:
+    put:
+      operationId: reorderCategories
+      summary: 같은 상위 안 순서 저장 (그 상위의 하위 번호 전체)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [ids]
+              properties:
+                parentId: { type: [integer, 'null'] }
+                ids: { type: array, items: { type: integer } }
+      responses:
+        '200':
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MyCategories' }
+        '400': { description: INVALID_CATEGORY (상위가 내 최상위가 아님) }
+        '409': { description: CATEGORY_ORDER_STALE (보낸 묶음 ≠ 지금 하위 묶음) }
+  /api/posts/{postId}/category:
+    parameters:
+      - { name: postId, in: path, required: true, schema: { type: string } }
+    get:
+      operationId: getPostCategory
+      summary: 내 글의 카테고리 (작성자만, 휴지통 제외)
+      responses:
+        '200':
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PostCategory' }
+        '401': { $ref: '#/components/responses/Error' }
+        '404': { description: 없음·남의 글·휴지통 }
+    put:
+      operationId: setPostCategory
+      summary: 글의 카테고리 즉시 지정 (발행과 별개, "수정됨" 없음)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/PostCategory' }
+      responses:
+        '200':
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PostCategory' }
+        '400': { description: "INVALID_CATEGORY (errors[0].field = categoryId)" }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { description: EMAIL_NOT_VERIFIED · ACCOUNT_SUSPENDED · ACCOUNT_WITHDRAWN }
+        '404': { description: 없음·남의 글·휴지통 }
+  /api/members/{handle}/categories:
+    parameters:
+      - { name: handle, in: path, required: true, schema: { type: string } }
+    get:
+      operationId: listBlogCategories
+      summary: 블로그 카테고리 목록과 공개 글 수 (누구나)
+      responses:
+        '200':
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/BlogCategories' }
+        '404': { description: 없는 블로그·탈퇴 유예·익명 처리 }
+  /api/members/{handle}/posts:
+    get:
+      operationId: listBlogPosts
+      summary: (005·008 확장) category=번호면 그 카테고리(최상위는 하위 포함) 글만
+      parameters:
+        - { name: handle, in: path, required: true, schema: { type: string } }
+        - { name: category, in: query, schema: { type: string } }
+        - { name: tag, in: query, schema: { type: string } }
+        - { name: cursor, in: query, schema: { type: string } }
+      responses:
+        '200': { description: 005 CursorPage<PostCard> }
+        '400': { description: INVALID_CURSOR (다른 목록 커서) }
+        '404': { description: 형식 오류·없는 번호·다른 블로그의 카테고리 }
+components:
+  responses:
+    Error:
+      description: 공통 오류 본문
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+  schemas:
+    ErrorResponse:
+      type: object
+      properties:
+        code: { type: string }
+        message: { type: string }
+        errors: { type: array, items: { type: object } }
+        details: { type: [object, 'null'] }
+    CategoryWrite:
+      type: object
+      required: [name]
+      properties:
+        name: { type: string, example: Spring }
+        parentId: { type: [integer, 'null'] }
+    Category:
+      type: object
+      properties:
+        id: { type: integer }
+        name: { type: string }
+        parentId: { type: [integer, 'null'] }
+        position: { type: integer }
+    CategoryNode:
+      type: object
+      properties:
+        id: { type: integer }
+        name: { type: string }
+        postCount: { type: integer }
+        children: { type: array, items: { $ref: '#/components/schemas/CategoryNode' } }
+    MyCategories:
+      type: object
+      properties:
+        maxCount: { type: integer, example: 100 }
+        items: { type: array, items: { $ref: '#/components/schemas/CategoryNode' } }
+    BlogCategories:
+      type: object
+      properties:
+        totalCount: { type: integer }
+        items: { type: array, items: { $ref: '#/components/schemas/CategoryNode' } }
+    PostCategory:
+      type: object
+      properties:
+        categoryId: { type: [integer, 'null'] }
+    PostDetailCategory:
+      description: 005 PostDetail.category (분류 없음이면 null)
+      type: [object, 'null']
+      properties:
+        id: { type: integer }
+        name: { type: string }
+        parent:
+          type: [object, 'null']
+          properties:
+            id: { type: integer }
+            name: { type: string }
+    PostDetailCategoryFields:
+      type: object
+      description: 005 PostDetail에 더하는 칸 (x-extends getPostDetail, 태그 다음). 임시 글(DRAFT) 응답에는 없다
+      properties:
+        category: { $ref: '#/components/schemas/PostDetailCategory' }

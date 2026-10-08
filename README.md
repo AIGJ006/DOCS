@@ -30,6 +30,7 @@
 | 014 | [report-hide](specs/014-report-hide/spec.md) 신고·관리자 숨김 | 43 | Tier C | tasks ✓ |
 | 015 | [withdraw](specs/015-withdraw/spec.md) 회원 탈퇴·복구 | 44, 13 | Tier C | tasks ✓ |
 | 016 | [dark-mode](specs/016-dark-mode/spec.md) 다크 모드 | 45 | Tier C | tasks ✓ |
+| 017 | [category](specs/017-category/spec.md) 2단계 카테고리 (나민서 개인 확장) | 01 §2-4, 02 §7 | 개인 확장 | 구현 ✓ |
 
 ERD(03, 51)는 각 스펙의 Implementation Notes에서 참조하며, `/speckit-plan` 단계의 `data-model.md`로 옮겨 갑니다. 카테고리·주제 등은 공통이 아닌 개인 확장(01 §2-4)이라 공통 스펙에 없습니다.
 

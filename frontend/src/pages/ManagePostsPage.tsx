@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
+import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { ApiError } from '../api/client';
 import {
   discardEditing,
@@ -181,6 +181,9 @@ export default function ManagePostsPage() {
     <main className="manage-page" data-route="manage-posts">
       <div className="manage-header">
         <h1>내 글 관리</h1>
+        <Link to="/manage/categories" style={{ marginLeft: 'auto' }}>
+          카테고리 관리
+        </Link>
         <button type="button" onClick={() => void newPost()} disabled={creating}>
           새 글
         </button>

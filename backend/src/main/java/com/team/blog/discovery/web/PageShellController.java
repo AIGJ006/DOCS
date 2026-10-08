@@ -2,6 +2,7 @@ package com.team.blog.discovery.web;
 
 import com.team.blog.account.application.BlogOwner;
 import com.team.blog.account.application.MemberQueryService;
+import com.team.blog.category.application.CategoryQueryService;
 import com.team.blog.discovery.application.BlogQueryService;
 import com.team.blog.discovery.application.LinkPreviewMetaFactory;
 import com.team.blog.post.application.PostQueryService;
@@ -62,6 +63,7 @@ public class PageShellController {
     private final SpaShellRenderer shell;
     private final NotFoundPageRenderer notFoundPage;
     private final TagQueryService tagQueryService;
+    private final CategoryQueryService categoryQueryService;
 
     public PageShellController(
             PostQueryService postQueryService,
@@ -69,13 +71,15 @@ public class PageShellController {
             LinkPreviewMetaFactory metaFactory,
             SpaShellRenderer shell,
             NotFoundPageRenderer notFoundPage,
-            TagQueryService tagQueryService) {
+            TagQueryService tagQueryService,
+            CategoryQueryService categoryQueryService) {
         this.postQueryService = postQueryService;
         this.blogQueryService = blogQueryService;
         this.metaFactory = metaFactory;
         this.shell = shell;
         this.notFoundPage = notFoundPage;
         this.tagQueryService = tagQueryService;
+        this.categoryQueryService = categoryQueryService;
     }
 
     /**
@@ -148,6 +152,12 @@ public class PageShellController {
         try {
             owner = blogQueryService.requireOwner(handle);
         } catch (NotFoundException e) {
+            return notFoundPage.render();
+        }
+        // 017 카테고리 필터: 이 블로그의 카테고리 번호가 아니면(형식 오류·없음·다른 블로그) 공통 404 화면
+        String category = request.getParameter("category");
+        if (category != null
+                && categoryQueryService.findSubtreeIds(owner.id(), category).isEmpty()) {
             return notFoundPage.render();
         }
         return html(shell.render(metaFactory.forBlog(owner)), CacheControlPolicy.NO_CACHE);
