@@ -178,16 +178,16 @@ description: "Task list for 008-tag (태그와 태그별 글 목록)"
 
 ### Tests for User Story 4 ⚠️
 
-- [ ] T047 [P] [US4] 통합 테스트 `T/tag/integration/TagIndexIT.java`: `공개_글_수_순_상위_100`(US4 #1, 같은 수면 이름 순, 101번째 없음, `limit` 쿼리 무시), `공개_글_수_0인_태그는_없다`(US4 #2), `없으면_빈_목록`(US4 #3), `비공개로_바꾸면_다음_요청에서_빠진다`(FR-029 — 비공개 전환·휴지통·숨김(`hidden_at` 직접 기록)·작성자 `withdrawn_at` 각각 바로 다음 요청)
-- [ ] T048 [P] [US4] 권한 실행기 `T/tag/integration/permission/TagTopAction.java`(`tag.top`, 대상 글만 쓰는 고유 태그가 목록에 있는가)
-- [ ] T049 [P] [US4] 화면 테스트 `F/pages/__tests__/TagIndexPage.test.tsx`: `#이름 글 수` 목록과 링크(`tagPath`), 빈 목록 "아직 태그가 없어요", 실패 "불러오지 못했어요 [다시 시도]"
+- [X] T047 [P] [US4] 통합 테스트 `T/tag/integration/TagIndexIT.java`: `공개_글_수_순_상위_100`(US4 #1, 같은 수면 이름 순, 101번째 없음, `limit` 쿼리 무시), `공개_글_수_0인_태그는_없다`(US4 #2), `없으면_빈_목록`(US4 #3), `비공개로_바꾸면_다음_요청에서_빠진다`(FR-029 — 비공개 전환·휴지통·숨김(`hidden_at` 직접 기록)·작성자 `withdrawn_at` 각각 바로 다음 요청) (구현 메모: 숨김은 hidden_at·hidden_by(관리자)·hidden_reason을 함께 기록했다(V1 제약))
+- [X] T048 [P] [US4] 권한 실행기 `T/tag/integration/permission/TagTopAction.java`(`tag.top`, 대상 글만 쓰는 고유 태그가 목록에 있는가) (구현 메모: T042와 함께 만들었다)
+- [X] T049 [P] [US4] 화면 테스트 `F/pages/__tests__/TagIndexPage.test.tsx`: `#이름 글 수` 목록과 링크(`tagPath`), 빈 목록 "아직 태그가 없어요", 실패 "불러오지 못했어요 [다시 시도]"
 
 ### Implementation for User Story 4
 
-- [ ] T050 [US4] `TagQueryRepository.top(limit)`(research R8 SQL, 캐시 없음)와 `TagQueryService.top()`, `TagController`의 `GET /api/tags`(`limit` 무시, `blog.tag.top-limit`)를 구현한다(T047 통과)
-- [ ] T051 [US4] `PageShellController`에 `GET /tags`(200 셸 + `LinkPreviewMetaFactory.forTagIndex()`)를 더한다. `TagPageShellIT`에 `태그_목록_주소는_200` 추가
-- [ ] T052 [US4] `F/pages/TagIndexPage.tsx`(목록·빈 상태·375px 줄바꿈)를 만들고 T037의 `/tags` 라우트에 연결한다(T049 통과)
-- [ ] T053 [US4] T048 행 통과 확인
+- [X] T050 [US4] `TagQueryRepository.top(limit)`(research R8 SQL, 캐시 없음)와 `TagQueryService.top()`, `TagController`의 `GET /api/tags`(`limit` 무시, `blog.tag.top-limit`)를 구현한다(T047 통과) (구현 메모: 응답 TagIndexView{items: TagCountView[]})
+- [X] T051 [US4] `PageShellController`에 `GET /tags`(200 셸 + `LinkPreviewMetaFactory.forTagIndex()`)를 더한다. `TagPageShellIT`에 `태그_목록_주소는_200` 추가 (구현 메모: GET /tags 매핑과 forTagIndex()는 T035에서 함께 넣었고 여기서 시험을 더했다)
+- [X] T052 [US4] `F/pages/TagIndexPage.tsx`(목록·빈 상태·375px 줄바꿈)를 만들고 T037의 `/tags` 라우트에 연결한다(T049 통과)
+- [X] T053 [US4] T048 행 통과 확인 (구현 메모: tag.top 28행 통과)
 
 **Checkpoint**: `/tags`가 매번 계산한 결과를 보인다
 

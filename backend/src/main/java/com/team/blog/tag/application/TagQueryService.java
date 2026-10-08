@@ -19,10 +19,21 @@ public class TagQueryService {
 
     private final TagNormalizer normalizer;
     private final TagQueryRepository repository;
+    private final TagProperties properties;
 
-    public TagQueryService(TagNormalizer normalizer, TagQueryRepository repository) {
+    public TagQueryService(
+            TagNormalizer normalizer, TagQueryRepository repository, TagProperties properties) {
         this.normalizer = normalizer;
         this.repository = repository;
+        this.properties = properties;
+    }
+
+    /** 전체 태그 목록 — 공개 글 수 많은 순 상위 {@code blog.tag.top-limit}개. */
+    public TagIndexView top() {
+        return new TagIndexView(
+                repository.top(properties.topLimit()).stream()
+                        .map(row -> new TagCountView(row.name(), row.postCount()))
+                        .toList());
     }
 
     /** 검색어·주소 값 정규화 (금칙어 검사 없음). 형식이 틀리면 빈 값 — {@link TagNormalizer#normalizeQuery}. */

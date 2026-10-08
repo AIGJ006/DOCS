@@ -6,6 +6,7 @@ import com.team.blog.discovery.application.TagPostQueryService;
 import com.team.blog.shared.security.CurrentUser;
 import com.team.blog.shared.security.LoginRequired;
 import com.team.blog.shared.web.CacheControlPolicy;
+import com.team.blog.tag.application.TagIndexView;
 import com.team.blog.tag.application.TagQueryService;
 import com.team.blog.tag.application.TagSuggestService;
 import com.team.blog.tag.application.TagSuggestionView;
@@ -43,6 +44,12 @@ public class TagController {
         this.tagQueryService = tagQueryService;
         this.tagPostQueryService = tagPostQueryService;
         this.tagSuggestService = tagSuggestService;
+    }
+
+    /** 전체 태그 목록. {@code limit}은 받아도 무시한다(원칙 VII — 서버 설정값). */
+    @GetMapping("/api/tags")
+    public ResponseEntity<TagIndexView> top(@RequestParam(required = false) String limit) {
+        return ok(tagQueryService.top());
     }
 
     /** 자동완성 (로그인한 회원만, 이메일 인증 전 허용). 현재 사용자는 세션에서만 얻는다. */

@@ -104,6 +104,18 @@ class TagPageShellIT extends IntegrationTestBase {
     }
 
     @Test
+    void 태그_목록_주소는_200() throws Exception {
+        MvcResult result = api().getRaw(null, "/tags");
+
+        assertThat(status(result)).isEqualTo(200);
+        String html = body(result);
+        assertThat(html).contains("<div id=\"root\">");
+        assertThat(html).contains("<title>태그");
+        assertThat(html).contains("href=\"http://localhost:8080/tags\"");
+        assertThat(result.getResponse().getHeader("Cache-Control")).isEqualTo("private, no-cache");
+    }
+
+    @Test
     void 글이_없는_태그도_200() throws Exception {
         MvcResult none = api().getRaw(null, "/tags/nobody-uses");
         long author = members().member().create();

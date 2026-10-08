@@ -3,6 +3,8 @@ package com.team.blog.tag.infra;
 import com.team.blog.post.infra.SqlCondition;
 import com.team.blog.post.infra.VisibilityFilter;
 import com.team.blog.shared.security.Viewer;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -57,6 +59,33 @@ public class TagQueryRepository {
                 .params(params)
                 .query(Long.class)
                 .single();
+    }
+
+    /**
+     * 전체 태그 목록 (research R8): 공개 글 수 많은 순, 같으면 이름 순 상위 {@code limit}개. 공개 글 수 0인 태그는 없다. 캐시 없이 매번
+     * 계산한다(FR-029 — 공개에서 빠진 글이 바로 다음 요청에 반영된다. 시간은 {@code TagPerformanceIT}가 잰다).
+     */
+    public List<TagCountRow> top(int limit) {
+        SqlCondition condition = publicCondition();
+        Map<String, Object> params = new LinkedHashMap<>(condition.params());
+        params.put("limit", limit);
+        return jdbc.sql(
+                        "SELECT t.name, count(*) AS post_count FROM post_tag pt"
+                                + " JOIN post p ON p.id = pt.post_id"
+                                + " JOIN member m ON m.id = p.author_id"
+                                + " JOIN tag t ON t.id = pt.tag_id"
+                                + " WHERE "
+                                + condition.sql()
+                                + " GROUP BY t.id, t.name"
+                                + " ORDER BY post_count DESC, t.name ASC"
+                                + " LIMIT :limit")
+                .params(params)
+                .query(TagQueryRepository::countRow)
+                .list();
+    }
+
+    private static TagCountRow countRow(ResultSet rs, int rowNum) throws SQLException {
+        return new TagCountRow(rs.getString("name"), rs.getLong("post_count"));
     }
 
     /**
