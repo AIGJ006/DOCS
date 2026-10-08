@@ -21,6 +21,7 @@ import { finishPublish } from '../features/editor/publish';
 import SaveStatus from '../components/editor/SaveStatus';
 import { useSession } from '../features/auth/useSession';
 import { AutosaveQueue, type AutosaveStatus } from '../features/editor/autosaveQueue';
+import { useImageInsert } from '../features/image-upload/useImageInsert';
 import { ConflictController, serverCopyOf, type ConflictState } from '../features/editor/conflict';
 import { EDITOR_CONFIG } from '../features/editor/editorConfig';
 import { registerLifecycle } from '../features/editor/lifecycle';
@@ -104,6 +105,8 @@ export default function EditorPage() {
   const queueRef = useRef<AutosaveQueue | null>(null);
   const conflictRef = useRef<ConflictController | null>(null);
   const latest = useRef({ title: '', contentMd: '' });
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const [imageNotice, setImageNotice] = useState<string | null>(null);
 
   useEffect(() => {
     if (loading || !validId) {
@@ -217,6 +220,14 @@ export default function EditorPage() {
     setFieldErrors((errors) => errors.filter((e) => e.field !== 'contentMd'));
     queueRef.current?.update(latest.current.title, value);
   };
+
+  /** 사진 넣기 (003 US1): 붙여넣기·끌어놓기·[사진] 버튼 → 대기 표시 → 업로드 → `![](주소)`. 자동 저장은 막지 않는다. */
+  const images = useImageInsert({
+    textareaRef,
+    getContent: () => latest.current.contentMd,
+    setContent: onContent,
+    onRejected: setImageNotice,
+  });
 
   /** [저장] — 즉시 DB에 반영한다 (FR-009, D-3). */
   const onSave = async () => {
@@ -391,6 +402,11 @@ export default function EditorPage() {
             <span className="editing-badge">수정 중</span>
           ) : null}
           <SaveStatus status={status} onCompare={conflict ? onCompare : undefined} />
+          {images.uploading > 0 ? (
+            <span className="image-uploading" aria-live="polite">
+              사진 올리는 중…
+            </span>
+          ) : null}
         </div>
         <div className="editor-actions">
           {opened.server.status === 'PUBLISHED' && editing ? (
@@ -398,6 +414,10 @@ export default function EditorPage() {
               변경 취소
             </button>
           ) : null}
+          <button type="button" onClick={images.openPicker}>
+            사진
+          </button>
+          <input {...images.fileInputProps} aria-label="사진 고르기" />
           <button type="button" onClick={onSave} disabled={saving}>
             저장
           </button>
@@ -411,6 +431,14 @@ export default function EditorPage() {
       {message ? (
         <p role="alert" className="form-error">
           {message}
+        </p>
+      ) : null}
+      {imageNotice ? (
+        <p role="alert" className="form-error image-notice">
+          {imageNotice}{' '}
+          <button type="button" className="link-button" onClick={() => setImageNotice(null)}>
+            닫기
+          </button>
         </p>
       ) : null}
 
@@ -433,12 +461,16 @@ export default function EditorPage() {
       <div className="editor-body">
         <div className="editor-input">
           <textarea
+            ref={textareaRef}
             aria-label="본문"
             placeholder="Markdown으로 쓰세요"
             value={contentMd}
             aria-invalid={contentError ? 'true' : undefined}
             aria-describedby={contentError ? 'content-error' : undefined}
             onChange={(e) => onContent(e.target.value)}
+            onPaste={images.onPaste}
+            onDrop={images.onDrop}
+            onDragOver={images.onDragOver}
           />
           {contentError ? (
             <p id="content-error" className="field-error">
