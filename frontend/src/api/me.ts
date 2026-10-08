@@ -1,4 +1,5 @@
 import { apiGet, apiPatch } from './client';
+import type { Visibility } from './posts';
 
 /** 현재 로그인 상태 요약 (contracts `MeSummary`). */
 export interface MeSummary {
@@ -42,7 +43,8 @@ export interface MySettings {
   email: string | null;
   provider: Provider;
   previousLogin: { at: string; provider: Provider } | null;
-  defaultVisibility: 'PUBLIC' | 'PRIVATE';
+  /** 004 공개 범위 값 (`FRIENDS`는 친구 공개 선택 구현 빌드에서만 나온다) */
+  defaultVisibility: Visibility;
   lastActiveVisible: boolean;
   passwordChangeAvailable: boolean;
 }

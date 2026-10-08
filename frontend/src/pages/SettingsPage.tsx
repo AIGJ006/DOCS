@@ -12,6 +12,7 @@ import {
   type Provider,
   type SettingsUpdate,
 } from '../api/me';
+import type { SetVisibilityResult, Visibility } from '../api/posts';
 import DefaultAvatar from '../components/DefaultAvatar';
 import ProfileImageCropper from '../components/ProfileImageCropper';
 import { groupFieldErrors } from '../features/auth/fieldErrors';
@@ -20,6 +21,7 @@ import { useSession } from '../features/auth/useSession';
 import { uploadProfileImage } from '../features/profile/uploadProfileImage';
 import PasswordChangeForm from '../features/settings/PasswordChangeForm';
 import { formatDate } from '../features/time/dateFormat';
+import VisibilitySelect from '../features/visibility/VisibilitySelect';
 import '../features/auth/auth.css';
 import '../features/settings/settings.css';
 
@@ -29,7 +31,6 @@ const PROVIDER_LABEL: Record<Provider, string> = {
   GOOGLE: 'Google',
   GITHUB: 'GitHub',
 };
-const VISIBILITY_LABEL = { PUBLIC: '전체 공개', PRIVATE: '나만 보기' } as const;
 const FAILED_MESSAGE = '잠시 후 다시 시도해 주세요';
 
 const HOUR_MINUTE = new Intl.DateTimeFormat('ko-KR', {
@@ -325,13 +326,25 @@ function AccountSection({
 }) {
   const [error, setError] = useState<string | null>(null);
 
-  async function save(update: SettingsUpdate) {
+  async function save(update: SettingsUpdate): Promise<MySettings | null> {
     setError(null);
     try {
-      onChange(await updateMySettings(update));
+      const saved = await updateMySettings(update);
+      onChange(saved);
+      return saved;
     } catch (caught) {
       setError(caught instanceof ApiError ? caught.message : FAILED_MESSAGE);
+      return null;
     }
+  }
+
+  /**
+   * 004 `VisibilitySelect`의 즉시 저장 모드: `PATCH /api/me/settings`로 저장하고 저장된 값을 돌려준다. 실패하면 위에서 문구를
+   * 이미 보였으므로 null — 선택 상자는 이전 값으로 돌아간다. 글이 아니라 `firstPublicAt`은 늘 null이다.
+   */
+  async function saveDefaultVisibility(next: Visibility): Promise<SetVisibilityResult | null> {
+    const saved = await save({ defaultVisibility: next });
+    return saved ? { visibility: saved.defaultVisibility, firstPublicAt: null } : null;
   }
 
   return (
@@ -350,20 +363,12 @@ function AccountSection({
         </dd>
       </dl>
       <div className="field">
-        <label htmlFor="settings-visibility">새 글 기본 공개 범위</label>
-        <select
-          id="settings-visibility"
+        {/* 004 T057: 선택지·라벨은 004 visibilityOptions.ts 한 곳에서 온다 */}
+        <VisibilitySelect
+          label="새 글 기본 공개 범위"
           value={settings.defaultVisibility}
-          onChange={(e) =>
-            void save({ defaultVisibility: e.target.value as MySettings['defaultVisibility'] })
-          }
-        >
-          {(Object.keys(VISIBILITY_LABEL) as Array<keyof typeof VISIBILITY_LABEL>).map((value) => (
-            <option key={value} value={value}>
-              {VISIBILITY_LABEL[value]}
-            </option>
-          ))}
-        </select>
+          save={saveDefaultVisibility}
+        />
       </div>
       <div className="check">
         <input

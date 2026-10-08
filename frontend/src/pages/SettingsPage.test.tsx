@@ -241,6 +241,33 @@ describe('SettingsPage (FR-046~053)', () => {
     );
   });
 
+  it('기본 공개 범위 선택지는 004 VisibilitySelect(visibilityOptions)에서 오고, 저장이 거부되면 이전 값으로 돌아간다', async () => {
+    routes({
+      'PATCH /api/me/settings': () =>
+        json(
+          400,
+          errorBody('VALIDATION_FAILED', '공개 범위를 다시 선택해 주세요', [
+            {
+              field: 'defaultVisibility',
+              code: 'INVALID_VISIBILITY',
+              message: '공개 범위를 다시 선택해 주세요',
+            },
+          ]),
+        ),
+    });
+    const user = userEvent.setup();
+    renderPage();
+    const select = await screen.findByLabelText('새 글 기본 공개 범위');
+    expect(
+      within(select)
+        .getAllByRole('option')
+        .map((o) => o.textContent),
+    ).toEqual(['🌐 전체 공개', '🔒 나만 보기']);
+    await user.selectOptions(select, 'PRIVATE');
+    expect(await screen.findByText('공개 범위를 다시 선택해 주세요')).toBeInTheDocument();
+    await waitFor(() => expect(select).toHaveValue('PUBLIC'));
+  });
+
   it('직전 로그인: 없으면 "첫 로그인", 있으면 YYYY.MM.DD HH:mm(Asia/Seoul)과 로그인 방식', async () => {
     routes();
     const { unmount } = renderPage();
