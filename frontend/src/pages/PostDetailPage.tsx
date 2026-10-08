@@ -207,7 +207,7 @@ export default function PostDetailPage({
             alignItems: 'center',
             flexWrap: 'wrap',
             gap: '0.5rem',
-            color: 'var(--muted, #868e96)',
+            color: 'var(--color-text-muted)',
             fontSize: '0.875rem',
           }}
         >

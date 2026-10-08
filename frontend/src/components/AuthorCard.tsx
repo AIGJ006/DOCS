@@ -28,7 +28,8 @@ export default function AuthorCard({ author, isMe, followButton = null }: Author
         margin: '2rem 0 0',
         padding: '1rem',
         borderRadius: '0.5rem',
-        background: 'var(--card-bg, #f8f9fa)',
+        border: '1px solid var(--color-border)',
+        background: 'var(--color-surface)',
       }}
     >
       {author.profileImageUrl ? (
@@ -52,7 +53,10 @@ export default function AuthorCard({ author, isMe, followButton = null }: Author
       )}
       <div style={{ minWidth: 0, flex: 1 }}>
         <p style={{ margin: 0, fontWeight: 600 }}>
-          {author.nickname} <span style={{ opacity: 0.7, fontWeight: 400 }}>@{author.handle}</span>
+          {author.nickname}{' '}
+          <span style={{ color: 'var(--color-text-muted)', fontWeight: 400 }}>
+            @{author.handle}
+          </span>
         </p>
         {author.bio ? (
           <p

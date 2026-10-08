@@ -20,6 +20,12 @@ public final class CacheControlPolicy {
     public static final String NO_CACHE = "private, no-cache";
     public static final String NO_STORE = "private, no-store";
 
+    /** 016: 이름에 해시가 없는 정적 파일({@code /js/theme-init.js}) — 매번 ETag·Last-Modified로 다시 확인. */
+    public static final String STATIC_REVALIDATE = "no-cache";
+
+    /** 016: 이름에 내용 해시가 붙은 Vite 빌드 파일({@code /assets/**}) — 내용이 바뀌면 이름이 바뀐다. */
+    public static final String STATIC_IMMUTABLE = "max-age=31536000, immutable";
+
     private CacheControlPolicy() {}
 
     public static String forPost(PostStatus status, Visibility visibility, boolean hidden) {

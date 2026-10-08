@@ -40,9 +40,9 @@ export default function ReactionBar({
         gap: '0.75rem',
         margin: '1.5rem 0 0',
         padding: '0.75rem 0',
-        borderTop: '1px solid var(--divider, #e9ecef)',
-        borderBottom: '1px solid var(--divider, #e9ecef)',
-        color: 'var(--muted, #868e96)',
+        borderTop: '1px solid var(--color-border)',
+        borderBottom: '1px solid var(--color-border)',
+        color: 'var(--color-text-muted)',
         fontSize: '0.875rem',
       }}
     >

@@ -53,14 +53,14 @@
 
 .preview-pane {
   min-width: 0;
-  border: 1px solid #ccc;
+  border: 1px solid var(--color-border);
   padding: 0.75rem;
 }
 
 .preview-note {
   margin: 0 0 0.5rem;
   font-size: 0.85rem;
-  color: #555;
+  color: var(--color-text-muted);
 }
 
 .post-content pre {
@@ -75,7 +75,7 @@
 .field-error,
 .form-error,
 .preview-error {
-  color: #b00020;
+  color: var(--color-danger);
 }
 
 .publish-dialog {
@@ -84,7 +84,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgb(0 0 0 / 40%);
+  background: var(--color-overlay);
   padding: 1rem;
 }
 
@@ -92,7 +92,8 @@
   box-sizing: border-box;
   width: 100%;
   max-width: 28rem;
-  background: #fff;
+  background: var(--color-surface);
+  color: var(--color-text);
   padding: 1rem;
   display: flex;
   flex-direction: column;
@@ -109,13 +110,13 @@
 }
 
 .tag-chips li {
-  border: 1px solid #999;
+  border: 1px solid var(--color-text-muted);
   border-radius: 1rem;
   padding: 0.1rem 0.5rem;
 }
 
 .tag-chips li[aria-invalid='true'] {
-  border-color: #b00020;
+  border-color: var(--color-danger);
 }
 
 .dialog-actions {
@@ -133,7 +134,7 @@
 }
 
 .editing-badge {
-  border: 1px solid #555;
+  border: 1px solid var(--color-text-muted);
   border-radius: 0.25rem;
   padding: 0.05rem 0.4rem;
   font-size: 0.85rem;
@@ -145,7 +146,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgb(0 0 0 / 40%);
+  background: var(--color-overlay);
   padding: 1rem;
   z-index: 20;
 }
@@ -154,14 +155,15 @@
   box-sizing: border-box;
   width: 100%;
   max-width: 26rem;
-  background: #fff;
+  background: var(--color-surface);
+  color: var(--color-text);
   padding: 1rem;
 }
 
 /* 충돌 배너·비교 창 (002 US5). 색과 기호(−/+)를 함께 쓰고, 375px에서는 위아래 한 줄 목록으로 줄바꿈한다. */
 .conflict-banner {
-  border: 1px solid #b26a00;
-  background: #fff4e5;
+  border: 1px solid var(--color-warning-border);
+  background: var(--color-warning-bg);
   padding: 0.5rem 0.75rem;
 }
 
@@ -171,7 +173,7 @@
   display: flex;
   align-items: flex-start;
   justify-content: center;
-  background: rgb(0 0 0 / 40%);
+  background: var(--color-overlay);
   padding: 0.5rem;
   overflow-y: auto;
   z-index: 10;
@@ -182,7 +184,8 @@
   width: 100%;
   max-width: 72rem;
   min-width: 0;
-  background: #fff;
+  background: var(--color-surface);
+  color: var(--color-text);
   padding: 1rem;
   display: flex;
   flex-direction: column;
@@ -252,25 +255,25 @@
 }
 
 .diff-removed {
-  background: #ffebe9;
+  background: var(--diff-del-bg);
 }
 
 .diff-added {
-  background: #e6ffec;
+  background: var(--diff-add-bg);
 }
 
 .diff-removed .diff-word {
-  background: #ffc1bc;
+  background: var(--diff-del-strong);
   text-decoration: line-through;
 }
 
 .diff-added .diff-word {
-  background: #abf2bc;
+  background: var(--diff-add-strong);
   text-decoration: none;
 }
 
 .diff-current {
-  outline: 2px solid #0b57d0;
+  outline: 2px solid var(--color-focus);
 }
 
 .diff-title {
