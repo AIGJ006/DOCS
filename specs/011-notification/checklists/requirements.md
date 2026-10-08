@@ -13,7 +13,7 @@
 
 ## Requirement Completeness
 
-- [ ] No [NEEDS CLARIFICATION] markers remain
+- [x] No [NEEDS CLARIFICATION] markers remain
 - [x] Requirements are testable and unambiguous
 - [x] Success criteria are measurable
 - [x] Success criteria are technology-agnostic (no implementation details)
@@ -31,6 +31,7 @@
 
 ## Notes
 
+- **2026-10-08 clarify 반영**: NEEDS CLARIFICATION 표시를 모두 spec Clarifications(Session 2026-10-08, 민서 확정)의 답으로 고쳤다. 아래 "남음" 기록은 clarify 전 상태다.
 - Items marked incomplete require spec updates before `/speckit-clarify` or `/speckit-plan`
 - NEEDS CLARIFICATION 1개 남음: FR-024 — 숨김 알림(`CONTENT_HIDDEN`)을 누르면 글 상세(25 §2·§12 "통일 제안")로 갈지, 내 글 관리 화면의 해당 글(41 "다른 담당자와 맞출 것")로 갈지.
 - 20의 이벤트 원칙은 본문에서 "사건"이라는 업무 용어로 옮겼고, 이벤트 이름·필드·리스너·스레드 풀 설정은 마지막 `Implementation Notes (for /speckit-plan)` 절에만 두었다. FR-003의 "대기열 1,000건·20초"는 원문 결정 수치를 관찰 가능한 동작으로 옮긴 것이다.

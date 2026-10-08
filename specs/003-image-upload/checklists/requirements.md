@@ -13,7 +13,7 @@
 
 ## Requirement Completeness
 
-- [ ] No [NEEDS CLARIFICATION] markers remain
+- [x] No [NEEDS CLARIFICATION] markers remain
 - [x] Requirements are testable and unambiguous
 - [x] Success criteria are measurable
 - [x] Success criteria are technology-agnostic (no implementation details)
@@ -31,6 +31,7 @@
 
 ## Notes
 
+- **2026-10-08 clarify 반영**: NEEDS CLARIFICATION 표시를 모두 spec Clarifications(Session 2026-10-08, 민서 확정)의 답으로 고쳤다. 아래 "남음" 기록은 clarify 전 상태다.
 - 미통과: NEEDS CLARIFICATION 1개가 남아 있다 — FR-025 `FRIENDS` 공개 범위 글의 사진 접근 방식 (04 결정 2·01 Q10 "친구 공개 도입 시 서명된 주소 방식으로 재검토"가 미결). `FRIENDS`는 선택 구현이고 기본 비활성이므로 공통 범위(`PUBLIC`/`PRIVATE`)의 계획은 진행할 수 있다.
 - 구현 용어(MinIO, Presigned URL, SigV4, CORS, API 경로, 설정 키, 테이블·컬럼)는 `Implementation Notes (for /speckit-plan)` 절에만 있다. 본문의 "업로드 권한", "교차 출처 허용", "매직 바이트"는 동작을 설명하는 일반 용어로 남겼다.
 - 저장소 운영 검증(FR-027, SC-009)은 운영 NHN 저장소에서 아직 실행하지 않았다(23 §2-3 "배포 전 필수, 아직 안 함"). 요구사항은 명확하지만 결과는 배포 전에 채워야 한다.

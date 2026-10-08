@@ -13,7 +13,7 @@
 
 ## Requirement Completeness
 
-- [ ] No [NEEDS CLARIFICATION] markers remain
+- [x] No [NEEDS CLARIFICATION] markers remain
 - [x] Requirements are testable and unambiguous
 - [x] Success criteria are measurable
 - [x] Success criteria are technology-agnostic (no implementation details)
@@ -31,6 +31,7 @@
 
 ## Notes
 
+- **2026-10-08 clarify 반영**: NEEDS CLARIFICATION 표시를 모두 spec Clarifications(Session 2026-10-08, 민서 확정)의 답으로 고쳤다. 아래 "남음" 기록은 clarify 전 상태다.
 - Items marked incomplete require spec updates before `/speckit-clarify` or `/speckit-plan`
 - NEEDS CLARIFICATION 1개 남음: FR-027 — 팔로우 요청이 공통 IP 기준 요청 제한에 포함되는지 (24 §12 "화요일 안건 2", 원문에 결론 없음).
 - 구현 용어는 마지막 `Implementation Notes (for /speckit-plan)` 절에만 두었다. SC-007의 "약 5ms"는 원문 측정치를 기준선으로 옮긴 것이다.

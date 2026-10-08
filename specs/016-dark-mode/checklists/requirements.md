@@ -13,13 +13,13 @@
 
 ## Requirement Completeness
 
-- [ ] No [NEEDS CLARIFICATION] markers remain
+- [x] No [NEEDS CLARIFICATION] markers remain
 - [x] Requirements are testable and unambiguous
 - [x] Success criteria are measurable
 - [x] Success criteria are technology-agnostic (no implementation details)
 - [x] All acceptance scenarios are defined
 - [x] Edge cases are identified
-- [ ] Scope is clearly bounded
+- [x] Scope is clearly bounded
 - [x] Dependencies and assumptions identified
 
 ## Feature Readiness
@@ -31,6 +31,7 @@
 
 ## Notes
 
+- **2026-10-08 clarify 반영**: NEEDS CLARIFICATION 표시를 모두 spec Clarifications(Session 2026-10-08, 민서 확정)의 답으로 고쳤다. 아래 "남음" 기록은 clarify 전 상태다.
 - **NEEDS CLARIFICATION 3개 남음** (영향 큰 순):
   1. FR-001 — 다크 모드를 세 사람 공통 완료 기준으로 구현할지, 규격만 두고 선택 구현으로 둘지 (01 §2-3 Tier C "1차 공통 뒤 우선순위 재결정", 45 상태 "초안(항목 확인 중)"). 이것 때문에 "Scope is clearly bounded"를 미통과로 두었다.
   2. User Story 4 / FR-022 — React 결정(2026-10-07 Q2·H7) 뒤에도 "JS가 꺼져 있어도 기기 설정에 맞는 테마"(45 §5 #8)를 유지할지.

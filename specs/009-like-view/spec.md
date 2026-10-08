@@ -8,6 +8,15 @@
 
 **Input**: 원문 설계 문서 — [docs/30-like.md](../../docs/30-like.md), [docs/31-view-count.md](../../docs/31-view-count.md) (참고: [01](../../docs/01-common-requirements.md) C-LIKE-1·C-VIEW-1·결정 기록 H6·H7·H8, [02](../../docs/02-architecture.md) §2-1, [40](../../docs/40-post-detail.md) R-7·R-8, [42](../../docs/42-permission-matrix.md) P-6·P-9·§3·§7, [43](../../docs/43-report-hide.md) §4-1, [51](../../docs/51-erd-unified.md))
 
+## Clarifications
+
+### Session 2026-10-08
+
+- Q: 관리자가 글을 열어 본 것도 조회수에 셀까? → A: 세지 않는다. 조회 기록 요청에서 관리자면 기록 없이 같은 성공 응답(204)을 준다 (FR-024·FR-031) (민서 확정 2026-10-08)
+- Q: "원래 접속 주소(IP)를 어디에도 남기지 않는다"의 범위는? → A: 조회수 기능이 만드는 기록(중복 판정 키·DB·조회수 로그)에만 해당한다. 서버 접속 로그와 로그인·재설정 요청 제한은 지금처럼 IP를 쓴다. SC-010을 이 범위로 좁힌다 (FR-034, SC-010) (민서 확정 2026-10-08)
+- Q: 비회원 방문자 쿠키 안내를 개인정보 처리방침에 언제 넣을까? → A: 첫 공개 전 처리방침 첫 판에 넣는다(재동의 흐름을 일으키지 않음) (FR-023·FR-034) (민서 확정 2026-10-08)
+- Q: 좋아요 요청 과다 오류 코드는? → A: 공통 `TOO_MANY_REQUESTS`(007 Q3과 같음) (FR-008) (민서 확정 2026-10-08)
+
 ## User Scenarios & Testing *(mandatory)*
 
 ### User Story 1 - 남의 글에 좋아요를 누르고 취소한다 (Priority: P1)
@@ -100,7 +109,7 @@
 - 반영 사이에 글이 완전 삭제되면? 그 글의 모아 둔 조회만 건너뛰고 나머지 글은 정상 반영한다.
 - 반영 중 한 글을 확정한 직후·정리 직전에 서버가 멈추면? 그 글 하나만 1분치가 한 번 더 더해질 수 있다. 조회수는 회계 값이 아니라서 허용한다.
 - 요청 제한용 임시 저장소가 멈추면? 좋아요·조회 요청 제한은 통과(경고 기록)되어 제한 없이 동작한다 (02 §2-1).
-- 관리자가 신고 처리를 위해 글을 열면? 미결정 — FR-031의 확인 항목을 따른다.
+- 관리자가 신고 처리를 위해 글을 열면? 세지 않는다. 다른 경우와 같은 204를 준다 (FR-031).
 
 ## Requirements *(mandatory)*
 
@@ -156,13 +165,13 @@
 - **FR-028**: 반영 도중 서버가 멈춰도 모아 둔 조회가 사라지지 않아야 하고, 다음 반영 때 남은 것만 처리해야 한다. 이미 반영한 글을 다시 더하지 않되, 확정 직후 멈춘 그 글 하나의 1분치 중복은 허용한다 (31 §5-2, C-VIEW-1 기준 5).
 - **FR-029**: 조회 기록용 저장소에 연결할 수 없으면 기록을 건너뛰고 같은 성공 응답을 줘야 하며, 글 상세는 (로그인 정보를 읽지 못하면 비회원 기준으로) 정상으로 열려야 한다 (W-6, C-VIEW-1 기준 3, 01 결정 H8).
 - **FR-030**: 조회수 반영은 글의 "수정 일자"를 바꾸지 않아야 한다 (31 §5-2).
-- **FR-031**: 관리자의 조회를 세지 않을지 정해야 한다 [NEEDS CLARIFICATION: 40 R-8과 42 "다른 담당자와 맞출 것"은 "신고 처리로 연 조회가 섞이지 않게 관리자 제외"를 31에 요청했으나 31 W-3에는 반영되지 않음 — 관리자를 제외 대상에 추가할지?]
+- **FR-031**: 관리자의 조회는 세지 않아야 한다. 조회 기록 요청을 보낸 사람이 관리자면 기록·중복 판정 없이 다른 경우와 같은 성공 응답(204)을 준다. 신고 검토로 연 조회가 조회수·트렌딩에 섞이지 않게 하기 위함이다 (40 R-8, 42 "다른 담당자와 맞출 것", Clarifications 2026-10-08)
 
 **조회수 — 일별 합계·화면·개인정보**
 
 - **FR-032**: 시스템은 글마다 날짜(한국 시간)별 조회수 합계를 저장하고, 90일이 지난 날짜의 합계는 매일 새벽 삭제해야 한다. 누적 조회수는 계속 유지되고, 글이 완전 삭제되면 일별 합계도 함께 삭제되어야 한다 (W-7, C-VIEW-1 기준 8).
 - **FR-033**: 조회수는 글 상세에만 "조회 N"(형식은 FR-016)으로 보이고 목록 카드에는 보이지 않아야 한다. 숫자에 마우스를 올리거나 누르면 "같은 사람은 하루에 한 번만 세요"를 보여 주고(중복 기준을 바꾸면 문구도 맞춤), 방금 본 내 조회를 화면에서 바로 +1하지 않아야 한다 (W-8, 31 §7).
-- **FR-034**: 원래 접속 주소(IP)는 어떤 저장소·로그에도 남기지 않아야 하고, 방문자 구분 값도 로그에 남기지 않아야 한다. 중복 판정 기록은 기간(기본 24시간)이 지나면 자동으로 사라져야 하며, 방문자 식별 쿠키는 개인정보 처리방침에 "조회수 중복 방지용 무작위 식별자"로 안내해야 한다 (31 §8, C-VIEW-1 기준 7).
+- **FR-034**: 조회수 기능이 만드는 기록(중복 판정 키·데이터베이스·조회수 관련 로그)에는 원래 접속 주소(IP)를 남기지 않아야 하고, 방문자 구분 값도 로그에 남기지 않아야 한다. 서버 접속 로그와 로그인·재설정 요청 제한(보안용)의 IP 사용은 이 규칙의 범위 밖이다. 중복 판정 기록은 기간(기본 24시간)이 지나면 자동으로 사라져야 하며, 방문자 식별 쿠키는 첫 공개 전 개인정보 처리방침 첫 판에 "조회수 중복 방지용 무작위 식별자"로 안내해야 한다 (31 §8, C-VIEW-1 기준 7, Clarifications 2026-10-08).
 
 ### Key Entities *(include if feature involves data)*
 
@@ -185,7 +194,7 @@
 - **SC-007**: 실제로 본 조회는 1분 안에 글 상세의 조회수와 그날의 일별 합계에 반영된다.
 - **SC-008**: 조회 기록용 저장소가 멈춘 동안에도 글 상세는 100% 정상으로 열린다.
 - **SC-009**: 반영 도중 서버를 강제로 멈췄다 다시 실행해도 모아 둔 조회가 0건 유실되고, 남은 처리 대기 묶음이 0개가 된다.
-- **SC-010**: 데이터베이스·임시 저장소·로그 어디에서도 원래 접속 주소가 0건 발견된다.
+- **SC-010**: 조회수 기능이 만드는 기록(중복 판정 키·데이터베이스·조회수 관련 로그) 어디에서도 원래 접속 주소가 0건 발견된다(서버 접속 로그·로그인 요청 제한 키는 범위 밖).
 - **SC-011**: 보관 정리 뒤 90일이 지난 일별 합계는 0건 남는다.
 
 ## Assumptions
@@ -206,14 +215,14 @@
 원문의 기술 결정 요약. 이 절 밖의 본문에는 구현 용어를 쓰지 않았다.
 
 - **스키마** ([51 §2](../../docs/51-erd-unified.md)): `post_like(post_id, member_id, created_at)` 복합 PK, `post_id` FK CASCADE·`member_id` FK RESTRICT, `ix_post_like_member (member_id, created_at DESC)`. `post.like_count`(INT)·`post.view_count`(BIGINT), `ck_post_counts`(음수 금지). `post_view_daily(post_id, view_date, views)` PK `(post_id, view_date)`, CASCADE, `ck_post_view_daily_views (views > 0)`, `ix_post_view_daily_date (view_date, post_id) INCLUDE (views)`. 스키마 변경 없음 (30 "ERD 변경 제안", 31 §6, 03 E-6·E-7·E-11·E-24).
-- **좋아요 API** ([30 §3](../../docs/30-like.md), [02 §5-1](../../docs/02-architecture.md)): `PUT`/`DELETE /api/posts/{postId}/like` → `200 { "liked", "likeCount" }`; 401 `LOGIN_REQUIRED`, 403 `EMAIL_NOT_VERIFIED`/`ACCOUNT_WITHDRAWN`, 400 `CANNOT_LIKE_OWN_POST`([42 P-9](../../docs/42-permission-matrix.md); 30은 403), 404 `NOT_FOUND`, 429 + `Retry-After`. 오류 본문은 O8 공통 형식.
+- **좋아요 API** ([30 §3](../../docs/30-like.md), [02 §5-1](../../docs/02-architecture.md)): `PUT`/`DELETE /api/posts/{postId}/like` → `200 { "liked", "likeCount" }`; 401 `LOGIN_REQUIRED`, 403 `EMAIL_NOT_VERIFIED`/`ACCOUNT_WITHDRAWN`, 400 `CANNOT_LIKE_OWN_POST`([42 P-9](../../docs/42-permission-matrix.md); 30은 403), 404 `NOT_FOUND`, 429 `TOO_MANY_REQUESTS` + `Retry-After`. 오류 본문은 O8 공통 형식.
 - **좋아요 처리** ([30 §4](../../docs/30-like.md)): `WITH ins AS (INSERT … ON CONFLICT DO NOTHING RETURNING post_id) UPDATE post SET like_count = like_count + 1 …`, 취소는 `WITH del AS (DELETE … RETURNING post_id) UPDATE … - 1`. 응답의 `likeCount`는 같은 트랜잭션에서 `SELECT like_count`. 동시성 검증 결과 30 §4-2 (PostgreSQL 18).
 - **보정 배치** ([30 §4-1](../../docs/30-like.md)): `LEFT JOIN post_like … GROUP BY` 후 `like_count <> n`인 행만 `UPDATE … RETURNING`, ShedLock, 0건 아니면 WARN 로그.
 - **권한 판정** ([42 §3](../../docs/42-permission-matrix.md), [02 §4-2](../../docs/02-architecture.md)): `PostAccessPolicy.canRead` + `status = PUBLISHED`; 공용 조건 `deleted_at IS NULL AND hidden_at IS NULL AND 작성자 withdrawn_at IS NULL`(01 H1).
 - **요청 제한** ([30 §6](../../docs/30-like.md)): Redis 카운터 `rate:like:{memberId}` 60/분. Redis 장애 시 통과 + 경고 로그 ([02 §2-1](../../docs/02-architecture.md), H8).
 - **이벤트** ([20 §3-3](../../docs/20-domain-events.md), [30 §6](../../docs/30-like.md)): `PostLiked(postId, postAuthorId, memberId, likedAt)`, `PostUnliked(postId, postAuthorId, memberId, unlikedAt)` — 20(2026-10-06)의 필드명을 따른다(30의 `likerId`/`authorId`, `PostUnliked{postId, likerId}`와 다름). Service에서 `ins`/`del` 결과로 판단해 발행, `@TransactionalEventListener(AFTER_COMMIT)` 구독. 모듈 `interaction/LikeService`, `ViewCountService` ([02 §3](../../docs/02-architecture.md)).
-- **글 상세 연동** ([40 §2·§4·§6](../../docs/40-post-detail.md)): "내가 눌렀는지"는 상세 조회 때 `EXISTS`(PK) 1번. 조회 기록 스크립트는 외부 파일 `/js/post-view.js`(`<script src defer>`), 글 ID·CSRF 토큰은 `data-` 속성 (CSP `script-src 'self'`). 상세 응답 `Cache-Control: private, no-cache` (R-9).
-- **조회 기록 API** ([31 §4](../../docs/31-view-count.md)): `POST /api/posts/{postId}/views` → 항상 `204`, 404, 429(방문자 키 60/분). `fetch(..., { keepalive: true })` + `X-CSRF-TOKEN`, `visibilitychange`로 1초 타이머.
+- **글 상세 연동** ([40 §2·§4·§6](../../docs/40-post-detail.md)): "내가 눌렀는지"는 상세 조회 때 `EXISTS`(PK) 1번. 조회 기록은 React 화면의 005 `useViewBeacon` 훅이 보낸다(2026-10-07 H7로 서버 화면 스크립트 `/js/post-view.js`는 쓰지 않음). 상세 응답 `Cache-Control: private, no-cache` (R-9).
+- **조회 기록 API** ([31 §4](../../docs/31-view-count.md)): `POST /api/posts/{postId}/views` → 항상 `204`, 404, 429(방문자 키 60/분). `fetch(..., { keepalive: true })` + `X-XSRF-TOKEN`(001 공통 CSRF 헤더), `visibilitychange`로 1초 타이머.
 - **방문자 키** ([31 §2-1](../../docs/31-view-count.md)): `m:{memberId}` / `v:{vid}` (쿠키 `vid`: UUID, 1년, `HttpOnly`, `Secure`, `SameSite=Lax`) / `h:{SHA-256(IP + User-Agent + 오늘의 비밀값)}`. IP는 02 §5 신뢰 프록시 규칙(H4)의 값.
 - **제외 판정** ([31 §3](../../docs/31-view-count.md)): UA에 `bot`·`crawler`·`spider`·`preview`·`facebookexternalhit`·`Slackbot`·`kakaotalk-scrap`·`Discordbot`·`HeadlessChrome`(설정 파일), `Purpose: prefetch`/`Sec-Purpose: prefetch` 헤더.
 - **설정값** ([31 §2-2](../../docs/31-view-count.md)): `blog.view.dedupe-window`(기본 `24h`), `blog.view.max-per-window`(기본 `1`).
