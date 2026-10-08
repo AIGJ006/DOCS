@@ -91,3 +91,41 @@
 .status-ok {
   color: #1b5e20;
 }
+
+.friend-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.friend-list li {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  min-width: 0;
+}
+
+.friend-photo {
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.friend-name {
+  min-width: 0;
+  flex: 1 1 8rem;
+}
+
+.friend-handle,
+.friend-since {
+  opacity: 0.75;
+  font-size: 0.875rem;
+}
+
+.friend-actions {
+  display: flex;
+  gap: 0.5rem;
+}

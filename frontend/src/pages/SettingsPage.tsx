@@ -15,6 +15,7 @@ import {
 import DefaultAvatar from '../components/DefaultAvatar';
 import ProfileImageCropper from '../components/ProfileImageCropper';
 import { groupFieldErrors } from '../features/auth/fieldErrors';
+import FriendLists from '../features/friends/FriendLists';
 import { useSession } from '../features/auth/useSession';
 import { uploadProfileImage } from '../features/profile/uploadProfileImage';
 import PasswordChangeForm from '../features/settings/PasswordChangeForm';
@@ -40,6 +41,7 @@ type PendingPhoto =
  * - 프로필: 사진([사진 바꾸기]·[기본 이미지로] — 고른 사진은 [저장] 때 올리고 연결한다), 닉네임(30일 제한 중이면 막고 다음 변경
  *   가능일), 소개(글자 수는 코드 포인트), 블로그 주소 `@handle` 읽기 전용. [저장] 한 번에 바꾼 칸만 보내고, 실패한 칸을 모두 보인다.
  * - 계정: 이메일 읽기 전용, 로그인 수단, 비밀번호 변경(이메일 계정만), 새 글 기본 공개 범위·최근 활동 공개(바꾸면 바로 저장), 약관 링크.
+ * - 친구: 받은 친구 요청·내 친구 목록(`FriendLists`, US7).
  * - 회원 탈퇴는 015가 채운다.
  *
  * 닉네임·소개는 React 텍스트로만 그린다(HTML로 해석하지 않음).
@@ -100,6 +102,7 @@ export default function SettingsPage() {
         }}
       />
       <AccountSection settings={settings} onChange={setSettings} />
+      <FriendLists />
       <section aria-labelledby="withdraw-title">
         <h2 id="withdraw-title">회원 탈퇴</h2>
         <p>회원 탈퇴는 준비 중이에요.</p>

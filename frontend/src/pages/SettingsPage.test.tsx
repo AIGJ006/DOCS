@@ -64,6 +64,8 @@ function routes(overrides: Record<string, (init: RequestInit | undefined) => Res
     'PATCH /api/me/profile': (init) => json(200, { ...PROFILE, ...JSON.parse(String(init?.body)) }),
     'PATCH /api/me/settings': (init) =>
       json(200, { ...SETTINGS, ...JSON.parse(String(init?.body)) }),
+    'GET /api/me/friends': () => json(200, { items: [], nextCursor: null }),
+    'GET /api/me/friend-requests': () => json(200, { items: [], nextCursor: null }),
     ...overrides,
   });
 }
@@ -248,5 +250,118 @@ describe('SettingsPage (FR-046~053)', () => {
     const account = await screen.findByRole('region', { name: '계정' });
     expect(within(account).getByText('GitHub')).toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: '비밀번호 변경' })).not.toBeInTheDocument();
+  });
+});
+
+describe('SettingsPage 친구 (FR-055·056)', () => {
+  it('받은 친구 요청 [수락]·[거절]과 내 친구 [친구 끊기]', async () => {
+    const mock = routes({
+      'GET /api/me/friend-requests': () =>
+        json(200, {
+          items: [
+            {
+              handle: 'carol',
+              nickname: '캐롤',
+              profileImageUrl: null,
+              requestedAt: '2026-10-01T00:00:00Z',
+            },
+            {
+              handle: 'dave',
+              nickname: '데이브',
+              profileImageUrl: null,
+              requestedAt: '2026-09-30T00:00:00Z',
+            },
+          ],
+          nextCursor: null,
+        }),
+      'GET /api/me/friends': (init) =>
+        json(200, {
+          items: [
+            {
+              handle: 'bob',
+              nickname: '밥밥이',
+              profileImageUrl: 'https://img.example/bob.webp',
+              friendsSince: '2026-09-01T00:00:00Z',
+            },
+          ],
+          nextCursor: init ? null : null,
+        }),
+      'PUT /api/members/carol/friend': () => json(200, { status: 'FRIENDS' }),
+      'DELETE /api/members/dave/friend': () => json(200, { status: 'NONE' }),
+      'DELETE /api/members/bob/friend': () => json(200, { status: 'NONE' }),
+    });
+    const user = userEvent.setup();
+    renderPage();
+    const requests = await screen.findByRole('region', { name: '받은 친구 요청' });
+    expect(await within(requests).findByText('캐롤')).toBeInTheDocument();
+    expect(within(requests).getByText('@carol')).toBeInTheDocument();
+    const friends = screen.getByRole('region', { name: '내 친구' });
+    expect(await within(friends).findByText('밥밥이')).toBeInTheDocument();
+    expect(friends.querySelector('img')).toHaveAttribute('src', 'https://img.example/bob.webp');
+
+    await user.click(within(requests).getAllByRole('button', { name: '수락' })[0]);
+    await waitFor(() => expect(within(requests).queryByText('캐롤')).not.toBeInTheDocument());
+    expect(requestsTo(mock, 'PUT', '/api/members/carol/friend')).toHaveLength(1);
+
+    await user.click(within(requests).getByRole('button', { name: '거절' }));
+    await waitFor(() => expect(within(requests).queryByText('데이브')).not.toBeInTheDocument());
+    expect(within(requests).getByText('받은 요청이 없어요')).toBeInTheDocument();
+
+    await user.click(within(friends).getByRole('button', { name: '친구 끊기' }));
+    await user.click(await screen.findByRole('button', { name: '끊기' }));
+    await waitFor(() => expect(within(friends).queryByText('밥밥이')).not.toBeInTheDocument());
+    expect(requestsTo(mock, 'DELETE', '/api/members/bob/friend')).toHaveLength(1);
+  });
+
+  it('[더 보기]로 다음 페이지를 붙이고 같은 사람은 한 번만', async () => {
+    const page1 = {
+      items: [
+        {
+          handle: 'f1',
+          nickname: '친구일',
+          profileImageUrl: null,
+          friendsSince: '2026-09-02T00:00:00Z',
+        },
+      ],
+      nextCursor: 'c1',
+    };
+    const page2 = {
+      items: [
+        {
+          handle: 'f1',
+          nickname: '친구일',
+          profileImageUrl: null,
+          friendsSince: '2026-09-02T00:00:00Z',
+        },
+        {
+          handle: 'f2',
+          nickname: '친구이',
+          profileImageUrl: null,
+          friendsSince: '2026-09-01T00:00:00Z',
+        },
+      ],
+      nextCursor: null,
+    };
+    const mock = routes({
+      'GET /api/me/friend-requests': () => json(200, { items: [], nextCursor: null }),
+    });
+    mock.mockImplementation(async (input, init) => {
+      const url = String(input);
+      const path = url.split('?')[0];
+      if (path === '/api/me') return json(200, ME);
+      if (path === '/api/me/profile') return json(200, PROFILE);
+      if (path === '/api/me/settings') return json(200, SETTINGS);
+      if (path === '/api/me/friend-requests') return json(200, { items: [], nextCursor: null });
+      if (path === '/api/me/friends') return json(200, url.includes('cursor=c1') ? page2 : page1);
+      return json(404, errorBody('NOT_FOUND', String(init?.method)));
+    });
+    const user = userEvent.setup();
+    renderPage();
+    const friends = await screen.findByRole('region', { name: '내 친구' });
+    await within(friends).findByText('친구일');
+    await user.click(within(friends).getByRole('button', { name: '더 보기' }));
+    expect(await within(friends).findByText('친구이')).toBeInTheDocument();
+    expect(within(friends).getAllByText('친구일')).toHaveLength(1);
+    expect(within(friends).queryByRole('button', { name: '더 보기' })).not.toBeInTheDocument();
   });
 });
