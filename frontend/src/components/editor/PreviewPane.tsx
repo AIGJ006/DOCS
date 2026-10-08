@@ -3,6 +3,7 @@ import { ApiError } from '../../api/client';
 import { previewMarkdown } from '../../api/posts';
 import { EDITOR_CONFIG } from '../../features/editor/editorConfig';
 import { highlightCode } from '../../features/markdown/highlightCode';
+import { focusableCodeBlocks } from '../../features/markdown/focusableCodeBlocks';
 
 /**
  * 미리보기 (002 T063, FR-047, C-POST-1 #5). 입력이 0.5초 멈추면 서버 렌더러(`POST /api/markdown/preview`)를 부르고,
@@ -94,6 +95,7 @@ export default function PreviewPane({ contentMd, localImages }: Props) {
 
   useEffect(() => {
     highlightCode(container.current);
+    focusableCodeBlocks(container.current);
   }, [html]);
 
   useEffect(() => {

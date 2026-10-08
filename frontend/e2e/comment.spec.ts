@@ -154,6 +154,8 @@ test.describe('댓글 (007 quickstart §3)', () => {
     await b.getByLabel('답글 입력').fill(`B의 답글 ${stamp}`);
     await b.locator('.comment-reply-form').getByRole('button', { name: '등록' }).click();
     await expect(b.getByText(`B의 답글 ${stamp}`)).toBeVisible();
+    // 화면에 보인 직후 목록 API가 아직 새 답글을 돌려주지 않을 때가 있어(전체 실행에서 한 번 관찰) 늘어날 때까지 기다린다
+    await expect.poll(() => newestId(b, postId)).toBeGreaterThan(rootId);
     const bReplyId = await newestId(b, postId);
 
     await page.reload();
@@ -161,15 +163,18 @@ test.describe('댓글 (007 quickstart §3)', () => {
     await page.getByLabel('답글 입력').fill(`A의 답글 ${stamp}`);
     await page.locator('.comment-reply-form').getByRole('button', { name: '등록' }).click();
     await expect(page.getByText(`@${bMe.nickname}에게`)).toBeVisible();
+    await expect.poll(() => newestId(page, postId)).toBeGreaterThan(bReplyId);
     const aReplyId = await newestId(page, postId);
     await expect(page.getByTestId(`replies-${rootId}`).getByTestId('comment-item')).toHaveCount(2);
     await expect(page.getByRole('heading', { name: '댓글 3' })).toBeVisible();
 
-    // §3-7 글 작성자(A)가 보는 남의 댓글에는 [수정]·[삭제]·[신고]가 없다
+    // §3-7 글 작성자(A)가 보는 남의 댓글에는 [수정]·[삭제]가 없다. [신고]는 014가 머지되어 남의 댓글에만 있다
+    // (FR-022 "014 전까지 숨김"이 끝남 — 014 T026). A 자신의 글·댓글에는 [신고]가 없다
     const others = mainOf(page, bReplyId);
     await expect(others.getByRole('button', { name: '수정' })).toHaveCount(0);
     await expect(others.getByRole('button', { name: '삭제' })).toHaveCount(0);
-    await expect(page.getByRole('button', { name: /신고/ })).toHaveCount(0);
+    await expect(others.getByRole('button', { name: '신고' })).toHaveCount(1);
+    await expect(page.getByRole('button', { name: /신고/ })).toHaveCount(1);
 
     // §3-8 비공개 → B에게 글·댓글 모두 찾을 수 없음 → 다시 공개 → 댓글 돌아옴
     expect(
