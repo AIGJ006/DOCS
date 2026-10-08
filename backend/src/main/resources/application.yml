@@ -140,6 +140,16 @@ blog:
     empty-draft-cron: "0 30 3 * * *"
     zone: Asia/Seoul
     empty-draft-age: 24h
+  # 글 읽기 (005 data-model §6). 클라이언트의 size는 무시하고 이 값으로 고정 (10 L-2)
+  list:
+    page-size: 9
+  seo:
+    description-length: 160
+    # 대표 사진이 없는 글·프로필 사진이 없는 블로그의 og:image (40 §5)
+    default-og-image-url: ${BLOG_SEO_DEFAULT_OG_IMAGE_URL:http://localhost:8080/og-default.png}
+  site:
+    # canonical 절대 주소 앞부분 (끝 / 없이). 운영은 서비스 주소
+    base-url: ${BLOG_SITE_BASE_URL:http://localhost:8080}
   policy:
     reserved-handles: classpath:policy/reserved-handles.txt
     reserved-nicknames: classpath:policy/reserved-nicknames.txt

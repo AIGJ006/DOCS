@@ -3,6 +3,7 @@
  * 004의 공개 범위 변경 함수 등 다른 기능의 함수는 이 파일에 더한다.
  */
 import { apiDelete, apiGet, apiPost, apiPut, CSRF_COOKIE, CSRF_HEADER } from './client';
+import type { PostCardPage, PostDetail } from './types/reading';
 
 export type Visibility = 'PUBLIC' | 'PRIVATE';
 export type PostStatus = 'DRAFT' | 'PUBLISHED';
@@ -147,5 +148,44 @@ export function autosaveKeepalive(postId: number, body: SaveRequest): void {
     }).catch(() => undefined);
   } catch {
     // 떠나는 중이면 무시한다. 이 기기(IndexedDB)에 남은 내용이 다음에 동기화된다.
+  }
+}
+
+/**
+ * 전체 글 목록 (홈, 005 FR-001~006). `cursor`는 이전 응답의 `nextCursor`를 그대로 넘기고 해석하지 않는다.
+ * `size`는 보내지 않는다 — 서버가 설정값(기본 9)으로 고정한다.
+ */
+export function listHomePosts(cursor?: string | null): Promise<PostCardPage> {
+  return apiGet<PostCardPage>(
+    cursor ? `/api/posts?cursor=${encodeURIComponent(cursor)}` : '/api/posts',
+  );
+}
+
+/** 글 상세 (005 FR-026). 없는 글·볼 수 없는 글은 모두 404 `NOT_FOUND`. */
+export function getPostDetail(postId: number | string): Promise<PostDetail> {
+  return apiGet<PostDetail>(`/api/posts/${postId}`);
+}
+
+/**
+ * 조회 기록 (005 FR-041). 응답을 기다리지 않고 실패도 무시한다 — 재시도하지 않는다.
+ * `keepalive: true`라 화면을 떠나도 요청이 이어진다.
+ *
+ * (구현 메모) `/api/posts/{id}/views`는 009 좋아요·조회수 기능 소유다 — 아직 없으면 404가 오고 그대로 무시한다.
+ */
+export function recordPostView(postId: number | string): void {
+  const headers: Record<string, string> = { Accept: 'application/json' };
+  const token = readCookie(CSRF_COOKIE);
+  if (token) {
+    headers[CSRF_HEADER] = token;
+  }
+  try {
+    void fetch(`/api/posts/${postId}/views`, {
+      method: 'POST',
+      headers,
+      credentials: 'same-origin',
+      keepalive: true,
+    }).catch(() => undefined);
+  } catch {
+    // 조회 기록 실패는 상세 화면에 영향이 없다 (원칙 V).
   }
 }

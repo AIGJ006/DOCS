@@ -4,8 +4,11 @@ import { onNotFound } from './api/client';
 import { SessionProvider } from './features/auth/SessionProvider';
 import SessionBar from './features/auth/SessionBar';
 import EditorPage, { NewPostPage } from './pages/EditorPage';
+import HomePage from './pages/HomePage';
 import LoginPage from './pages/LoginPage';
+import BlogPage from './pages/BlogPage';
 import NotFoundPage from './pages/NotFoundPage';
+import PostDetailPage from './pages/PostDetailPage';
 import PrivacyPage from './pages/PrivacyPage';
 import SignupPage from './pages/SignupPage';
 import TermsPage from './pages/TermsPage';
@@ -30,7 +33,7 @@ export default function App() {
         <NotFoundPage />
       ) : (
         <Routes>
-          <Route path="/" element={<Placeholder name="home" />} />
+          <Route path="/" element={<HomePage />} />
           <Route path="/signup" element={<SignupPage />} />
           <Route path="/signup/social" element={<Placeholder name="signup-social" />} />
           <Route path="/login" element={<LoginPage />} />
@@ -43,6 +46,9 @@ export default function App() {
           <Route path="/privacy" element={<PrivacyPage />} />
           <Route path="/write/new" element={<NewPostPage />} />
           <Route path="/write/:postId" element={<EditorPage />} />
+          {/* 005 글 상세 — react-router는 `/@:handle`처럼 구간 일부만 파라미터로 받지 못해 `@`는 화면이 떼어 낸다 */}
+          <Route path="/:handle/posts/:postId" element={<PostDetailPage />} />
+          <Route path="/:handle" element={<BlogPage />} />
           <Route path="*" element={<NotFoundPage />} />
         </Routes>
       )}
