@@ -57,9 +57,9 @@ description: "Task list for 009-like-view (좋아요와 조회수)"
 
 **Purpose**: 선행 확인, 처리방침 시점 확인, 설정값·정책 파일
 
-- [ ] T001 선행 확인: V1 `post_like`(PK·`ix_post_like_member`)·`post_view_daily`(PK·`ck_post_view_daily_views`·`ix_post_view_daily_date`)·`post.like_count`/`view_count`(`ck_post_counts`)·V2 `shedlock`, `B/post/application/PostReadService.java`, `B/post/application/port/PostLikeStatusQuery.java`, `B/shared/web/ClientIp.java`, `F/components/ReactionBar.tsx`(`likeButton`), `F/features/post-detail/useViewBeacon.ts`가 있는지, `PostCounterService`가 이미 있는지(007) 기록한다
-- [ ] T002 **확인 작업(Clarifications Q3)**: 서비스가 이미 일반 공개됐는지 팀에 확인하고 결과를 research R15 아래에 적는다. 공개 전이면 T055(처리방침 문단)만, 공개 후면 001 재동의 규칙(처리방침 버전 올림) 결정을 팀 결정 항목으로 올린다
-- [ ] T003 [P] 설정값 `B/interaction/application/LikeProperties.java`(`blog.like`)·`ViewProperties.java`(`blog.view`, `@Validated`: `maxPerWindow ≥ 1`, `dedupeWindow ≥ 1m`)와 `R/application.yml` 기본값(research R14), 봇 단어 목록 `R/policy/view-bot-user-agents.txt`를 추가한다
+- [X] T001 선행 확인: V1 `post_like`(PK·`ix_post_like_member`)·`post_view_daily`(PK·`ck_post_view_daily_views`·`ix_post_view_daily_date`)·`post.like_count`/`view_count`(`ck_post_counts`)·V2 `shedlock`, `B/post/application/PostReadService.java`, `B/post/application/port/PostLikeStatusQuery.java`, `B/shared/web/ClientIp.java`, `F/components/ReactionBar.tsx`(`likeButton`), `F/features/post-detail/useViewBeacon.ts`가 있는지, `PostCounterService`가 이미 있는지(007) 기록한다 (구현 메모: main 3961a76 기준 모두 있음 — V1 post_like·post_view_daily·ck_post_counts, V2 shedlock, PostReadService·PostLikeStatusQuery·ClientIp, ReactionBar likeButton, useViewBeacon. PostCounterService는 main에 없고 007-comment 브랜치(미병합)에만 있어 T008이 007 파일과 같은 머리말로 만들고 좋아요·조회 메서드를 끝에 더했다)
+- [X] T002 **확인 작업(Clarifications Q3)**: 서비스가 이미 일반 공개됐는지 팀에 확인하고 결과를 research R15 아래에 적는다. 공개 전이면 T055(처리방침 문단)만, 공개 후면 001 재동의 규칙(처리방침 버전 올림) 결정을 팀 결정 항목으로 올린다 (구현 메모: 팀에 묻지 않고 "첫 공개 전"으로 가정했다(Clarifications Q3 확정안과 같음). research R15 아래에 기록, T046은 처리방침 문단 추가만 한다)
+- [X] T003 [P] 설정값 `B/interaction/application/LikeProperties.java`(`blog.like`)·`ViewProperties.java`(`blog.view`, `@Validated`: `maxPerWindow ≥ 1`, `dedupeWindow ≥ 1m`)와 `R/application.yml` 기본값(research R14), 봇 단어 목록 `R/policy/view-bot-user-agents.txt`를 추가한다 (구현 메모: dedupe-window 1분 이상·daily-retention 1일 이상은 @AssertTrue로 검사. 시험 프로필은 blog.view.flush-interval 24h(배치가 스스로 돌지 않게, initialDelay도 같은 값))
 
 ---
 
@@ -73,17 +73,17 @@ description: "Task list for 009-like-view (좋아요와 조회수)"
 
 > **NOTE: Write these tests FIRST, ensure they FAIL before implementation**
 
-- [ ] T004 [P] 카운터 API 통합 테스트 `T/post/integration/PostCounterServiceIT.java`에 추가(007 T006과 같은 파일, 없으면 새로): `adjustLikeCount` ±1·MANDATORY, `likeCount`, `addViews`가 `view_count`만 늘리고 `updated_at` 그대로·없는 글이면 false, `adjustLikeCounts`, `reconcileLikeCounts`(어긋난 글만 고치고 번호 반환)
-- [ ] T005 [P] 좋아요 저장소 통합 테스트 `T/interaction/integration/LikeRepositoryIT.java`: `insertIfAbsent` 1/0, `deleteIfPresent` 1/0, `exists`, `deleteAllByMember`가 글 번호 목록 반환
-- [ ] T006 [P] 화면 수 형식 테스트 `F/components/__tests__/formatCount.test.ts`: 0, 999, 1,234, 9,999, 10,000 → `1만`, 12,999 → `1.2만`(내림), 1,000,000 → `100만`
+- [X] T004 [P] 카운터 API 통합 테스트 `T/post/integration/PostCounterServiceIT.java`에 추가(007 T006과 같은 파일, 없으면 새로): `adjustLikeCount` ±1·MANDATORY, `likeCount`, `addViews`가 `view_count`만 늘리고 `updated_at` 그대로·없는 글이면 false, `adjustLikeCounts`, `reconcileLikeCounts`(어긋난 글만 고치고 번호 반환) (구현 메모: 007 브랜치의 PostCounterServiceIT와 같은 파일을 새로 만들면 합칠 때 add/add 충돌이 나므로 T/post/integration/PostCounterLikeViewIT.java로 나눴다)
+- [X] T005 [P] 좋아요 저장소 통합 테스트 `T/interaction/integration/LikeRepositoryIT.java`: `insertIfAbsent` 1/0, `deleteIfPresent` 1/0, `exists`, `deleteAllByMember`가 글 번호 목록 반환
+- [X] T006 [P] 화면 수 형식 테스트 `F/components/__tests__/formatCount.test.ts`: 0, 999, 1,234, 9,999, 10,000 → `1만`, 12,999 → `1.2만`(내림), 1,000,000 → `100만`
 
 ### Implementation for Foundational
 
-- [ ] T007 [P] 이유 코드 `B/interaction/domain/LikeReasonCode.java`(`CANNOT_LIKE_OWN_POST` 400 "내 글에는 좋아요를 누를 수 없어요")와 이벤트 `B/shared/event/PostLiked.java`·`PostUnliked.java`(20 §3-3 필드)를 만든다
-- [ ] T008 `B/post/application/PostCounterService.java`에 좋아요·조회 메서드(contracts/view-pipeline.md §7)를 더한다 — 클래스가 없으면(007 전) 이 작업이 만든다(T004 통과)
-- [ ] T009 [P] 좋아요 저장소 `B/interaction/infra/LikeRepository.java`(`JdbcClient`)를 만든다(T005 통과)
-- [ ] T010 [P] 일별 저장소 `B/interaction/infra/ViewDailyRepository.java`(`upsert(postId, date, n)`, `deleteOlderThan(date)`)를 만든다
-- [ ] T011 [P] 화면: `F/components/formatCount.ts`를 만들고 `F/components/ReactionBar.tsx`의 조회수 식과 좋아요 수 표시가 이것을 쓰게 바꾼다(T006 통과, 005 소유 파일 — 005 회귀 `PostDetailPage.test.tsx`의 `조회 1.2만` 함께 실행). `F/api/likes.ts`(`putLike(postId)`·`deleteLike(postId)`, 001 `client.ts`)와 문구 `F/features/like/likeMessages.ts`를 만든다
+- [X] T007 [P] 이유 코드 `B/interaction/domain/LikeReasonCode.java`(`CANNOT_LIKE_OWN_POST` 400 "내 글에는 좋아요를 누를 수 없어요")와 이벤트 `B/shared/event/PostLiked.java`·`PostUnliked.java`(20 §3-3 필드)를 만든다
+- [X] T008 `B/post/application/PostCounterService.java`에 좋아요·조회 메서드(contracts/view-pipeline.md §7)를 더한다 — 클래스가 없으면(007 전) 이 작업이 만든다(T004 통과) (구현 메모: 007-comment의 PostCounterService(미병합)와 같은 내용 + 끝에 '009 좋아요·조회수' 구역으로 adjustLikeCount·likeCount·addViews·adjustLikeCounts·reconcileLikeCounts를 더했다. 합칠 때 add/add 충돌은 끝 구역만 남기면 된다. addViews는 n≤0이면 존재 여부만 본다)
+- [X] T009 [P] 좋아요 저장소 `B/interaction/infra/LikeRepository.java`(`JdbcClient`)를 만든다(T005 통과)
+- [X] T010 [P] 일별 저장소 `B/interaction/infra/ViewDailyRepository.java`(`upsert(postId, date, n)`, `deleteOlderThan(date)`)를 만든다
+- [X] T011 [P] 화면: `F/components/formatCount.ts`를 만들고 `F/components/ReactionBar.tsx`의 조회수 식과 좋아요 수 표시가 이것을 쓰게 바꾼다(T006 통과, 005 소유 파일 — 005 회귀 `PostDetailPage.test.tsx`의 `조회 1.2만` 함께 실행). `F/api/likes.ts`(`putLike(postId)`·`deleteLike(postId)`, 001 `client.ts`)와 문구 `F/features/like/likeMessages.ts`를 만든다 (구현 메모: LikeButton이 likeButton 자리를 채우면 ReactionBar 앞의 '♥ N' 대신 버튼이 수를 보인다(버튼이 없을 때만 span). likes.ts는 404여도 공통 404 화면으로 바꾸지 않는다(notFoundScreen:false))
 
 **Checkpoint**: 카운터 API와 저장소가 통합 테스트를 통과한다
 
