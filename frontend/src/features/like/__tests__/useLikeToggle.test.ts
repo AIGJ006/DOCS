@@ -104,6 +104,21 @@ describe('useLikeToggle', () => {
     expect(result.current.notice).toEqual({ kind: 'failed' });
   });
 
+  it('Redis 메모리 부족(503)도 되돌리고 같은 실패 안내 (research R13)', async () => {
+    stubFetch({
+      [`DELETE ${PATH}`]: () =>
+        json(503, errorBody('AUTOSAVE_UNAVAILABLE', '잠시 후 다시 시도해 주세요')),
+    });
+    const { result } = setup(true, 5);
+
+    act(() => result.current.toggle());
+    await flush();
+
+    expect(result.current.liked).toBe(true);
+    expect(result.current.count).toBe(5);
+    expect(result.current.notice).toEqual({ kind: 'failed' });
+  });
+
   it('네트워크가 끊겨도 되돌리고 안내한다', async () => {
     vi.stubGlobal(
       'fetch',
