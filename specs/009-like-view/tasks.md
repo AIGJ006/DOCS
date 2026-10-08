@@ -169,13 +169,13 @@ description: "Task list for 009-like-view (좋아요와 조회수)"
 
 ### Tests for User Story 4 ⚠️
 
-- [ ] T036 [P] [US4] 통합 테스트 `T/interaction/integration/ViewDailyRetentionJobIT.java`: `91일_전만_지운다`(US4 #3·SC-011, `Clock` 고정, 경계 90일 남김), `누적_조회수는_그대로`, `글을_완전_삭제하면_일별도_사라진다`(US4 #4, CASCADE)
-- [ ] T037 [P] [US4] 보정 통합 테스트 `T/interaction/integration/LikeReconcileJobIT.java`: 정상이면 0건·WARN 없음(SC-003), `like_count`를 SQL로 틀어 두면 고치고 WARN(글 번호 포함), ShedLock으로 두 인스턴스 동시 실행 시 한 번만(FR-005)
+- [X] T036 [P] [US4] 통합 테스트 `T/interaction/integration/ViewDailyRetentionJobIT.java`: `91일_전만_지운다`(US4 #3·SC-011, `Clock` 고정, 경계 90일 남김), `누적_조회수는_그대로`, `글을_완전_삭제하면_일별도_사라진다`(US4 #4, CASCADE) (구현 메모: Clock Bean을 바꾸는 새 컨텍스트 대신 ViewDailyRetentionJob.purge(LocalDate)로 날짜를 넘겨 확인, 예약 경로 run()도 따로 확인)
+- [X] T037 [P] [US4] 보정 통합 테스트 `T/interaction/integration/LikeReconcileJobIT.java`: 정상이면 0건·WARN 없음(SC-003), `like_count`를 SQL로 틀어 두면 고치고 WARN(글 번호 포함), ShedLock으로 두 인스턴스 동시 실행 시 한 번만(FR-005) (구현 메모: ShedLock은 ImageCleanupLockIT처럼 LockProvider로 잠금을 쥐고 run()이 건너뛰는지 확인)
 
 ### Implementation for User Story 4
 
-- [ ] T038 [P] [US4] `B/interaction/application/ViewDailyRetentionJob.java`(`@Scheduled(cron = "${blog.view.retention-cron}", zone = "${blog.time-zone}")` + ShedLock)를 구현한다(T036 통과)
-- [ ] T039 [P] [US4] `B/interaction/application/LikeReconcileJob.java`(`PostCounterService.reconcileLikeCounts` 호출, 0 아니면 WARN)를 구현한다(T037 통과)
+- [X] T038 [P] [US4] `B/interaction/application/ViewDailyRetentionJob.java`(`@Scheduled(cron = "${blog.view.retention-cron}", zone = "${blog.time-zone}")` + ShedLock)를 구현한다(T036 통과)
+- [X] T039 [P] [US4] `B/interaction/application/LikeReconcileJob.java`(`PostCounterService.reconcileLikeCounts` 호출, 0 아니면 WARN)를 구현한다(T037 통과) (구현 메모: 보정 쿼리 UPDATE…RETURNING을 PostCounterService.reconcileLikeCounts에 두고 배치는 호출·WARN만(글 번호 최대 20개))
 
 **Checkpoint**: 모든 스토리가 독립적으로 동작한다
 
