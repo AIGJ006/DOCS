@@ -95,6 +95,20 @@ public class PostEditRepository {
                 > 0;
     }
 
+    /**
+     * 내 휴지통 밖 글의 공개 범위 (013 {@code PostOwnershipQuery}). 조건은 {@link #isOwned}와 같다. 남의 글·휴지통 글·없는 글은
+     * 빈 값.
+     */
+    public Optional<Visibility> findOwnedVisibility(long postId, long memberId) {
+        return jdbc.sql(
+                        "SELECT visibility FROM post"
+                                + " WHERE id = :id AND author_id = :me AND deleted_at IS NULL")
+                .param("id", postId)
+                .param("me", memberId)
+                .query((rs, n) -> Visibility.valueOf(rs.getString(1)))
+                .optional();
+    }
+
     /** 작성자 주소 ({@code member.handle}) — 글 주소 {@code /@{handle}/posts/{id}}용. */
     public Optional<String> findAuthorHandle(long memberId) {
         return jdbc.sql("SELECT handle FROM member WHERE id = ?")

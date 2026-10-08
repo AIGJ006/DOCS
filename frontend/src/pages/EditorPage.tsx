@@ -635,6 +635,7 @@ export default function EditorPage() {
           onClose={() => setPublishing(false)}
           contentMd={contentMd}
           onContentChange={onContent}
+          title={title}
         />
       ) : null}
     </main>

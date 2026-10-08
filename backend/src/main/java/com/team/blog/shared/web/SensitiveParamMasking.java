@@ -31,11 +31,17 @@ public class SensitiveParamMasking extends OncePerRequestFilter {
     public static final String MASKED_QUERY_ATTRIBUTE = "blog.maskedQuery";
 
     private static final String NAMES =
-            "token|password|passwordConfirm|currentPassword|newPassword|newPasswordConfirm|q";
+            "token|password|passwordConfirm|currentPassword|newPassword|newPasswordConfirm|q"
+                    // 013 AI 태그 추천: 외부 AI 키와 추천 요청의 제목·본문 (research R11)
+                    + "|x-goog-api-key|contentMd|title";
     private static final Pattern PARAM =
             Pattern.compile("(?i)(?<![A-Za-z0-9_])(" + NAMES + ")=[^&\\s\"']*");
     private static final Pattern JSON_FIELD =
             Pattern.compile("(?i)\"(" + NAMES + ")\"\\s*:\\s*\"(?:[^\"\\\\]|\\\\.)*\"");
+
+    /** 013: 헤더 모양({@code x-goog-api-key: 값}, {@code x-goog-api-key:"값"})의 외부 AI 키. */
+    private static final Pattern API_KEY_HEADER =
+            Pattern.compile("(?i)(x-goog-api-key)\\s*:\\s*\"?[^\\s\",;\\]]+\"?");
 
     /** 민감 값을 {@code ***}로 바꾼다. null은 null. */
     public static String mask(String text) {
@@ -43,7 +49,8 @@ public class SensitiveParamMasking extends OncePerRequestFilter {
             return text;
         }
         String masked = PARAM.matcher(text).replaceAll("$1=***");
-        return JSON_FIELD.matcher(masked).replaceAll("\"$1\":\"***\"");
+        masked = JSON_FIELD.matcher(masked).replaceAll("\"$1\":\"***\"");
+        return API_KEY_HEADER.matcher(masked).replaceAll("$1: ***");
     }
 
     @Override
