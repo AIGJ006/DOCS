@@ -25,6 +25,12 @@
   font-size: 0.875rem;
 }
 
+.visibility-select-notice {
+  flex-basis: 100%;
+  margin: 0;
+  font-size: 0.875rem;
+}
+
 .sr-only {
   position: absolute;
   width: 1px;

@@ -145,4 +145,42 @@ describe('VisibilitySelect', () => {
     expect(onChange).toHaveBeenCalledWith('PRIVATE');
     expect(mock).not.toHaveBeenCalled();
   });
+
+  it('US8 친구 공개 빌드에서만 "👥 친구 공개" 선택지가 나온다', () => {
+    render(<VisibilitySelect value="PUBLIC" onChange={() => {}} friendsEnabled />);
+
+    const select = screen.getByRole('combobox', { name: '공개 범위' });
+    expect(Array.from((select as HTMLSelectElement).options).map((o) => o.textContent)).toEqual([
+      '🌐 전체 공개',
+      '👥 친구 공개',
+      '🔒 나만 보기',
+    ]);
+  });
+
+  it('US8-4 친구 공개인데 친구가 없으면 안내와 [친구 초대]·[전체 공개로 바꾸기]를 보인다', async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    render(
+      <VisibilitySelect value="FRIENDS" onChange={onChange} friendsEnabled hasFriends={false} />,
+    );
+
+    expect(screen.getByRole('status')).toHaveTextContent(
+      '아직 친구가 없어서 지금은 나만 볼 수 있어요.',
+    );
+    expect(screen.getByRole('link', { name: '친구 초대' })).toHaveAttribute('href', '/friends');
+    await user.click(screen.getByRole('button', { name: '전체 공개로 바꾸기' }));
+
+    expect(onChange).toHaveBeenCalledWith('PUBLIC');
+    expect(screen.getByRole('combobox', { name: '공개 범위' })).toHaveValue('PUBLIC');
+    expect(screen.queryByRole('status')).toBeNull();
+  });
+
+  it('친구가 있거나 모르면 안내가 없다', () => {
+    const { rerender } = render(
+      <VisibilitySelect value="FRIENDS" onChange={() => {}} friendsEnabled hasFriends />,
+    );
+    expect(screen.queryByRole('status')).toBeNull();
+    rerender(<VisibilitySelect value="FRIENDS" onChange={() => {}} friendsEnabled />);
+    expect(screen.queryByRole('status')).toBeNull();
+  });
 });
