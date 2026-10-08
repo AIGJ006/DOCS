@@ -46,6 +46,17 @@
   text-decoration: underline;
 }
 
+/* BuildLOG의 대문자(B·L·O·G): 브랜드 색. 나머지 소문자는 --color-text-muted */
+.site-header-logo span {
+  color: var(--color-text-muted);
+  font-weight: 400;
+}
+
+.site-header-logo .site-header-logo-mark {
+  color: var(--color-brand);
+  font-weight: 800;
+}
+
 /* 흰 글자가 올라가는 단추 모양 링크 ([글쓰기], [회원 가입]) */
 .site-header-write {
   display: inline-block;
