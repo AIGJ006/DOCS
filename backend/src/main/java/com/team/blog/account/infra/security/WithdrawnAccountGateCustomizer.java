@@ -7,7 +7,10 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.web.access.intercept.AuthorizationFilter;
 import org.springframework.stereotype.Component;
 
-/** {@link WithdrawnAccountGateFilter}를 보안 필터 체인의 {@link AuthorizationFilter} 뒤에 붙인다 (T042a). */
+/**
+ * 요청 단계 계정 게이트를 보안 필터 체인의 {@link AuthorizationFilter} 뒤에 붙인다: {@link WithdrawnAccountGateFilter}
+ * (T042a) → {@link ReagreementGateFilter}(US5 T109). 탈퇴 유예 안내가 재동의보다 먼저다.
+ */
 @Component
 public class WithdrawnAccountGateCustomizer implements SecurityFilterChainCustomizer {
 
@@ -25,5 +28,7 @@ public class WithdrawnAccountGateCustomizer implements SecurityFilterChainCustom
         http.addFilterAfter(
                 new WithdrawnAccountGateFilter(memberQueryService, errorWriter),
                 AuthorizationFilter.class);
+        http.addFilterAfter(
+                new ReagreementGateFilter(errorWriter), WithdrawnAccountGateFilter.class);
     }
 }

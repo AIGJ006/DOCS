@@ -122,7 +122,7 @@ export default function BlogPage({ headerSlot = null, sidebarSlot = null }: Blog
               }}
             />
           ) : (
-            <DefaultAvatar size={64} />
+            <DefaultAvatar nickname={header.nickname} handle={header.handle} size={64} />
           )}
           <div style={{ minWidth: 0, flex: 1 }}>
             <h1 style={{ fontSize: '1.25rem', margin: 0 }}>{header.nickname}</h1>

@@ -141,6 +141,55 @@ public class Member {
         return deletedAt;
     }
 
+    /**
+     * 닉네임을 바꾼다(FR-052). 값이 실제로 다를 때만(대소문자만 달라도 변경) {@code nickname_changed_at}을 기록한다.
+     *
+     * @return 실제로 바뀌었는가
+     */
+    public boolean changeNickname(String newNickname, Instant now) {
+        Objects.requireNonNull(newNickname, "nickname");
+        if (newNickname.equals(nickname)) {
+            return false;
+        }
+        this.nickname = newNickname;
+        this.nicknameChangedAt = now;
+        this.updatedAt = now;
+        return true;
+    }
+
+    /** 닉네임을 다시 바꿀 수 있는 때. 바꾼 적이 없으면 null(지금 바꿀 수 있음). */
+    public Instant nicknameChangeAvailableAt(java.time.Duration interval) {
+        return nicknameChangedAt == null ? null : nicknameChangedAt.plus(interval);
+    }
+
+    /** 소개를 바꾼다(정리된 값, null = 비움). */
+    public void changeBio(String newBio, Instant now) {
+        if (!Objects.equals(bio, newBio)) {
+            this.bio = newBio;
+            this.updatedAt = now;
+        }
+    }
+
+    /** 새 글 기본 공개 범위(FR-053). 값은 호출한 쪽이 공개 범위 등록 목록으로 검사한다. */
+    public void changeDefaultVisibility(String visibility, Instant now) {
+        this.defaultVisibility = Objects.requireNonNull(visibility, "defaultVisibility");
+        this.updatedAt = now;
+    }
+
+    /** 최근 활동 공개 여부(FR-061). */
+    public void changeLastActiveVisible(boolean visible, Instant now) {
+        this.lastActiveVisible = visible;
+        this.updatedAt = now;
+    }
+
+    /** 기한이 지난 정지를 해제한다(R-23). 정지 상태일 때만 ACTIVE로 돌린다. */
+    public void liftSuspension(Instant now) {
+        if (status == MemberStatus.SUSPENDED) {
+            this.status = MemberStatus.ACTIVE;
+            this.updatedAt = now;
+        }
+    }
+
     /** 익명 처리(015)되어 더 이상 사람으로 보이지 않는 회원. */
     public boolean isDeleted() {
         return deletedAt != null;

@@ -48,7 +48,7 @@ export default function AuthorCard({ author, isMe, followButton = null }: Author
           }}
         />
       ) : (
-        <DefaultAvatar size={48} />
+        <DefaultAvatar nickname={author.nickname} handle={author.handle} size={48} />
       )}
       <div style={{ minWidth: 0, flex: 1 }}>
         <p style={{ margin: 0, fontWeight: 600 }}>

@@ -1,5 +1,6 @@
 package com.team.blog.account.application.policy;
 
+import com.team.blog.account.infra.AccountProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -26,6 +27,12 @@ public class AccountPolicyConfig {
     NicknamePolicy nicknamePolicy(
             ReservedWords words, BannedWordFilter bannedWordFilter, NicknameLookup nicknameLookup) {
         return new NicknamePolicy(words.reservedNicknames(), bannedWordFilter, nicknameLookup);
+    }
+
+    @Bean
+    BioPolicy bioPolicy(AccountProperties properties, BannedWordFilter bannedWordFilter) {
+        AccountProperties.MemberRules.Bio bio = properties.member().bio();
+        return new BioPolicy(bio.maxLength(), bio.maxLines(), bannedWordFilter);
     }
 
     @Bean

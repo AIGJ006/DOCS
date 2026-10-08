@@ -7,9 +7,11 @@ import {
   type CurrentAgreements,
   type SignupResult,
 } from '../api/auth';
+import AvailabilityHint from '../components/AvailabilityHint';
+import HandleInput from '../components/HandleInput';
+import NicknameInput from '../components/NicknameInput';
 import PasswordRuleChecklist from '../components/PasswordRuleChecklist';
 import { groupFieldErrors, stripActionLabels } from '../features/auth/fieldErrors';
-import { suggestHandleFromEmail } from '../features/auth/suggestHandle';
 import { useSession } from '../features/auth/useSession';
 import '../features/auth/auth.css';
 
@@ -19,7 +21,7 @@ type FieldName = 'email' | 'handle' | 'password' | 'passwordConfirm' | 'nickname
 
 /**
  * 이메일 가입 화면 (07 §3, FR-002~005·010·013·014). 서버가 모든 칸 오류를 한 번에 돌려주면 칸마다 보인다.
- * 블로그 주소·닉네임 칸은 US3에서 `HandleInput`·`NicknameInput`(실시간 확인)으로 바뀐다.
+ * 블로그 주소는 이메일 앞부분으로 미리 채우고(직접 고치면 멈춤), 주소·닉네임은 입력이 멈추면 사용 가능 여부를 묻는다(US3).
  */
 export default function SignupPage() {
   const { refresh } = useSession();
@@ -27,7 +29,6 @@ export default function SignupPage() {
   const [agreementsFailed, setAgreementsFailed] = useState(false);
   const [email, setEmail] = useState('');
   const [handle, setHandle] = useState('');
-  const [handleEdited, setHandleEdited] = useState(false);
   const [password, setPassword] = useState('');
   const [passwordConfirm, setPasswordConfirm] = useState('');
   const [nickname, setNickname] = useState('');
@@ -44,13 +45,6 @@ export default function SignupPage() {
       .then(setAgreements)
       .catch(() => setAgreementsFailed(true));
   }, []);
-
-  function onEmailChange(value: string) {
-    setEmail(value);
-    if (!handleEdited) {
-      setHandle(suggestHandleFromEmail(value));
-    }
-  }
 
   async function onSubmit(event: FormEvent) {
     event.preventDefault();
@@ -140,14 +134,7 @@ export default function SignupPage() {
           </p>
         ))}
         {field === 'handle' && handleSuggestion && (
-          <button
-            type="button"
-            className="link-button"
-            onClick={() => {
-              setHandle(handleSuggestion);
-              setHandleEdited(true);
-            }}
-          >
+          <button type="button" className="link-button" onClick={() => setHandle(handleSuggestion)}>
             {handleSuggestion} 쓰기
           </button>
         )}
@@ -167,7 +154,7 @@ export default function SignupPage() {
             autoComplete="email"
             maxLength={254}
             value={email}
-            onChange={(e) => onEmailChange(e.target.value)}
+            onChange={(e) => setEmail(e.target.value)}
             aria-invalid={errorsOf('email').length > 0}
             aria-describedby={describedBy('email')}
           />
@@ -175,24 +162,16 @@ export default function SignupPage() {
         </div>
 
         <div className="field">
-          <label htmlFor="signup-handle">블로그 주소</label>
-          <input
+          <HandleInput
             id="signup-handle"
-            autoComplete="off"
-            autoCapitalize="none"
-            spellCheck={false}
-            maxLength={36}
+            label="블로그 주소"
             value={handle}
-            onChange={(e) => {
-              setHandle(e.target.value);
-              setHandleEdited(true);
-            }}
-            aria-invalid={errorsOf('handle').length > 0}
-            aria-describedby={describedBy('handle', 'signup-handle-help')}
+            onChange={setHandle}
+            sourceEmail={email}
+            invalid={errorsOf('handle').length > 0}
+            describedBy={describedBy('handle')}
           />
-          <p id="signup-handle-help" className="field-help">
-            영문 소문자·숫자·_로 3~36자. 가입 후 한 번 바꿀 수 있어요
-          </p>
+          <AvailabilityHint kind="handle" value={handle} onSuggestion={setHandle} />
           {renderErrors('handle')}
         </div>
 
@@ -226,18 +205,14 @@ export default function SignupPage() {
         </div>
 
         <div className="field">
-          <label htmlFor="signup-nickname">닉네임</label>
-          <input
+          <NicknameInput
             id="signup-nickname"
-            autoComplete="nickname"
             value={nickname}
-            onChange={(e) => setNickname(e.target.value)}
-            aria-invalid={errorsOf('nickname').length > 0}
-            aria-describedby={describedBy('nickname', 'signup-nickname-help')}
+            onChange={setNickname}
+            invalid={errorsOf('nickname').length > 0}
+            describedBy={describedBy('nickname')}
           />
-          <p id="signup-nickname-help" className="field-help">
-            한글·영문·숫자로 2~10자
-          </p>
+          <AvailabilityHint kind="nickname" value={nickname} />
           {renderErrors('nickname')}
         </div>
 

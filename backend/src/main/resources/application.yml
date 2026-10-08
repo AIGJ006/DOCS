@@ -128,6 +128,15 @@ blog:
     social:
       pending-ttl: 10m
       photo-hosts: lh3.googleusercontent.com,avatars.githubusercontent.com
+      # 소셜 로그인 앱 키 (R-06, constitution IV — 값은 환경 변수로만, .env.example 참고). 비어 있으면 그 제공자는
+      # 등록하지 않고 로그인 화면에서 버튼을 숨긴다. scope·주소는 코드(SocialClientRegistrationConfig)가 정한다:
+      # Google openid,email,profile / GitHub read:user,user:email, redirect {baseUrl}/login/oauth2/code/{registrationId}
+      google:
+        client-id: ${GOOGLE_CLIENT_ID:}
+        client-secret: ${GOOGLE_CLIENT_SECRET:}
+      github:
+        client-id: ${GITHUB_CLIENT_ID:}
+        client-secret: ${GITHUB_CLIENT_SECRET:}
   availability:
     ip-limit-per-minute: 30
   member:
