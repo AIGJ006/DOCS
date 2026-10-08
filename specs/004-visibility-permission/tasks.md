@@ -223,14 +223,14 @@ description: "Task list for 004-visibility-permission (공개 범위와 권한)"
 
 ### Tests for User Story 6 ⚠️
 
-- [ ] T058 [P] [US6] 화면 테스트 작성 `frontend/src/components/PostActions.test.tsx`: 작성자 → [수정]·[공개 범위]·[삭제] 보임, [좋아요]·[신고]·[팔로우] 없음, 좋아요 수만(US6-1); 비회원·인증 전 회원·다른 회원 → [좋아요]·[신고] 보임, 비회원이 누르면 로그인 안내이고 로그인 후 자동으로 눌리지 않음(US6-2); 관리자 → [숨김]/[숨김 해제]만 추가, 남의 글 [수정]·[삭제] 없음 (FR-045)
-- [ ] T059 [P] [US6] 화면 테스트 작성 `frontend/src/components/CommentInputGate.test.tsx`: 비회원 → "로그인하고 댓글 쓰기"; 인증 전 → "이메일 인증 후 댓글을 쓸 수 있어요 [인증 메일 다시 보내기]"; 회원·관리자 → 입력창(children) 렌더링 (US6-3, FR-045)
+- [X] T058 [P] [US6] 화면 테스트 작성 `frontend/src/components/PostActions.test.tsx`: 작성자 → [수정]·[공개 범위]·[삭제] 보임, [좋아요]·[신고]·[팔로우] 없음, 좋아요 수만(US6-1); 비회원·인증 전 회원·다른 회원 → [좋아요]·[신고] 보임, 비회원이 누르면 로그인 안내이고 로그인 후 자동으로 눌리지 않음(US6-2); 관리자 → [숨김]/[숨김 해제]만 추가, 남의 글 [수정]·[삭제] 없음 (FR-045) (구현 메모: [팔로우]는 `onFollow`(010)를 줄 때만 그린다(작성자 카드 자리와 겹치지 않게). 관리자 [숨김]은 관리자면 보이고 판정은 014 서버가 한다)
+- [X] T059 [P] [US6] 화면 테스트 작성 `frontend/src/components/CommentInputGate.test.tsx`: 비회원 → "로그인하고 댓글 쓰기"; 인증 전 → "이메일 인증 후 댓글을 쓸 수 있어요 [인증 메일 다시 보내기]"; 회원·관리자 → 입력창(children) 렌더링 (US6-3, FR-045)
 
 ### Implementation for User Story 6
 
-- [ ] T060 [P] [US6] 표시 플래그 타입 작성 `frontend/src/api/types/viewerFlags.ts`: `{ isAuthor, loggedIn, emailVerified, isAdmin }`(005 상세 응답의 `viewer` 필드, research R-29). 화면이 작성자 id를 직접 비교하지 않는다
-- [ ] T061 [US6] 버튼 표시 규칙 컴포넌트 작성 `frontend/src/components/PostActions.tsx`: FR-045 규칙으로 버튼 선택, [공개 범위]는 `VisibilitySelect`(T039), 누름 결과는 `useAuthGate`(T052) 사용 (depends on T039, T052, T060)
-- [ ] T062 [US6] 댓글 입력창 안내 컴포넌트 작성 `frontend/src/components/CommentInputGate.tsx`(007 댓글 입력창이 감싸서 사용) (depends on T053, T060)
+- [X] T060 [P] [US6] 표시 플래그 타입 작성 `frontend/src/api/types/viewerFlags.ts`: `{ isAuthor, loggedIn, emailVerified, isAdmin }`(005 상세 응답의 `viewer` 필드, research R-29). 화면이 작성자 id를 직접 비교하지 않는다 (구현 메모: 005가 `api/types/reading.ts`에 임시로 둔 `ViewerFlags`를 이 파일로 옮기고 reading.ts는 다시 내보낸다(이름·뜻 그대로). 비회원 값 `ANONYMOUS_VIEWER`도 둔다)
+- [X] T061 [US6] 버튼 표시 규칙 컴포넌트 작성 `frontend/src/components/PostActions.tsx`: FR-045 규칙으로 버튼 선택, [공개 범위]는 `VisibilitySelect`(T039), 누름 결과는 `useAuthGate`(T052) 사용 (depends on T039, T052, T060) (구현 메모: 비회원·인증 전 회원은 화면이 아는 사실로 바로 안내(`useAuthGate().show`)하고 요청을 보내지 않는다. 회원 요청이 거부되면 `useAuthGate({unauthorized:'prompt'})`가 안내한다. 005 상세 화면은 이미 `AuthorActions`·`ReactionBar` 자리로 나뉘어 있어 지금은 이 부품을 끼우지 않았다 — 009 좋아요·014 신고/숨김이 버튼 동작을 만들 때 이 부품으로 모은다)
+- [X] T062 [US6] 댓글 입력창 안내 컴포넌트 작성 `frontend/src/components/CommentInputGate.tsx`(007 댓글 입력창이 감싸서 사용) (depends on T053, T060) (구현 메모: 인증 메일 재발송 버튼은 `features/auth-gate/ResendVerificationButton`으로 빼서 `AuthPrompt`와 함께 쓴다)
 
 **Checkpoint**: 화면 버튼 규칙이 서버 판정을 보조함
 

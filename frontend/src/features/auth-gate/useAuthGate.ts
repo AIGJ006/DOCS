@@ -18,6 +18,8 @@ export interface AuthGate {
   handle: (error: unknown) => boolean;
   /** 지금 띄울 안내 (없으면 `null`) */
   prompt: AuthPromptKind | null;
+  /** 서버에 묻기 전에 화면이 아는 사실(비회원·인증 전)로 안내를 띄운다 */
+  show: (kind: AuthPromptKind) => void;
   dismiss: () => void;
   /** 지금 경로로 돌아오는 로그인 주소 */
   loginPath: string;
@@ -50,6 +52,7 @@ export function useAuthGate({ unauthorized = 'redirect' }: AuthGateOptions = {})
   );
 
   const dismiss = useCallback(() => setPrompt(null), []);
+  const show = useCallback((kind: AuthPromptKind) => setPrompt(kind), []);
 
-  return { handle, prompt, dismiss, loginPath };
+  return { handle, prompt, show, dismiss, loginPath };
 }
