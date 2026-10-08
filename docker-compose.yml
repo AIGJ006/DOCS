@@ -104,7 +104,8 @@ services:
       retries: 30
 
   ollama-pull:
-    # 일회성: 모델 내려받기 (볼륨에 있으면 바로 끝난다). app은 이 서비스가 끝난 뒤 뜬다
+    # 일회성: 모델 내려받기 (볼륨에 있으면 바로 끝난다). app은 기다리지 않는다 — 첫 내려받기(약 1GB) 동안이나
+    # 내려받기가 실패해도 앱은 뜨고, 자체 AI 추천만 잠시 쓸 수 없다(Gemini 키가 있으면 Gemini를 먼저 쓴다)
     image: ollama/ollama:0.34.4
     entrypoint: ["ollama", "pull", "${OLLAMA_MODEL:-qwen2.5:1.5b}"]
     environment:
@@ -147,8 +148,6 @@ services:
         condition: service_completed_successfully
       mailpit:
         condition: service_healthy
-      ollama-pull:
-        condition: service_completed_successfully
 
 volumes:
   postgres-data:
