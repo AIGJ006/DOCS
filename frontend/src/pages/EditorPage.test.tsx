@@ -117,7 +117,7 @@ describe('EditorPage', () => {
     renderAt('/write/42');
     await screen.findByLabelText('제목');
 
-    await user.click(screen.getByRole('button', { name: '발행하기' }));
+    await user.click(screen.getByRole('button', { name: '글 등록' }));
     await user.click(await screen.findByRole('button', { name: '발행' }));
 
     await waitFor(() => expect(assign).toHaveBeenCalledWith('/@kim755030/posts/42'));
@@ -144,7 +144,7 @@ describe('EditorPage', () => {
     const user = userEvent.setup();
     renderAt('/write/42');
     await screen.findByLabelText('제목');
-    await user.click(screen.getByRole('button', { name: '발행하기' }));
+    await user.click(screen.getByRole('button', { name: '글 등록' }));
     await user.click(await screen.findByRole('button', { name: '발행' }));
 
     expect(await screen.findByText('제목을 입력해 주세요')).toBeInTheDocument();

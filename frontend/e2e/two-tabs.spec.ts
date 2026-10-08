@@ -9,7 +9,7 @@ const BANNER = /다른 탭이나 기기에서 이 글이 수정되었어요\(\d{
 
 async function saveIn(page: Page, title: string) {
   await page.getByLabel('제목').fill(title);
-  await page.getByRole('button', { name: '저장', exact: true }).click();
+  await page.getByRole('button', { name: '임시저장', exact: true }).click();
   await expect(page.locator('.save-status')).toHaveText(/^✓ 저장됨 \d{2}:\d{2}$/, {
     timeout: 10_000,
   });
