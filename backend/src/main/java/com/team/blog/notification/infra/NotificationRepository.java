@@ -231,6 +231,12 @@ public class NotificationRepository {
      * @return 넣은 행 수
      */
     public int insertNewPostForFollowers(long postId, long authorId, Instant now) {
+        // 같은 글의 PostWentPublic이 두 번 동시에 처리되면 NOT EXISTS가 서로를 못 봐 두 줄이 생긴다(이 종류에는 고유 인덱스가 없다).
+        // 글마다 트랜잭션 잠금으로 줄을 세운다. 두 정수 형태(11, 글 번호)라 다른 기능의 bigint 잠금 키와 겹치지 않는다.
+        jdbc.sql("SELECT pg_advisory_xact_lock(11, CAST(:key AS integer))")
+                .param("key", (int) (postId % Integer.MAX_VALUE))
+                .query()
+                .singleRow();
         return jdbc.sql(
                         """
                         INSERT INTO notification (receiver_id, type, post_id, last_actor_id, actor_count,
