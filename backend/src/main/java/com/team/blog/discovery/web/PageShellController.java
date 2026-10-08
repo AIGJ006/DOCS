@@ -150,7 +150,18 @@ public class PageShellController {
         } catch (NotFoundException e) {
             return notFoundPage.render();
         }
-        return html(shell.render(metaFactory.forBlog(owner)), CacheControlPolicy.NO_CACHE);
+        LinkPreviewMeta meta = metaFactory.forBlog(owner);
+        // 012 블로그 안 검색 결과(?q=)는 검색 엔진 수집 금지 (FR-038, research R15)
+        if (request.getParameter("q") != null) {
+            meta = LinkPreviewMetaFactory.noindex(meta);
+        }
+        return html(shell.render(meta), CacheControlPolicy.NO_CACHE);
+    }
+
+    /** 검색 결과 화면 주소의 첫 응답 (012 T021, FR-038): 200 셸 + {@code noindex}. 검색어와 상관없이 같은 응답이다. */
+    @GetMapping("/search")
+    public ResponseEntity<byte[]> searchShell() {
+        return html(shell.render(metaFactory.forSearch()), CacheControlPolicy.NO_CACHE);
     }
 
     /**

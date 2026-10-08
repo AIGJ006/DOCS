@@ -26,6 +26,19 @@ class SensitiveParamMaskingTest {
     }
 
     @Test
+    void masksSearchQuery() {
+        // 012 T017: 검색어 원문은 접근 로그·오류 로그에 남기지 않는다 (FR-039)
+        assertThat(SensitiveParamMasking.mask("/api/search/posts?q=%ED%8A%B8%EB%9E%9C&sort=latest"))
+                .isEqualTo("/api/search/posts?q=***&sort=latest");
+        assertThat(SensitiveParamMasking.mask("/api/search/posts?sort=latest&q=spring+boot"))
+                .isEqualTo("/api/search/posts?sort=latest&q=***");
+        assertThat(SensitiveParamMasking.mask("/@kim?q=abc&tag=jpa"))
+                .isEqualTo("/@kim?q=***&tag=jpa");
+        // 이름이 q로 끝나는 다른 값은 그대로
+        assertThat(SensitiveParamMasking.mask("seq=3&faq=1")).isEqualTo("seq=3&faq=1");
+    }
+
+    @Test
     void masksJsonValues() {
         assertThat(
                         SensitiveParamMasking.mask(

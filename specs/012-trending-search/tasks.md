@@ -85,22 +85,22 @@ description: "Task list for 012-trending-search (트렌딩·검색)"
 
 > **NOTE: Write these tests FIRST, ensure they FAIL before implementation**
 
-- [ ] T009 [P] [US1] `T/discovery/unit/SnippetBuilderTest.java` — contracts §6 표, 앞뒤 40 코드 포인트와 `…`, 제목 대체, `excerpt` 대체, 서로게이트 쌍 경계, 겹친 강조 합치기, 대소문자 무시(`İ`처럼 길이가 바뀌는 글자 포함), 줄바꿈 → 공백
-- [ ] T010 [P] [US1] `T/discovery/integration/PostSearchIT.java` — US1 #1~#7·SC-003·SC-004·SC-005: 단계 순서, 2글자 단어 본문 제외 + `notice`, 1글자 무시·AND, 25개 결과를 9개씩 끝까지(단계 경계가 페이지 중간에 오는 경우 포함) 중복·누락 0, 본문 `<script>`가 `snippet.text`에 글자 그대로, 코드 블록 안 글자도 찾음(FR-023), `100%`·`snake_case`·`a\b` 글자 그대로, 결과 없음 `items []`, 최신순, 다른 검색어·정렬 커서 400 `INVALID_CURSOR`, 비공개·친구 공개(적용자)·휴지통·숨김·작성자 유예 글 0, 작성자 본인·관리자가 검색해도 자기 비공개 글 0, 최근창(설정 5로 줄여) 밖의 글도 ② 경로로 찾음, 남는 단어 없음 400 `SEARCH_QUERY_TOO_SHORT`
+- [X] T009 [P] [US1] `T/discovery/unit/SnippetBuilderTest.java` — contracts §6 표, 앞뒤 40 코드 포인트와 `…`, 제목 대체, `excerpt` 대체, 서로게이트 쌍 경계, 겹친 강조 합치기, 대소문자 무시(`İ`처럼 길이가 바뀌는 글자 포함), 줄바꿈 → 공백 (구현 메모: 2글자 단어는 본문에서 기준 위치를 찾지 않고(FR-019) 제목에서 찾는다. 맞닿은 강조도 합친다)
+- [X] T010 [P] [US1] `T/discovery/integration/PostSearchIT.java` — US1 #1~#7·SC-003·SC-004·SC-005: 단계 순서, 2글자 단어 본문 제외 + `notice`, 1글자 무시·AND, 25개 결과를 9개씩 끝까지(단계 경계가 페이지 중간에 오는 경우 포함) 중복·누락 0, 본문 `<script>`가 `snippet.text`에 글자 그대로, 코드 블록 안 글자도 찾음(FR-023), `100%`·`snake_case`·`a\b` 글자 그대로, 결과 없음 `items []`, 최신순, 다른 검색어·정렬 커서 400 `INVALID_CURSOR`, 비공개·친구 공개(적용자)·휴지통·숨김·작성자 유예 글 0, 작성자 본인·관리자가 검색해도 자기 비공개 글 0, 최근창(설정 5로 줄여) 밖의 글도 ② 경로로 찾음, 남는 단어 없음 400 `SEARCH_QUERY_TOO_SHORT` (구현 메모: 최근창 축소는 새 컨텍스트 대신 PostSearchRepository.find에 창 5를 직접 넘겨 확인. 친구 공개는 V1 ck_post_visibility에 없어(PUBLIC·PRIVATE만) 해당 경우가 없다. 작업본(post_draft)의 제목은 찾지 않음도 확인)
 - [ ] T011 [P] [US1] `T/discovery/integration/PostSearchPerformanceIT.java`(`@Tag("slow")`) — SC-001: 글 10만 개(본문 길이·단어 분포를 현실적으로 — 같은 문장 반복 금지, 33 §8), 검색어 20종 p95 500ms, 글 1만 개 p95 300ms(헌법 목록 기준), `EXPLAIN (ANALYZE)` 결과를 로그로 남기고 `ix_post_title_trgm`·`ix_post_content_trgm` 사용 확인
 - [ ] T012 [P] [US1] 화면 테스트 `F/features/search/__tests__/SnippetText.test.tsx`(범위대로 `<mark>`, `<script>` 글자가 텍스트 노드, 빈 `marks`), `F/features/search/__tests__/SearchBox.test.tsx`(`#spring` → `/tags/spring`, `# spring`·`#` → 보통 검색, 남는 단어 없음이면 요청 없이 "두 글자 이상 입력해 주세요"), `F/pages/__tests__/SearchPage.test.tsx`(글 탭 기본, 정렬 전환, 2글자 안내, 결과 없음 문구 "'{검색어}'에 대한 글이 없어요", 429 문구, [더 보기], 뒤로 가기 복원)
 
 ### Implementation for User Story 1
 
-- [ ] T013 [US1] `B/discovery/infra/PostSearchRepository.java` — research R7 단계 조건(단어마다 이름 붙은 매개변수, `escapeLike`), R8 ① 최근창 SQL·② 후보 `UNION` SQL, `snippetSources(ids)`. 클래스 주석에 plan Complexity Tracking 2행(원칙 II 읽기 예외)을 적는다 (T007 다음)
-- [ ] T014 [US1] `B/discovery/application/search/SnippetBuilder.java`·`Snippet.java`(research R9) (T009 통과)
-- [ ] T015 [US1] `B/discovery/application/search/SearchCursor.java`(`ListScope` `search:{sort}:{blogOwnerId|-}:{지문}`, 키 `[stage, first_public_at 마이크로초, id]`)와 `PostSearchService.java`(단계 잇기 9 + 1, 카드 `findCardsByIds` 순서 맞추기, 주변 문장, `notice`, 로그는 길이·단어 수·단계·시간만 — FR-039) (T013·T014 다음)
-- [ ] T016 [US1] `B/discovery/web/SearchController.java` `GET /api/search/posts`(`q`·`sort`·`cursor`, 이 단계는 `blog` 없이) — 응답은 카드 필드 + `snippet`을 평평하게(openapi `PostSearchItem`) (T010 통과)
-- [ ] T017 [P] [US1] 001 `B/shared/web/SensitiveParamMasking.java`에 `q`를 더해 접근 로그·오류 로그에서 가린다(001 소유 — 001 담당에게 알림)와 테스트 1개
+- [X] T013 [US1] `B/discovery/infra/PostSearchRepository.java` — research R7 단계 조건(단어마다 이름 붙은 매개변수, `escapeLike`), R8 ① 최근창 SQL·② 후보 `UNION` SQL, `snippetSources(ids)`. 클래스 주석에 plan Complexity Tracking 2행(원칙 II 읽기 예외)을 적는다 (T007 다음) (구현 메모: ① 최근창 SQL은 창 크기(count)를 LATERAL로 함께 돌려받아 창이 가득 찼을 때만 ② 후보 SQL을 돌린다)
+- [X] T014 [US1] `B/discovery/application/search/SnippetBuilder.java`·`Snippet.java`(research R9) (T009 통과)
+- [X] T015 [US1] `B/discovery/application/search/SearchCursor.java`(`ListScope` `search:{sort}:{blogOwnerId|-}:{지문}`, 키 `[stage, first_public_at 마이크로초, id]`)와 `PostSearchService.java`(단계 잇기 9 + 1, 카드 `findCardsByIds` 순서 맞추기, 주변 문장, `notice`, 로그는 길이·단어 수·단계·시간만 — FR-039) (T013·T014 다음) (구현 메모: 트랜잭션을 열지 않는다 — 요청 제한(Redis)이 판정 순서상 SQL 앞에 있어 서비스가 beforeSearch 콜백으로 받는다. 3글자 이상 단어가 없으면 ③ 단계는 ②와 같아 건너뛴다)
+- [X] T016 [US1] `B/discovery/web/SearchController.java` `GET /api/search/posts`(`q`·`sort`·`cursor`, 이 단계는 `blog` 없이) — 응답은 카드 필드 + `snippet`을 평평하게(openapi `PostSearchItem`) (T010 통과) (구현 메모: q가 없어도 400 SEARCH_QUERY_TOO_SHORT, 모르는 sort는 400 VALIDATION_FAILED. 응답 Cache-Control private, no-cache)
+- [X] T017 [P] [US1] 001 `B/shared/web/SensitiveParamMasking.java`에 `q`를 더해 접근 로그·오류 로그에서 가린다(001 소유 — 001 담당에게 알림)와 테스트 1개 (구현 메모: 001 담당에게 알림 대상 — 보고에 적음. 이름 목록에 q를 더해 접근 로그·로그 문구 모두 가린다)
 - [ ] T018 [P] [US1] `F/api/discovery.ts`(`searchPosts({q, sort, cursor, blog})`, 타입은 openapi와 같게)와 `F/features/search/SnippetText.tsx`·`searchMessages.ts`
 - [ ] T019 [US1] `F/features/search/SearchBox.tsx`(R6 `#태그` 판정은 008 `F/features/tag/normalizeTag.ts`, 이동 주소는 `tagPath.ts`, 남는 단어 판정은 서버와 같은 규칙의 작은 함수 `F/features/search/parseQuery.ts`)와 001 `F/features/auth/SessionBar.tsx`에 머리말 검색창 자리(001 담당에게 알림) (T012 일부 통과)
 - [ ] T020 [US1] `F/pages/SearchPage.tsx`(`/search?q&tab&sort`, 글 탭 — 005 `PostCardGrid`의 미리보기 자리를 `SnippetText`로, `useCursorList({listKey: 'search:posts:{sort}:{q}', restore})`, 2글자 안내·결과 없음·429) (T012 통과)
-- [ ] T021 [US1] 005 `B/discovery/web/PageShellController.java`에 `GET /search` 셸(`LinkPreviewMeta` `noindex = true`)을 더하고 `T/discovery/SearchPageShellIntegrationTest.java`(첫 응답에 `<meta name="robots" content="noindex">`) (005 소유 파일)
+- [X] T021 [US1] 005 `B/discovery/web/PageShellController.java`에 `GET /search` 셸(`LinkPreviewMeta` `noindex = true`)을 더하고 `T/discovery/SearchPageShellIntegrationTest.java`(첫 응답에 `<meta name="robots" content="noindex">`) (005 소유 파일) (구현 메모: 005 LinkPreviewMetaFactory에 forSearch()와 noindex(meta)를 더했다. 메타에 검색어를 넣지 않는다)
 
 **Checkpoint**: 글 검색 완료 — MVP
 
