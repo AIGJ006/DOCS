@@ -93,6 +93,18 @@ describe('PostDetailPage', () => {
     expect(content.querySelector('p')?.textContent).toBe('본문');
   });
 
+  it('코드 블록(pre)은 키보드로 가로 스크롤할 수 있게 Tab으로 갈 수 있다 (final-check, axe scrollable-region-focusable)', async () => {
+    stubFetch({
+      'GET /api/posts/7': () =>
+        json(200, detail({ contentHtml: '<pre><code>const x = 1;</code></pre><p>본문</p>' })),
+    });
+
+    renderDetail();
+
+    const content = await screen.findByTestId('post-content');
+    await waitFor(() => expect(content.querySelector('pre')).toHaveAttribute('tabindex', '0'));
+  });
+
   it('작성자 영역은 닉네임 @handle이고 블로그로 간다', async () => {
     stubFetch({ 'GET /api/posts/7': () => json(200, detail()) });
 

@@ -20,6 +20,7 @@ import { playableGifs } from '../features/post-detail/gifPlayer';
 import { loadHighlighter } from '../features/post-detail/loadHighlighter';
 import { useViewBeacon } from '../features/post-detail/useViewBeacon';
 import { formatMonthDay } from '../features/time/dateFormat';
+import { focusableCodeBlocks } from '../features/markdown/focusableCodeBlocks';
 import NotFoundPage from './NotFoundPage';
 import '../features/post-detail/postDetail.css';
 import CategoryPath from '../features/category/CategoryPath';
@@ -146,6 +147,7 @@ export default function PostDetailPage({
       void loadHighlighter(contentRef.current);
     }
     playableGifs(contentRef.current);
+    focusableCodeBlocks(contentRef.current);
   }, [detail]);
 
   useViewBeacon({
