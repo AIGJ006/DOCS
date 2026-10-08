@@ -235,9 +235,9 @@ description: "Task list for 014-report-hide (신고·관리자 숨김·회원 �
 
 **Purpose**: 종단 확인, 다른 기능 인계
 
-- [ ] T063 [P] `E/report-hide.spec.ts`(Playwright): 회원 B 신고 → 관리자 K 처리 화면 → 숨기기 → B로 글 404 → 작성자 A 상세 숨김 안내 → K 해제 → B로 글 보임, 375px 가로 스크롤 없음
-- [ ] T064 인계 확인: 011 `ModerationNotificationIT`가 이 기능이 내는 이벤트로 통과하는지(011 머지 후), 007 contracts/events.md `CommentDeleted` 구독자에 014가 있고 "015 `MemberPurged`가 대신" 문장이 고쳐졌는지, 015 contracts/purge-steps.md order 80 행이 T062와 같은지 기록한다
-- [ ] T065 quickstart.md §1~§4 실행 결과를 기록하고 어긋난 문서를 고친다
+- [X] T063 [P] `E/report-hide.spec.ts`(Playwright): 회원 B 신고 → 관리자 K 처리 화면 → 숨기기 → B로 글 404 → 작성자 A 상세 숨김 안내 → K 해제 → B로 글 보임, 375px 가로 스크롤 없음 (구현 메모: desktop 프로젝트 1개 워커로 통과(4.5s). 작성자·독자·관리자 셋을 E2E_EMAIL·E2E_READER_EMAIL·E2E_ADMIN_EMAIL로 받고, 375px 확인은 독자 창을 375px로 열어 신고 창에서 한다)
+- [X] T064 인계 확인: 011 `ModerationNotificationIT`가 이 기능이 내는 이벤트로 통과하는지(011 머지 후), 007 contracts/events.md `CommentDeleted` 구독자에 014가 있고 "015 `MemberPurged`가 대신" 문장이 고쳐졌는지, 015 contracts/purge-steps.md order 80 행이 T062와 같은지 기록한다 (구현 메모: 011 ModerationNotificationIT 5건 통과. 007 contracts/events.md CommentDeleted 구독자에 014 OrphanCaseCloser가 있고 탈퇴 정리 문장은 order 20·70·80으로 이미 고쳐져 있다. 015 contracts/purge-steps.md order 80 행(CLOSED_NO_TARGET + 신고 설명 NULL)이 ReportWithdrawalPurgeStep과 같다. 다른 기능 문서는 고치지 않았다)
+- [X] T065 quickstart.md §1~§4 실행 결과를 기록하고 어긋난 문서를 고친다 (구현 메모: §1 새 마이그레이션 없음 확인. §2 백엔드 IT 전부 통과, vitest 7파일 34건 통과, E2E 통과. §3 수동 브라우저 확인은 E2E 흐름과 IT로 대신했다(사람이 직접 클릭하지 않음). §4는 OrphanCaseIT·HiddenContentVisibilityIT·AccountWithdrawalPurgeStepsIT로 확인. quickstart §2에 E2E 계정 환경 변수와 예약 닉네임 안내를 더했다)
 
 ---
 

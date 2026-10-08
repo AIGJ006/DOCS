@@ -30,6 +30,8 @@ docker compose up -d postgres redis minio mailpit
 (cd frontend && npx playwright test e2e/report-hide.spec.ts)
 ```
 
+- E2E는 이메일 인증을 마친 회원 셋(작성자·독자·관리자)이 있어야 한다: `E2E_EMAIL`(작성자)·`E2E_READER_EMAIL`·`E2E_ADMIN_EMAIL`(DB에서 `role = 'ADMIN'`)·`E2E_PASSWORD`. 관리자 닉네임에 "관리자"를 넣으면 가입이 `NICKNAME_RESERVED`로 막힌다
+
 | 테스트 | 확인하는 것 |
 |---|---|
 | `ReportApiIT` | US1 #1~#7: 접수 200·사건 1·신고 1·스냅샷(글 제목 + 앞 2,000자, 댓글 내용), 같은 회원 두 번 → 신고 1건(SC-002), 기타 + 빈 설명 → 400 `REPORT_DETAIL_REQUIRED` 칸 오류, 자기 글·댓글 400, 비회원 401·인증 전 403, 비공개·휴지통·숨김·작성자 유예 글과 그 댓글·삭제된 댓글 404 고정 본문, 6번째(1분) 429·51번째(하루) 429 + `Retry-After`, Redis 정지 중 제한 없이 통과, 처리된 뒤 신고 → 새 사건, 접수로 알림·이벤트 0, 신고 10건이 쌓여도 자동 숨김 없음(FR-017) |
