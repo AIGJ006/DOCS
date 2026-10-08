@@ -17,6 +17,10 @@ import { useNarrowScreen } from '../features/category/useNarrowScreen';
 import FollowButton from '../features/follow/FollowButton';
 import FollowCounts from '../features/follow/FollowCounts';
 import { useCursorList } from '../features/post-list/useCursorList';
+import PostSearchResults from '../features/search/PostSearchResults';
+import SearchBox from '../features/search/SearchBox';
+import { BLOG_SEARCH_BOX_LABEL } from '../features/search/searchMessages';
+import type { SearchSort } from '../api/types/discovery';
 import NotFoundPage from './NotFoundPage';
 
 /** 글이 없을 때 (FR-023). */
@@ -55,6 +59,9 @@ const LOADING: HeaderState = { status: 'loading', header: null };
  * 부르며 복원 키는 `blog:{handle}:category:{id}`다. 카테고리 필터가 있으면 태그 필터는 쓰지 않는다. 이 블로그의 카테고리가
  * 아닌 값은 서버 첫 응답이 404 화면으로 처리했다.
  *
+ * 012: 목록 위에 "이 블로그에서 검색" 입력. `?q=`가 있으면 목록 자리에 이 블로그 안 검색 결과(같은 카드·정렬 탭,
+ * `?sort=latest`)를 보이고 글 목록은 부르지 않는다(요청 없는 빈 목록). 서버 셸은 `q`가 있으면 `noindex`다.
+ *
  * 001 `FriendButton`(T132)·`LastActiveBadge`(T142)와 시리즈 탭은 아직 없어 `headerSlot`·`sidebarSlot` prop 자리만 둔다.
  */
 export interface BlogPageProps {
@@ -74,7 +81,10 @@ export default function BlogPage({ headerSlot = null, sidebarSlot = null }: Blog
   /** 팔로우 버튼이 알려 준 팔로워 수 (어느 블로그의 값인지 함께 둔다) */
   const [followers, setFollowers] = useState<{ handle: string; count: number } | null>(null);
   const onFollowerCount = useCallback((count: number) => setFollowers({ handle, count }), [handle]);
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const q = searchParams.get('q');
+  const searching = q !== null && q.trim() !== '';
+  const sort: SearchSort = searchParams.get('sort') === 'latest' ? 'latest' : 'relevance';
   const category = searchParams.get('category');
   const tag = category === null ? searchParams.get('tag') : null;
   const narrow = useNarrowScreen();
@@ -151,13 +161,17 @@ export default function BlogPage({ headerSlot = null, sidebarSlot = null }: Blog
 
   const navigationType = useNavigationType();
   const load = useCallback(
-    (cursor?: string | null) => listBlogPosts(handle, cursor, tag, category),
-    [handle, tag, category],
+    (cursor?: string | null) =>
+      searching
+        ? Promise.resolve({ items: [], nextCursor: null })
+        : listBlogPosts(handle, cursor, tag, category),
+    [handle, tag, category, searching],
   );
   // 뒤로 가기로 돌아오면 30분 안의 보관값으로 복원한다 (005 T071, FR-018)
   const list = useCursorList(load, {
-    listKey:
-      category !== null
+    listKey: searching
+      ? undefined
+      : category !== null
         ? `blog:${handle}:category:${category}`
         : tag === null
           ? `blog:${handle}`
@@ -259,6 +273,15 @@ export default function BlogPage({ headerSlot = null, sidebarSlot = null }: Blog
 
       <div className={hasCategories ? 'blog-layout blog-layout--with-nav' : 'blog-layout'}>
         <div className="blog-layout__main">
+          <SearchBox
+            key={`search:${handle}:${q ?? ''}`}
+            label={BLOG_SEARCH_BOX_LABEL}
+            placeholder={BLOG_SEARCH_BOX_LABEL}
+            defaultValue={q ?? ''}
+            className="search-page-form"
+            onSearch={(next) => setSearchParams({ q: next })}
+          />
+
           {stripTags !== null && category === null ? (
             <BlogTagStrip
               handle={handle}
@@ -298,40 +321,62 @@ export default function BlogPage({ headerSlot = null, sidebarSlot = null }: Blog
 
           {sidebarSlot}
 
-          <PostCardGrid>
-            {list.items.map((card) => (
-              <PostCard key={card.id} card={card} showAuthor={false} />
-            ))}
-          </PostCardGrid>
+          {searching ? (
+            <section aria-label="이 블로그 검색 결과">
+              <p role="status" className="tag-filter-header">
+                <strong style={{ overflowWrap: 'anywhere', minWidth: 0 }}>'{q}' 검색 결과</strong>
+                <Link to={`/@${handle}`}>검색 해제</Link>
+              </p>
+              <PostSearchResults
+                q={q}
+                sort={sort}
+                blog={handle}
+                showAuthor={false}
+                onSortChange={(next) =>
+                  setSearchParams(next === 'latest' ? { q, sort: next } : { q })
+                }
+              />
+            </section>
+          ) : null}
 
-          {list.initialError ? (
-            <p role="status" style={{ textAlign: 'center', padding: '3rem 1rem' }}>
-              {INITIAL_LOAD_FAILED_TEXT}{' '}
-              <button type="button" onClick={() => void list.retry()}>
-                다시 시도
-              </button>
-            </p>
-          ) : list.loadedOnce && list.items.length === 0 ? (
-            <div style={{ textAlign: 'center', padding: '3rem 1rem' }}>
-              {category !== null ? (
-                <p style={{ margin: 0 }}>{EMPTY_CATEGORY_TEXT}</p>
-              ) : tag !== null ? (
-                <p style={{ margin: 0 }}>{EMPTY_TAG_FILTER_TEXT}</p>
-              ) : header?.isMe ? (
-                <p style={{ margin: 0 }}>
-                  {EMPTY_MY_BLOG_TEXT} <Link to="/write/new">글쓰기</Link>
+          {searching ? null : (
+            <>
+              <PostCardGrid>
+                {list.items.map((card) => (
+                  <PostCard key={card.id} card={card} showAuthor={false} />
+                ))}
+              </PostCardGrid>
+
+              {list.initialError ? (
+                <p role="status" style={{ textAlign: 'center', padding: '3rem 1rem' }}>
+                  {INITIAL_LOAD_FAILED_TEXT}{' '}
+                  <button type="button" onClick={() => void list.retry()}>
+                    다시 시도
+                  </button>
                 </p>
+              ) : list.loadedOnce && list.items.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '3rem 1rem' }}>
+                  {category !== null ? (
+                    <p style={{ margin: 0 }}>{EMPTY_CATEGORY_TEXT}</p>
+                  ) : tag !== null ? (
+                    <p style={{ margin: 0 }}>{EMPTY_TAG_FILTER_TEXT}</p>
+                  ) : header?.isMe ? (
+                    <p style={{ margin: 0 }}>
+                      {EMPTY_MY_BLOG_TEXT} <Link to="/write/new">글쓰기</Link>
+                    </p>
+                  ) : (
+                    <p style={{ margin: 0 }}>{EMPTY_BLOG_TEXT}</p>
+                  )}
+                </div>
               ) : (
-                <p style={{ margin: 0 }}>{EMPTY_BLOG_TEXT}</p>
+                <LoadMoreButton
+                  status={list.status}
+                  done={list.done}
+                  onLoadMore={() => void list.loadMore()}
+                  onRetry={() => void list.retry()}
+                />
               )}
-            </div>
-          ) : (
-            <LoadMoreButton
-              status={list.status}
-              done={list.done}
-              onLoadMore={() => void list.loadMore()}
-              onRetry={() => void list.retry()}
-            />
+            </>
           )}
         </div>
         {hasCategories ? (

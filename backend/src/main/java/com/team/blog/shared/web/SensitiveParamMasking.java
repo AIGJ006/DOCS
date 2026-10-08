@@ -16,9 +16,9 @@ import org.springframework.web.filter.OncePerRequestFilter;
  *
  * <ul>
  *   <li>{@link #mask(String)}: {@code token}·{@code password}·{@code passwordConfirm}·{@code
- *       currentPassword}·{@code newPassword}·{@code newPasswordConfirm}의 쿼리·폼 값({@code name=값})과
- *       JSON 값({@code "name":"값"})을 {@code ***}로 바꾼다. 애플리케이션 로그 문구는 {@code logback-spring.xml}의
- *       {@code %maskedMsg}가 이 메서드를 거친다.
+ *       currentPassword}·{@code newPassword}·{@code newPasswordConfirm}과 012 검색어 {@code q}(FR-039)의
+ *       쿼리·폼 값({@code name=값})과 JSON 값({@code "name":"값"})을 {@code ***}로 바꾼다. 애플리케이션 로그 문구는 {@code
+ *       logback-spring.xml}의 {@code %maskedMsg}가 이 메서드를 거친다.
  *   <li>필터: 요청마다 가린 쿼리 문자열을 요청 속성 {@link #MASKED_QUERY_ATTRIBUTE}에 둔다. Tomcat 접근 로그 패턴({@code
  *       server.tomcat.accesslog.pattern})은 {@code %q} 대신 {@code %{blog.maskedQuery}r}을 쓴다.
  * </ul>
@@ -31,7 +31,7 @@ public class SensitiveParamMasking extends OncePerRequestFilter {
     public static final String MASKED_QUERY_ATTRIBUTE = "blog.maskedQuery";
 
     private static final String NAMES =
-            "token|password|passwordConfirm|currentPassword|newPassword|newPasswordConfirm";
+            "token|password|passwordConfirm|currentPassword|newPassword|newPasswordConfirm|q";
     private static final Pattern PARAM =
             Pattern.compile("(?i)(?<![A-Za-z0-9_])(" + NAMES + ")=[^&\\s\"']*");
     private static final Pattern JSON_FIELD =

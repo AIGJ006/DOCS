@@ -54,6 +54,7 @@ const PAIRS: Array<[string, string[], number]> = [
       '--diff-del-strong',
       '--diff-add-strong',
       '--color-danger-bg',
+      '--color-mark-bg', // 012 검색어 강조
     ],
     4.5,
   ],

@@ -113,6 +113,29 @@ public class LinkPreviewMetaFactory {
         return website("태그", "공개 글에 붙은 태그 목록", properties.site().baseUrl() + "/tags");
     }
 
+    /**
+     * 검색 결과 화면 {@code /search} (012 T021, FR-038): 검색 엔진 수집 금지({@code noindex}). 검색어는 메타에 넣지
+     * 않는다(FR-039) — 제목·설명은 고정 문구이고 canonical은 쿼리 없는 {@code /search}.
+     */
+    public LinkPreviewMeta forSearch() {
+        return noindex(website("검색", "글과 사람 검색", properties.site().baseUrl() + "/search"));
+    }
+
+    /** 같은 메타에 {@code noindex}만 켠다 (012 — 블로그 안 검색 {@code /@{handle}?q=}). */
+    public static LinkPreviewMeta noindex(LinkPreviewMeta meta) {
+        return new LinkPreviewMeta(
+                meta.title(),
+                meta.description(),
+                meta.canonicalUrl(),
+                meta.ogType(),
+                meta.ogTitle(),
+                meta.ogDescription(),
+                meta.ogImage(),
+                meta.publishedTime(),
+                meta.modifiedTime(),
+                true);
+    }
+
     private LinkPreviewMeta website(String title, String description, String canonicalUrl) {
         return new LinkPreviewMeta(
                 title,

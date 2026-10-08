@@ -10,6 +10,18 @@
 - 선행 기능: 001(`RateLimiter`·`CursorCodec`·`MemberQueryService`·임시 머리말·`SensitiveParamMasking`), 004(`VisibilityFilter`·권한 하네스), 005(카드·홈·블로그·페이지 셸·`useCursorList`), 007(댓글 — 트렌딩 작성자 수), 008(태그 — 태그 검색·`normalizeTag`·`/tags`), 009(좋아요·조회 수, `VisitorKeyResolver`)
 - 있으면 함께 확인: 014(숨김 글 제외), 015(탈퇴 유예 작성자 제외)
 
+### 운영 확인 메모 (T045, 2026-10-08 구현 때 가정)
+
+배포 담당에게 묻지 않고 아래를 가정했다. 배포 전에 한 번씩 확인한다.
+
+| 항목 | 가정 | 확인 방법 |
+|---|---|---|
+| `pg_trgm` | 운영 DB에서 V1이 `CREATE EXTENSION IF NOT EXISTS pg_trgm`을 실행할 권한이 있다(관리형 DB면 허용 목록에 있음). 이 기능은 새 마이그레이션을 더하지 않았다 | `SELECT extname FROM pg_extension WHERE extname = 'pg_trgm'`, `\di ix_post_*_trgm` |
+| `blog.site.base-url` | 운영값이 공개 주소(https, 끝 `/` 없음)로 들어간다 — sitemap `<loc>`·검색 셸 canonical이 이 값을 쓴다 | `curl -s https://{도메인}/sitemap.xml \| head` 의 `<loc>`가 공개 주소 |
+| 검색 엔진 콘솔 | 배포 뒤 `https://{도메인}/sitemap.xml`을 등록한다(`robots.txt`는 이 기능 범위가 아님, research R13) | 콘솔의 sitemap 상태 "성공" |
+| 트렌딩 스냅샷 | 여러 인스턴스여도 ShedLock `trendingSnapshot`이 10분에 한 번만 계산한다. 기동 직후 1번은 `blog.trending.refresh-on-startup`(기본 true) | 로그 `trending snapshot id=… size=…`, `SELECT * FROM shedlock WHERE name = 'trendingSnapshot'` |
+| 요청 제한 | 검색 1분 30번(`blog.search.rate-limit`)은 방문자 키 기준 — 프록시 뒤라면 001 `ClientIp`가 보는 전달 헤더 설정을 따른다 | 같은 IP에서 31번째 429 |
+
 ## 1. 기동
 
 ```bash
@@ -25,7 +37,7 @@ docker compose up -d postgres redis minio
 
 ```bash
 ./mvnw -pl backend verify -Dit.test='Trending*IT,*Search*IT,SitemapIT' -Dtest='SearchQueryParserTest,SnippetBuilderTest,TrendingScoreTest'
-./mvnw -pl backend verify -Dit.test=PostSearchPerformanceIT -Dgroups=slow     # 글 10만 개, 몇 분 걸림
+./mvnw -pl backend verify -Dit.test=PostSearchPerformanceIT -Dblog.perf=true -Dtest=NONE -Dsurefire.failIfNoSpecifiedTests=false   # 글 10만 개, 몇 분 걸림 (008 TagPerformanceIT와 같은 켜기 방식)
 (cd frontend && npx vitest run src/features/search src/features/trending src/pages/__tests__/SearchPage.test.tsx src/pages/__tests__/HomePage.test.tsx)
 (cd frontend && npx playwright test e2e/trending-search.spec.ts)
 ```

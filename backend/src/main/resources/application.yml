@@ -242,6 +242,31 @@ blog:
   site:
     # canonical 절대 주소 앞부분 (끝 / 없이). 운영은 서비스 주소
     base-url: ${BLOG_SITE_BASE_URL:http://localhost:8080}
+  # 트렌딩 (012 research R17). 점수 = (3×좋아요 + 2×남의 댓글 작성자 + 0.1×조회) / (경과 시간 + 2)^1.5.
+  # 10분마다 상위 100개를 Redis에 30분 보관(ShedLock trendingSnapshot). 카드 수는 blog.list.page-size
+  trending:
+    window: 7d
+    refresh-cron: "0 */10 * * * *"
+    refresh-on-startup: true
+    snapshot-size: 100
+    snapshot-ttl: 30m
+    per-author: 3
+    weight-like: 3
+    weight-commenter: 2
+    weight-view: 0.1
+    offset-hours: 2
+    gravity: 1.5
+    read-chunk: 18          # 건너뛰기용으로 한 번에 읽는 번호 수
+  # 검색 (012 research R17). recent-window는 결과 순서와 무관한 성능 설정(33 §4)
+  search:
+    max-length: 50
+    max-words: 5
+    recent-window: 3000
+    snippet-radius: 40
+    people-limit: 20
+    rate-limit:
+      limit: 30
+      window: 1m
   # 댓글 (007 research R15). 내용 최대는 DB varchar(1000)보다 클 수 없고 깊이는 공통 1
   comment:
     page-size: 20
