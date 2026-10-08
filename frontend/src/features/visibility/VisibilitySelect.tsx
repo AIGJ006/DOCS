@@ -19,6 +19,11 @@ export interface VisibilitySelectProps {
    * (다시 발행 없음, 004 FR-016).
    */
   postId?: number;
+  /**
+   * 즉시 저장을 부르는 쪽이 맡을 때(006 내 글 관리 — 줄 단위 처리 `useRowAction`): 고른 값을 저장하고 결과를 돌려준다. `null`이면
+   * 실패를 부르는 쪽이 이미 보였다는 뜻이라 조용히 이전 값으로 되돌린다. 주면 `postId` 없이도 즉시 저장 모드다.
+   */
+  save?: (next: VisibilityValue) => Promise<SetVisibilityResult | null>;
   /** 즉시 저장이 성공한 뒤 */
   onSaved?: (result: SetVisibilityResult) => void;
   /**
@@ -61,6 +66,7 @@ export default function VisibilitySelect({
   value,
   onChange,
   postId,
+  save,
   onSaved,
   onError,
   confirm,
@@ -101,7 +107,7 @@ export default function VisibilitySelect({
       setCurrent(previous);
       return;
     }
-    if (postId === undefined) {
+    if (postId === undefined && save === undefined) {
       setCurrent(next);
       onChange?.(next);
       return;
@@ -109,7 +115,13 @@ export default function VisibilitySelect({
     setCurrent(next);
     setSaving(true);
     try {
-      const result = await setVisibility(postId, next, requestOptions);
+      const result = save
+        ? await save(next)
+        : await setVisibility(postId as number, next, requestOptions);
+      if (result === null) {
+        setCurrent(previous);
+        return;
+      }
       setCurrent(result.visibility);
       onChange?.(result.visibility);
       onSaved?.(result);
