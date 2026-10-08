@@ -56,7 +56,7 @@ type PendingPhoto =
  *   가능일), 소개(글자 수는 코드 포인트), 블로그 주소 `@handle` 읽기 전용. [저장] 한 번에 바꾼 칸만 보내고, 실패한 칸을 모두 보인다.
  * - 계정: 이메일 읽기 전용, 로그인 수단, 직전 로그인(없으면 "첫 로그인"), 비밀번호 변경(이메일 계정만), 새 글 기본 공개 범위·최근 활동 공개(바꾸면 바로 저장), 약관 링크.
  * - 친구: 받은 친구 요청·내 친구 목록(`FriendLists`, US7).
- * - 회원 탈퇴는 015가 채운다.
+ * - 회원 탈퇴: 계정 칸 맨 아래 [회원 탈퇴] 링크 → `/settings/withdraw` (015).
  *
  * 닉네임·소개는 React 텍스트로만 그린다(HTML로 해석하지 않음).
  */
@@ -397,6 +397,10 @@ function AccountSection({
       <PasswordChangeForm available={settings.passwordChangeAvailable} />
       <p>
         <Link to="/terms">이용약관</Link> · <Link to="/privacy">개인정보 처리방침</Link>
+      </p>
+      {/* 015 회원 탈퇴 (001 T122 자리) */}
+      <p>
+        <Link to="/settings/withdraw">회원 탈퇴</Link>
       </p>
     </section>
   );

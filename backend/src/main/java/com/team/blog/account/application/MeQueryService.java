@@ -24,18 +24,21 @@ public class MeQueryService {
     private final AgreementService agreementService;
     private final ProfileImageQuery profileImageQuery;
     private final ImageUrlResolver imageUrlResolver;
+    private final WithdrawalPolicy withdrawalPolicy;
 
     public MeQueryService(
             MemberRepository members,
             AuthIdentityRepository authIdentities,
             AgreementService agreementService,
             ProfileImageQuery profileImageQuery,
-            ImageUrlResolver imageUrlResolver) {
+            ImageUrlResolver imageUrlResolver,
+            WithdrawalPolicy withdrawalPolicy) {
         this.members = members;
         this.authIdentities = authIdentities;
         this.agreementService = agreementService;
         this.profileImageQuery = profileImageQuery;
         this.imageUrlResolver = imageUrlResolver;
+        this.withdrawalPolicy = withdrawalPolicy;
     }
 
     @Transactional(readOnly = true)
@@ -54,6 +57,15 @@ public class MeQueryService {
                         .map(ProfileImageKeys::display)
                         .map(imageUrlResolver::publicUrl)
                         .orElse(null);
+        java.time.Instant restoreDeadline =
+                member.getStatus() == com.team.blog.account.domain.MemberStatus.WITHDRAWN
+                                && member.getWithdrawnAt() != null
+                        ? withdrawalPolicy.deadline(member.getWithdrawnAt())
+                        : null;
+        boolean restoreExpired =
+                restoreDeadline != null
+                        && !withdrawalPolicy.isRestorable(
+                                member.getWithdrawnAt(), withdrawalPolicy.now());
         return new MeSummary(
                 memberId,
                 member.getHandle(),
@@ -63,6 +75,8 @@ public class MeQueryService {
                 identity.getProvider().name(),
                 identity.isEmailVerified(),
                 !agreementService.needsReagreement(memberId).isEmpty(),
-                profileImageUrl);
+                profileImageUrl,
+                restoreDeadline,
+                restoreExpired);
     }
 }

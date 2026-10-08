@@ -37,5 +37,5 @@ export function loginPathFor(returnTo: string): string {
   return `/login?returnTo=${encodeURIComponent(returnTo)}`;
 }
 
-/** 탈퇴 유예 계정 복구 화면 (001). */
-export const RESTORE_PATH = '/restore';
+/** 탈퇴 유예 계정 복구 화면 (015 `RestorePage`, ANALYSIS-tier-a R13). */
+export const RESTORE_PATH = '/account/restore';

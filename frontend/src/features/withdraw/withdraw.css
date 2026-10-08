@@ -1,0 +1,99 @@
+/* 015 탈퇴·복구 화면. 색은 tokens.css의 토큰만 쓴다. 375px에서 가로 스크롤이 생기지 않게 부모 폭을 넘지 않는다. */
+.withdraw-page {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 36rem;
+  margin: 0 auto;
+  padding: 1.5rem 1rem;
+  overflow-wrap: anywhere;
+}
+
+.withdraw-page h2 {
+  font-size: 1.125rem;
+  margin: 0 0 0.5rem;
+}
+
+.withdraw-effects {
+  margin: 0;
+  padding-left: 1.25rem;
+}
+
+.withdraw-effects li + li {
+  margin-top: 0.25rem;
+}
+
+.withdraw-effects .withdraw-note {
+  color: var(--color-text-muted);
+  font-size: 0.875rem;
+}
+
+.withdraw-section {
+  border: 1px solid var(--color-border);
+  border-radius: 0.375rem;
+  padding: 1rem;
+  margin: 0 0 1rem;
+  min-width: 0;
+}
+
+.withdraw-page .field-error,
+.withdraw-page .form-error {
+  color: var(--color-danger);
+}
+
+.withdraw-check {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-height: 44px;
+  margin-top: 0.75rem;
+}
+
+.withdraw-check input {
+  width: 1.25rem;
+  height: 1.25rem;
+  margin: 0;
+}
+
+.withdraw-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.75rem;
+}
+
+.withdraw-actions a,
+.withdraw-actions button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  min-height: 44px;
+  min-width: 44px;
+  padding: 0.5rem 1rem;
+  border: 1px solid var(--color-border);
+  border-radius: 0.375rem;
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.withdraw-actions .danger {
+  border-color: var(--color-danger);
+  background: var(--color-danger);
+  color: var(--color-bg);
+}
+
+.withdraw-actions .primary-action {
+  border-color: var(--color-brand-fill);
+  background: var(--color-brand-fill);
+  color: var(--color-bg);
+}
+
+.withdraw-actions button:disabled {
+  opacity: 0.5;
+}
+
+.withdraw-page .notice {
+  border-color: var(--color-danger);
+}

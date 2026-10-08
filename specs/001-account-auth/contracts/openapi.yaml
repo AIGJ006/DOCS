@@ -87,6 +87,7 @@ paths:
         '400':
           description: |
             `VALIDATION_FAILED`. `errors[].code`: `EMAIL_INVALID_FORMAT`, `EMAIL_ALREADY_REGISTERED`("이미 가입된 이메일이에요. [로그인] [비밀번호 찾기]"),
+            `EMAIL_WITHDRAWAL_PENDING`("탈퇴 신청한 계정이 있어요. 로그인하면 복구할 수 있어요" — 015, 같은 이메일의 이메일 가입 회원이 익명 처리 전 탈퇴 유예 중),
             `HANDLE_INVALID_FORMAT`, `HANDLE_PREFIX_MISMATCH`, `HANDLE_RESERVED`, `HANDLE_BANNED_WORD`, `HANDLE_DUPLICATE`,
             `PASSWORD_INVALID_LENGTH`, `PASSWORD_MISSING_CHAR_TYPE`, `PASSWORD_INVALID_CHAR`, `PASSWORD_CONTAINS_EMAIL`, `PASSWORD_TOO_COMMON`,
             `PASSWORD_CONFIRM_MISMATCH`, `NICKNAME_INVALID_FORMAT`, `NICKNAME_LETTER_REQUIRED`, `NICKNAME_RESERVED`, `NICKNAME_BANNED_WORD`,
@@ -1021,7 +1022,7 @@ components:
           enum: [NICKNAME_INVALID_FORMAT, NICKNAME_LETTER_REQUIRED, NICKNAME_RESERVED, NICKNAME_BANNED_WORD, NICKNAME_DUPLICATE, null]
     MeSummary:
       type: object
-      required: [memberId, handle, nickname, role, status, provider, emailVerified, reagreementRequired, profileImageUrl]
+      required: [memberId, handle, nickname, role, status, provider, emailVerified, reagreementRequired, profileImageUrl, restoreDeadline, restoreExpired]
       properties:
         memberId: { type: integer, format: int64, description: '본인 회원 번호. 로그아웃 때 브라우저 임시 글 키 draft:{memberId}:* 삭제용(FR-041, 002 clearMemberDrafts)' }
         handle: { type: string }
@@ -1032,6 +1033,8 @@ components:
         emailVerified: { type: boolean }
         reagreementRequired: { type: boolean }
         profileImageUrl: { type: [string, 'null'], description: null이면 화면이 기본 아바타(닉네임 첫 글자 + 8색)를 그린다 }
+        restoreDeadline: { type: [string, 'null'], format: date-time, description: '015 탈퇴 유예 중(WITHDRAWN)일 때 복구 기한(신청 시각 + 30일). 그 밖에는 null' }
+        restoreExpired: { type: boolean, description: '015 복구 기한이 지났는가. WITHDRAWN이 아니면 false' }
     MyProfile:
       type: object
       required: [handle, nickname, bio, profileImageId, profileImageUrl, nicknameChangeAvailableAt]
