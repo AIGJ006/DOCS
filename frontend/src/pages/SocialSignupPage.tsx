@@ -7,6 +7,9 @@ import {
   type CurrentAgreements,
   type SocialSignupDraft,
 } from '../api/auth';
+import AvailabilityHint from '../components/AvailabilityHint';
+import HandleInput from '../components/HandleInput';
+import NicknameInput from '../components/NicknameInput';
 import { groupFieldErrors, stripActionLabels } from '../features/auth/fieldErrors';
 import { safeRedirect } from '../features/auth/safeRedirect';
 import { importSocialPhoto } from '../features/profile/socialPhotoImport';
@@ -40,6 +43,7 @@ export default function SocialSignupPage() {
   const [agreePrivacy, setAgreePrivacy] = useState(false);
   const [noticeOpen, setNoticeOpen] = useState(true);
   const [fieldErrors, setFieldErrors] = useState<Record<string, FieldError[]>>({});
+  const [handleSuggestion, setHandleSuggestion] = useState<string | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [status, setStatus] = useState<string | null>(null);
@@ -69,6 +73,7 @@ export default function SocialSignupPage() {
       return;
     }
     setFormError(null);
+    setHandleSuggestion(null);
     if (!agreeTerms || !agreePrivacy) {
       setFieldErrors({
         agreements: [
@@ -109,6 +114,8 @@ export default function SocialSignupPage() {
         setExpired(true);
       } else if (error instanceof ApiError && error.errors.length > 0) {
         setFieldErrors(groupFieldErrors(error.errors));
+        const suggestion = error.details?.handleSuggestion;
+        setHandleSuggestion(typeof suggestion === 'string' ? suggestion : null);
       } else {
         setFieldErrors({});
         setFormError(error instanceof ApiError ? error.message : '잠시 후 다시 시도해 주세요');
@@ -204,46 +211,47 @@ export default function SocialSignupPage() {
         )}
 
         <div className="field">
-          <label htmlFor="social-handle">블로그 주소</label>
-          <div className="handle-input">
-            <span className="handle-prefix" aria-hidden="true">
-              {draft.handlePrefix}
-            </span>
-            <input
-              id="social-handle"
-              autoComplete="off"
-              autoCapitalize="none"
-              spellCheck={false}
-              maxLength={36}
-              value={handleBody}
-              onChange={(e) => setHandleBody(e.target.value.toLowerCase())}
-              aria-invalid={errorsOf('handleBody').length > 0}
-              aria-describedby={describedBy('handleBody', 'social-handle-help')}
-            />
-          </div>
-          <p id="social-handle-help" className="field-help">
-            앞의 <code>{draft.handlePrefix}</code>는 가입 수단 표시라 바꿀 수 없어요. 영문
-            소문자·숫자·_로 3~36자
-          </p>
+          <HandleInput
+            id="social-handle"
+            label="블로그 주소"
+            prefix={draft.handlePrefix}
+            value={handleBody}
+            onChange={setHandleBody}
+            invalid={errorsOf('handleBody').length > 0}
+            describedBy={describedBy('handleBody')}
+          />
+          <AvailabilityHint
+            kind="handle"
+            value={handleBody === '' ? '' : draft.handlePrefix + handleBody}
+            onSuggestion={(full) => setHandleBody(withoutPrefix(full, draft.handlePrefix))}
+          />
           {renderErrors('handleBody')}
+          {handleSuggestion && (
+            <button
+              type="button"
+              className="link-button"
+              onClick={() => setHandleBody(withoutPrefix(handleSuggestion, draft.handlePrefix))}
+            >
+              {handleSuggestion} 쓰기
+            </button>
+          )}
         </div>
 
         <div className="field">
-          <label htmlFor="social-nickname">닉네임</label>
-          <input
+          <NicknameInput
             id="social-nickname"
-            autoComplete="nickname"
             value={nickname}
+            onChange={setNickname}
             placeholder={draft.suggestedNickname === null ? NICKNAME_REQUIRED_MESSAGE : undefined}
-            onChange={(e) => setNickname(e.target.value)}
-            aria-invalid={errorsOf('nickname').length > 0}
-            aria-describedby={describedBy('nickname', 'social-nickname-help')}
+            helpText={
+              draft.suggestedNickname === null && nickname === ''
+                ? NICKNAME_REQUIRED_MESSAGE
+                : undefined
+            }
+            invalid={errorsOf('nickname').length > 0}
+            describedBy={describedBy('nickname')}
           />
-          <p id="social-nickname-help" className="field-help">
-            {draft.suggestedNickname === null && nickname === ''
-              ? NICKNAME_REQUIRED_MESSAGE
-              : '한글·영문·숫자로 2~10자'}
-          </p>
+          <AvailabilityHint kind="nickname" value={nickname} />
           {renderErrors('nickname')}
         </div>
 
@@ -311,4 +319,8 @@ export default function SocialSignupPage() {
       </form>
     </main>
   );
+}
+
+function withoutPrefix(handle: string, prefix: string): string {
+  return handle.startsWith(prefix) ? handle.slice(prefix.length) : handle;
 }
