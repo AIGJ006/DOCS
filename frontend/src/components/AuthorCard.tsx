@@ -53,7 +53,7 @@ export default function AuthorCard({ author, isMe, followButton = null }: Author
       )}
       <div style={{ minWidth: 0, flex: 1 }}>
         <p style={{ margin: 0, fontWeight: 600 }}>
-          {author.nickname} <span style={{ opacity: 0.7, fontWeight: 400 }}>@{author.handle}</span>
+          {author.nickname} <span style={{ color: 'var(--color-text-muted)', fontWeight: 400 }}>@{author.handle}</span>
         </p>
         {author.bio ? (
           <p

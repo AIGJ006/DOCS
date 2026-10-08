@@ -72,7 +72,7 @@
 
 .counter {
   font-size: 0.875rem;
-  opacity: 0.8;
+  color: var(--color-text-muted);
   align-self: flex-end;
 }
 
@@ -121,7 +121,7 @@
 
 .friend-handle,
 .friend-since {
-  opacity: 0.75;
+  color: var(--color-text-muted);
   font-size: 0.875rem;
 }
 

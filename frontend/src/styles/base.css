@@ -81,6 +81,14 @@ button {
   cursor: pointer;
 }
 
+/* 다크에서 브라우저 기본 단추 면(ButtonFace #6b6b6b)은 글자 대비가 4.5:1에 못 미친다(016 T037).
+ * 기능 화면이 따로 칠하지 않은 단추만 토큰 면으로 바꾼다(:where라 우선순위 0). */
+:where(:root[data-theme='dark'])
+  :where(button, input[type='button'], input[type='submit'], input[type='reset']) {
+  border: 1px solid var(--color-text-muted);
+  background: var(--thumb-empty);
+}
+
 button:disabled {
   cursor: not-allowed;
 }

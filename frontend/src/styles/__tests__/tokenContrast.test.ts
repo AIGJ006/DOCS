@@ -61,6 +61,8 @@ const PAIRS: Array<[string, string[], number]> = [
   ['--color-brand', ['--color-bg', '--color-surface'], 4.5],
   ['--color-on-fill', ['--color-brand-fill', ...AVATARS], 4.5],
   ['--color-danger', ['--color-bg', '--color-surface', '--color-danger-bg'], 4.5],
+  // 채운 삭제 버튼 위 글자는 반전색 --color-bg (015 탈퇴 화면)
+  ['--color-bg', ['--color-danger'], 4.5],
   ['--color-success', ['--color-bg', '--color-surface'], 4.5],
   ['--color-toast-text', ['--color-toast-bg'], 4.5],
   ['--color-toast-link', ['--color-toast-bg'], 4.5],
