@@ -7,6 +7,8 @@ package com.team.blog.account.application;
  *     쓴다(FR-041, 002 {@code clearMemberDrafts})
  * @param profileImageUrl 현재 프로필 사진(작은 사진 = {@code ProfileImageKeys.display()}) 주소. 없으면 null → 화면이
  *     기본 아바타를 그린다
+ * @param restoreDeadline 탈퇴 유예 회원의 복구 기한({@code withdrawn_at + grace}), 그 밖에는 null (015 R6)
+ * @param restoreExpired 탈퇴 유예 회원이고 지금이 복구 기한보다 뒤면 true (015 FR-021a)
  */
 public record MeSummary(
         long memberId,
@@ -17,4 +19,6 @@ public record MeSummary(
         String provider,
         boolean emailVerified,
         boolean reagreementRequired,
-        String profileImageUrl) {}
+        String profileImageUrl,
+        java.time.Instant restoreDeadline,
+        boolean restoreExpired) {}

@@ -1,6 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { resetClientForTests } from '../../api/client';
-import { logout, registerLogoutCleanup, resetLogoutCleanupForTests } from './logout';
+import {
+  clearLocalAccountData,
+  logout,
+  registerLogoutCleanup,
+  resetLogoutCleanupForTests,
+} from './logout';
 
 type FetchMock = ReturnType<typeof vi.fn<typeof fetch>>;
 
@@ -98,5 +103,27 @@ describe('logout', () => {
     );
     await logout(42);
     expect(assign).toHaveBeenCalledWith('/');
+  });
+});
+
+describe('clearLocalAccountData (015)', () => {
+  it('임시 글만 지우고 전송·로그아웃 요청·이동은 하지 않는다', async () => {
+    const flushPendingWork = vi.fn(async () => true);
+    const clearMemberDrafts = vi.fn(async (memberId: number) => {
+      calls.push(`clear ${memberId}`);
+    });
+    registerLogoutCleanup({ flushPendingWork, clearMemberDrafts });
+
+    await clearLocalAccountData(42);
+
+    expect(calls).toEqual(['clear 42']);
+    expect(flushPendingWork).not.toHaveBeenCalled();
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(assign).not.toHaveBeenCalled();
+  });
+
+  it('등록된 정리가 없으면 아무것도 하지 않는다', async () => {
+    await clearLocalAccountData(42);
+    expect(calls).toEqual([]);
   });
 });

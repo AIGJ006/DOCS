@@ -62,4 +62,6 @@ export const ME = {
   emailVerified: false,
   reagreementRequired: false,
   profileImageUrl: null,
+  restoreDeadline: null,
+  restoreExpired: false,
 };

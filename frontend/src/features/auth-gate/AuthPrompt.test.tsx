@@ -67,7 +67,10 @@ describe('AuthPrompt', () => {
     renderPrompt(<AuthPrompt kind="restore" />);
 
     expect(screen.getByRole('alert')).toHaveTextContent('탈퇴 신청한 계정이에요');
-    expect(screen.getByRole('link', { name: '계정 복구하기' })).toHaveAttribute('href', '/restore');
+    expect(screen.getByRole('link', { name: '계정 복구하기' })).toHaveAttribute(
+      'href',
+      '/account/restore',
+    );
   });
 
   it('정지 회원에게 "정지된 계정이에요"를 보이고 다른 행동 버튼은 없다', () => {

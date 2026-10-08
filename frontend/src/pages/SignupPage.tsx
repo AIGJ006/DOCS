@@ -131,6 +131,13 @@ export default function SignupPage() {
                 <Link to="/login">로그인</Link> <Link to="/forgot-password">비밀번호 찾기</Link>
               </>
             )}
+            {/* 015: 같은 이메일 계정이 탈퇴 유예 중 — 로그인하면 복구 화면으로 간다 */}
+            {error.code === 'EMAIL_WITHDRAWAL_PENDING' && (
+              <>
+                {' '}
+                <Link to="/login">로그인</Link>
+              </>
+            )}
           </p>
         ))}
         {field === 'handle' && handleSuggestion && (

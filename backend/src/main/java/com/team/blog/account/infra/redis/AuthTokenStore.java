@@ -108,6 +108,26 @@ public class AuthTokenStore {
                 AuthTokenStore::unavailable);
     }
 
+    /**
+     * 회원의 최신 토큰과 최신 포인터를 지운다 (015 탈퇴 정리, contracts/purge-steps.md §4). 이미 없으면 아무 일도 하지 않는다. 커밋 뒤에만
+     * 부른다.
+     *
+     * @throws TemporarilyUnavailableException Redis 장애
+     */
+    public void revokeLatest(TokenType type, long memberId) {
+        redisGuard.runWrite(
+                () -> {
+                    String latestKey = type.latestKey(memberId);
+                    String latest = redis.opsForValue().getAndDelete(latestKey);
+                    if (latest != null) {
+                        redis.delete(type.tokenKey(latest));
+                    }
+                },
+                () -> {
+                    throw new TemporarilyUnavailableException();
+                });
+    }
+
     private Duration ttl(TokenType type) {
         return switch (type) {
             case VERIFY -> settings.verify().tokenTtl();
