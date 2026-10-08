@@ -1,5 +1,5 @@
-import { useMemo, useState } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useEffect, useMemo, useState } from 'react';
+import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { ApiError } from '../api/client';
 import {
   discardEditing,
@@ -64,6 +64,14 @@ export default function ManagePostsPage() {
   const list = useManagePosts({ tab, visibility });
   const { confirm, dialog } = useConfirm();
   const { show, toast } = useToast();
+  const location = useLocation();
+  const draftSaved = (location.state as { draftSaved?: unknown } | null)?.draftSaved === true;
+  useEffect(() => {
+    // 에디터 [임시저장]으로 나온 경우
+    if (draftSaved) {
+      show({ text: '임시저장했어요' });
+    }
+  }, [draftSaved, location.key, show]);
   const rowAction = useRowAction({ reload: list.reload });
   const actions = useTrashActions({
     confirm,

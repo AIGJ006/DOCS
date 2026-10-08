@@ -321,7 +321,11 @@ export default function EditorPage() {
     },
   });
 
-  /** [임시저장] — 즉시 DB에 반영한다 (FR-009, D-3). */
+  /**
+   * [임시저장] — 즉시 DB에 반영한 뒤 내 글 관리로 나간다 (FR-009, D-3).
+   * 임시글은 "임시" 탭, 발행 글을 고치던 중이면 "발행" 탭으로 간다(발행본은 그대로, 고친 내용은 작업본으로 남음).
+   * 실패하면 나가지 않고 이 화면에 안내를 보인다.
+   */
   const onSave = async () => {
     const queue = queueRef.current;
     if (!queue || saving || conflictRef.current?.intercept()) {
@@ -331,15 +335,22 @@ export default function EditorPage() {
     setMessage(null);
     await queue.pause();
     const snapshot = { ...latest.current };
+    let leaving = false;
     try {
       const response = await saveWorkingCopy(postId, {
         ...snapshot,
         baseVersion: queue.baseVersion,
       });
       queue.markSaved(response, snapshot);
-      if (opened?.server.status === 'PUBLISHED') {
-        setEditing(true);
+      leaving = true;
+      queue.dispose();
+      if (memberId !== null) {
+        // 서버에 저장됐으니 이 기기 초안은 필요 없다(다시 열 때 복구 안내가 뜨지 않게).
+        await removeDraft(memberId, postId).catch(() => undefined);
       }
+      const tab = opened?.server.status === 'PUBLISHED' ? 'published' : 'drafts';
+      navigate(`/manage/posts?tab=${tab}`, { state: { draftSaved: true } });
+      return;
     } catch (e) {
       const server = serverCopyOf(e);
       if (server) {
@@ -353,8 +364,10 @@ export default function EditorPage() {
         );
       }
     } finally {
-      queue.resume();
-      setSaving(false);
+      if (!leaving) {
+        queue.resume();
+        setSaving(false);
+      }
     }
   };
 

@@ -28,7 +28,7 @@ let assign: ReturnType<typeof vi.fn>;
 
 function Where() {
   const location = useLocation();
-  return <output data-testid="where">{location.pathname}</output>;
+  return <output data-testid="where">{location.pathname + location.search}</output>;
 }
 
 const SIGNED_IN = ME as unknown as MeSummary;
@@ -41,6 +41,7 @@ function renderAt(path: string, me: MeSummary | null = SIGNED_IN) {
           <Route path="/write/new" element={<NewPostPage />} />
           <Route path="/write/:postId" element={<EditorPage />} />
           <Route path="/login" element={<p>로그인 화면</p>} />
+          <Route path="/manage/posts" element={<p>내 글 관리</p>} />
         </Routes>
         <Where />
       </MemoryRouter>
@@ -122,6 +123,71 @@ describe('EditorPage', () => {
 
     await waitFor(() => expect(assign).toHaveBeenCalledWith('/@kim755030/posts/42'));
     expect(await loadDraft(ME.memberId, 42)).toBeNull();
+  });
+
+  it('[임시저장]에 성공하면 이 기기 초안을 지우고 내 글 관리 "임시" 탭으로 나간다', async () => {
+    const fetchMock = stubFetch({
+      'GET /api/posts/42/working-copy': () => json(200, COPY),
+      'POST /api/markdown/preview': () => json(200, { html: '' }),
+      'PUT /api/posts/42/working-copy': () =>
+        json(200, { version: 4, savedAt: '2026-10-07T05:10:00Z' }),
+    });
+    await saveDraft(ME.memberId, 42, {
+      title: '임시 제목',
+      contentMd: '임시 본문',
+      baseVersion: 3,
+      dirty: true,
+      pendingImages: [],
+      updatedAt: Date.now(),
+    });
+    const user = userEvent.setup();
+    renderAt('/write/42');
+    await screen.findByLabelText('제목');
+
+    await user.click(screen.getByRole('button', { name: '임시저장' }));
+
+    await waitFor(() =>
+      expect(screen.getByTestId('where')).toHaveTextContent('/manage/posts?tab=drafts'),
+    );
+    expect(requestsTo(fetchMock, 'PUT', '/api/posts/42/working-copy').length).toBeGreaterThan(0);
+    expect(await loadDraft(ME.memberId, 42)).toBeNull();
+  });
+
+  it('발행 글을 고치다 [임시저장]하면 "발행" 탭으로 나간다', async () => {
+    stubFetch({
+      'GET /api/posts/42/working-copy': () =>
+        json(200, { ...COPY, status: 'PUBLISHED', url: '/@kim755030/posts/42' }),
+      'POST /api/markdown/preview': () => json(200, { html: '' }),
+      'PUT /api/posts/42/working-copy': () =>
+        json(200, { version: 4, savedAt: '2026-10-07T05:10:00Z' }),
+    });
+    const user = userEvent.setup();
+    renderAt('/write/42');
+    await screen.findByLabelText('제목');
+
+    await user.click(screen.getByRole('button', { name: '임시저장' }));
+
+    await waitFor(() =>
+      expect(screen.getByTestId('where')).toHaveTextContent('/manage/posts?tab=published'),
+    );
+  });
+
+  it('[임시저장]이 실패하면 나가지 않고 안내를 보인다', async () => {
+    stubFetch({
+      'GET /api/posts/42/working-copy': () => json(200, COPY),
+      'POST /api/markdown/preview': () => json(200, { html: '' }),
+      'PUT /api/posts/42/working-copy': () =>
+        json(503, errorBody('AUTOSAVE_UNAVAILABLE', '잠시 후 다시 저장할게요')),
+    });
+    const user = userEvent.setup();
+    renderAt('/write/42');
+    await screen.findByLabelText('제목');
+
+    await user.click(screen.getByRole('button', { name: '임시저장' }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('잠시 후 다시 저장할게요');
+    expect(screen.getByTestId('where')).toHaveTextContent('/write/42');
+    expect(screen.getByRole('button', { name: '임시저장' })).toBeEnabled();
   });
 
   it('발행 검증 오류의 제목·본문 항목은 입력칸 옆에 보인다', async () => {
