@@ -189,8 +189,8 @@ description: "Task list for 010-follow-feed (팔로우·팔로잉 피드)"
 - [X] T046 `grep -rn "010 팔로우\|TODO(010)\|010이 넘겨받\|010 전까지" backend/src frontend/src`가 0건인지 확인하고 남은 표시를 정리한다(005 `AuthorFollowStatusQuery`·`AuthorCard`·`BlogHeaderView` 주석) (구현 메모: App.tsx·follow.css 주석까지 정리해 0건)
 - [X] T047 [P] 001 `B/shared/security/ActionKind.java` 주석의 `ACCOUNT_WRITE` 설명에 "팔로우"를 더한다(T003 결과가 기본안일 때, 001 담당에게 알림)
 - [X] T048 [P] 011 인계 확인: `specs/011-notification/tasks.md`가 `MemberFollowed`·`MemberUnfollowed` 필드 이름(contracts/follow-sql.md §5)과 새 글 알림의 `follow` 직접 읽기(25 §4-1)를 쓰는지 확인한다 (구현 메모: 011 data-model §3 필드(followerId·followeeId·followedAt/unfollowedAt)와 같고, 새 글 알림은 follow 표 직접 INSERT…SELECT, isFollowing(followerId, followeeId)도 있음. 011 문서 수정 불필요)
-- [ ] T049 quickstart.md §1~§4를 처음부터 끝까지 실행하고 결과를 기록한다
-- [ ] T050 전체 회귀: `./mvnw -pl backend verify`(004·005·008 테스트 포함)와 `npm test`·`npm run build`·`npm run lint`
+- [X] T049 quickstart.md §1~§4를 처음부터 끝까지 실행하고 결과를 기록한다 (구현 메모: 결과를 quickstart.md '실행 기록'에 적음)
+- [X] T050 전체 회귀: `./mvnw -pl backend verify`(004·005·008 테스트 포함)와 `npm test`·`npm run build`·`npm run lint` (구현 메모: main ce11144 합친 뒤 backend verify 2,890개 실패 0(건너뜀 56), frontend npm test 750 통과·build·lint·format 통과, E2E follow-feed 통과. 005 PostDetailIntegrationTest 회원 SQL 상한을 4→5로 올림(좋아요·팔로우 각 1번, 005 quickstart '최대 5번'))
 
 ---
 
