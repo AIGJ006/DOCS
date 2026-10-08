@@ -49,7 +49,9 @@ export default function AuthorChip({ author, withHandle = false, size = 24 }: Au
         }}
       >
         {author.nickname}
-        {withHandle ? <span style={{ color: 'var(--color-text-muted)' }}> @{author.handle}</span> : null}
+        {withHandle ? (
+          <span style={{ color: 'var(--color-text-muted)' }}> @{author.handle}</span>
+        ) : null}
       </Link>
     </span>
   );
