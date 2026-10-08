@@ -141,6 +141,10 @@ test.describe('알림 (011)', () => {
     const cMe = await meOf(c.page);
     const title = `알림 글 ${stamp}`;
     const post = await write(a.page, title);
+    // 같은 E2E 회원을 쓰는 다른 spec(댓글·좋아요·팔로우)이 먼저 돌면 A에게 안 읽은 알림이 남아 있다 — 모두 읽음으로 시작한다
+    expect((await call(a.page, 'POST', '/api/notifications/read-all', {})).status()).toBeLessThan(
+      300,
+    );
     await a.page.goto('/');
     await expect(bell(a.page)).toHaveAccessibleName('알림');
 
