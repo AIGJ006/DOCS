@@ -114,6 +114,11 @@ jobs:
                       STORAGE_ROOT_USER STORAGE_ROOT_PASSWORD BLOG_IMAGE_STORAGE_ACCESS_KEY BLOG_IMAGE_STORAGE_SECRET_KEY \
                       GEMINI_API_KEY COMPOSE_PROFILES OLLAMA_ENABLED OLLAMA_MODEL BLOG_AI_TAG_SUGGEST_ENABLED; do
             value="${!name}"
+            # 붙여 넣을 때 딸려 온 앞뒤 공백·줄바꿈은 지운다 (openssl 출력, 복사한 줄 끝 등)
+            value="${value#"${value%%[![:space:]]*}"}"
+            value="${value%"${value##*[![:space:]]}"}"
+            # Gmail 앱 비밀번호는 4자씩 띄어 보이지만 실제 값에는 공백이 없다
+            if [ "$name" = SPRING_MAIL_PASSWORD ]; then value="${value//[[:space:]]/}"; fi
             [ -n "$value" ] || continue
             # .env는 작은따옴표로 감싸 그대로 읽힌다($ 등 특수 문자 안전). 작은따옴표·줄바꿈만 쓸 수 없다
             case "$value" in
