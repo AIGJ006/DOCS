@@ -76,6 +76,7 @@ class HandlePolicyTest {
         "go-admin, GOOGLE", // 접두어를 뺀 본문 기준 (08 #5)
         "gi-settings, GITHUB",
         "teamblog, LOCAL",
+        "baselog, LOCAL", // 서비스 이름 (2026-10-10)
         "null, LOCAL",
     })
     void rejectsReservedBody(String handle, Provider provider) {
