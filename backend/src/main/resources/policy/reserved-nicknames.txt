@@ -15,3 +15,4 @@ staff
 manager
 system
 root
+baselog

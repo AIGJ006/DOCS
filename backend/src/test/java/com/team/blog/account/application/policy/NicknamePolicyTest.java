@@ -53,6 +53,7 @@ class NicknamePolicyTest {
                 "admin123 | NICKNAME_RESERVED",
                 "Official | NICKNAME_RESERVED",
                 "운영팀장 | NICKNAME_RESERVED",
+                "BaseLOG지기 | NICKNAME_RESERVED", // 서비스 이름 (2026-10-10)
                 "ADM1N | NICKNAME_RESERVED", // 예약어도 금칙어와 같은 변형으로 (1→i)
                 "시1발 | NICKNAME_BANNED_WORD", // 숫자 끼워 넣기 (09 #4)
                 "sh1t | NICKNAME_BANNED_WORD", // 숫자로 글자 바꾸기
