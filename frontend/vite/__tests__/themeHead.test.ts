@@ -7,7 +7,7 @@ const HTML = `<!doctype html>
   <head>
     <meta charset="UTF-8" />
     <!--app-head-->
-    <title>BuildLOG</title>
+    <title>BaseLOG</title>
     <link rel="stylesheet" href="/assets/index.css">
   </head>
 </html>`;
