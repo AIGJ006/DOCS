@@ -82,7 +82,9 @@ jobs:
           BLOG_IMAGE_STORAGE_ACCESS_KEY: ${{ secrets.BLOG_IMAGE_STORAGE_ACCESS_KEY }}
           BLOG_IMAGE_STORAGE_SECRET_KEY: ${{ secrets.BLOG_IMAGE_STORAGE_SECRET_KEY }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-          COMPOSE_PROFILES: ${{ vars.COMPOSE_PROFILES }}
+          # 기본은 서버 안 PostgreSQL(localdb). Crowfoot PostgreSQL은 확장(pg_trgm)을 지원하지 않는다(2026-10-10 확인).
+          # Crowfoot 등 바깥 DB를 쓰려면 Variables에 COMPOSE_PROFILES=external(또는 ai)처럼 localdb가 없는 값을 넣는다
+          COMPOSE_PROFILES: ${{ vars.COMPOSE_PROFILES || 'localdb' }}
           OLLAMA_ENABLED: ${{ vars.OLLAMA_ENABLED }}
           OLLAMA_MODEL: ${{ vars.OLLAMA_MODEL }}
           BLOG_AI_TAG_SUGGEST_ENABLED: ${{ vars.BLOG_AI_TAG_SUGGEST_ENABLED }}
@@ -106,6 +108,10 @@ jobs:
           esac
           case "$APP_PORT" in
             ''|*[!0-9]*) echo "::error::APP_PORT는 숫자여야 합니다"; exit 1 ;;
+          esac
+          # localdb면 DB는 compose 안 postgres 컨테이너다. 이름·계정·비밀번호는 DB_NAME·DB_USERNAME·DB_PASSWORD로 처음 만든다
+          case "$COMPOSE_PROFILES" in
+            *localdb*) DB_ADDRESS=postgres; DB_PORT=5432; DB_SCHEMA=public ;;
           esac
           : > bundle/.env
           for name in SITE_URL APP_PORT DB_ADDRESS DB_PORT DB_NAME DB_USERNAME DB_PASSWORD DB_SCHEMA \
