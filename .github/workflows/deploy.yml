@@ -1,0 +1,164 @@
+# 팀 공용 서버 배포 (deploy/README.md).
+# main에 push되거나 Actions 화면에서 직접 실행하면: 도커 이미지 빌드 → 서버로 복사(SSH 비밀번호 인증) → 서버 ~/buildlog/deploy.sh 실행.
+# 필수 Secrets가 아직 비어 있으면 안내(notice)만 남기고 성공으로 끝난다 — 배포 설정 전 main push가 빨갛게 되지 않게.
+# 비밀값은 Secrets로만 받는다. 로그에 찍지 않는다(set -x 금지, .env를 출력하지 않음).
+name: deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+env:
+  IMAGE_NAME: buildlog-app
+  # 서버 쪽 폴더 (SSH 사용자 홈 아래)
+  DEPLOY_DIR: buildlog
+
+jobs:
+  deploy:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    steps:
+      - name: 배포 설정 확인
+        id: gate
+        env:
+          SSH_ADDRESS: ${{ secrets.SSH_ADDRESS }}
+          SSH_ID: ${{ secrets.SSH_ID }}
+          SSH_PASSWORD: ${{ secrets.SSH_PASSWORD }}
+          SSH_PORT: ${{ secrets.SSH_PORT }}
+          DB_ADDRESS: ${{ secrets.DB_ADDRESS }}
+          DB_PORT: ${{ secrets.DB_PORT }}
+          DB_NAME: ${{ secrets.DB_NAME }}
+          DB_USERNAME: ${{ secrets.DB_USERNAME }}
+          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+          DB_SCHEMA: ${{ secrets.DB_SCHEMA }}
+          APP_PORT: ${{ secrets.APP_PORT || vars.APP_PORT }}
+          SITE_URL: ${{ secrets.SITE_URL || vars.SITE_URL }}
+        run: |
+          missing=""
+          for name in SSH_ADDRESS SSH_ID SSH_PASSWORD SSH_PORT DB_ADDRESS DB_PORT DB_NAME DB_USERNAME DB_PASSWORD DB_SCHEMA APP_PORT SITE_URL; do
+            if [ -z "${!name}" ]; then missing="$missing $name"; fi
+          done
+          if [ -n "$missing" ]; then
+            echo "::notice title=배포 건너뜀::GitHub Secrets가 아직 비어 있습니다:$missing (deploy/README.md 참고). 배포 없이 성공으로 끝냅니다."
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: 소스 받기
+        if: steps.gate.outputs.ready == 'true'
+        uses: actions/checkout@v4.2.2
+
+      - name: 서버 .env 만들기
+        if: steps.gate.outputs.ready == 'true'
+        env:
+          SITE_URL: ${{ secrets.SITE_URL || vars.SITE_URL }}
+          APP_PORT: ${{ secrets.APP_PORT || vars.APP_PORT }}
+          DB_ADDRESS: ${{ secrets.DB_ADDRESS }}
+          DB_PORT: ${{ secrets.DB_PORT }}
+          DB_NAME: ${{ secrets.DB_NAME }}
+          DB_USERNAME: ${{ secrets.DB_USERNAME }}
+          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+          DB_SCHEMA: ${{ secrets.DB_SCHEMA }}
+          SPRING_MAIL_HOST: ${{ secrets.SPRING_MAIL_HOST }}
+          SPRING_MAIL_PORT: ${{ secrets.SPRING_MAIL_PORT }}
+          SPRING_MAIL_USERNAME: ${{ secrets.SPRING_MAIL_USERNAME }}
+          SPRING_MAIL_PASSWORD: ${{ secrets.SPRING_MAIL_PASSWORD }}
+          BLOG_MAIL_FROM: ${{ secrets.BLOG_MAIL_FROM }}
+          GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
+          GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
+          GITHUB_CLIENT_ID: ${{ secrets.OAUTH_GITHUB_CLIENT_ID }}
+          GITHUB_CLIENT_SECRET: ${{ secrets.OAUTH_GITHUB_CLIENT_SECRET }}
+          STORAGE_ROOT_USER: ${{ secrets.STORAGE_ROOT_USER }}
+          STORAGE_ROOT_PASSWORD: ${{ secrets.STORAGE_ROOT_PASSWORD }}
+          BLOG_IMAGE_STORAGE_ACCESS_KEY: ${{ secrets.BLOG_IMAGE_STORAGE_ACCESS_KEY }}
+          BLOG_IMAGE_STORAGE_SECRET_KEY: ${{ secrets.BLOG_IMAGE_STORAGE_SECRET_KEY }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          COMPOSE_PROFILES: ${{ vars.COMPOSE_PROFILES }}
+          OLLAMA_ENABLED: ${{ vars.OLLAMA_ENABLED }}
+          OLLAMA_MODEL: ${{ vars.OLLAMA_MODEL }}
+          BLOG_AI_TAG_SUGGEST_ENABLED: ${{ vars.BLOG_AI_TAG_SUGGEST_ENABLED }}
+        run: |
+          set -euo pipefail
+          umask 077
+          mkdir -p bundle
+          # 앱이 안 뜨는 값부터 먼저 확인 (빈 값이면 여기서 실패 — 이름만 알린다)
+          for name in STORAGE_ROOT_USER STORAGE_ROOT_PASSWORD BLOG_IMAGE_STORAGE_ACCESS_KEY BLOG_IMAGE_STORAGE_SECRET_KEY; do
+            if [ -z "${!name}" ]; then
+              echo "::error title=Secrets 부족::$name 이(가) 비어 있습니다 (deploy/README.md 표 참고)"
+              exit 1
+            fi
+          done
+          case "$SITE_URL" in
+            http://*|https://*) ;;
+            *) echo "::error::SITE_URL은 https:// 로 시작해야 합니다"; exit 1 ;;
+          esac
+          case "$SITE_URL" in
+            */) echo "::error::SITE_URL 끝에 / 를 붙이지 않습니다"; exit 1 ;;
+          esac
+          case "$APP_PORT" in
+            ''|*[!0-9]*) echo "::error::APP_PORT는 숫자여야 합니다"; exit 1 ;;
+          esac
+          : > bundle/.env
+          for name in SITE_URL APP_PORT DB_ADDRESS DB_PORT DB_NAME DB_USERNAME DB_PASSWORD DB_SCHEMA \
+                      SPRING_MAIL_HOST SPRING_MAIL_PORT SPRING_MAIL_USERNAME SPRING_MAIL_PASSWORD BLOG_MAIL_FROM \
+                      GOOGLE_CLIENT_ID GOOGLE_CLIENT_SECRET GITHUB_CLIENT_ID GITHUB_CLIENT_SECRET \
+                      STORAGE_ROOT_USER STORAGE_ROOT_PASSWORD BLOG_IMAGE_STORAGE_ACCESS_KEY BLOG_IMAGE_STORAGE_SECRET_KEY \
+                      GEMINI_API_KEY COMPOSE_PROFILES OLLAMA_ENABLED OLLAMA_MODEL BLOG_AI_TAG_SUGGEST_ENABLED; do
+            value="${!name}"
+            [ -n "$value" ] || continue
+            # .env는 작은따옴표로 감싸 그대로 읽힌다($ 등 특수 문자 안전). 작은따옴표·줄바꿈만 쓸 수 없다
+            case "$value" in
+              *"'"*|*$'\n'*) echo "::error::$name 값에 작은따옴표(') 또는 줄바꿈이 있으면 안 됩니다"; exit 1 ;;
+            esac
+            printf "%s='%s'\n" "$name" "$value" >> bundle/.env
+          done
+          echo ".env: $(wc -l < bundle/.env)줄 (값은 출력하지 않음)"
+
+      - name: 도커 이미지 빌드
+        if: steps.gate.outputs.ready == 'true'
+        run: |
+          set -euo pipefail
+          docker build -f backend/Dockerfile -t "$IMAGE_NAME:$GITHUB_SHA" -t "$IMAGE_NAME:latest" .
+          docker save "$IMAGE_NAME:$GITHUB_SHA" "$IMAGE_NAME:latest" | gzip -1 > bundle/buildlog-app.tar.gz
+          cp deploy/docker-compose.prod.yml deploy/deploy.sh deploy/nginx.conf.template scripts/minio-init.sh bundle/
+          du -sh bundle/buildlog-app.tar.gz
+
+      - name: 서버로 복사
+        if: steps.gate.outputs.ready == 'true'
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.SSH_ADDRESS }}
+          port: ${{ secrets.SSH_PORT }}
+          username: ${{ secrets.SSH_ID }}
+          password: ${{ secrets.SSH_PASSWORD }}
+          source: bundle
+          strip_components: 1
+          target: ${{ env.DEPLOY_DIR }}
+
+      - name: 서버에서 배포 스크립트 실행
+        if: steps.gate.outputs.ready == 'true'
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SSH_ADDRESS }}
+          port: ${{ secrets.SSH_PORT }}
+          username: ${{ secrets.SSH_ID }}
+          password: ${{ secrets.SSH_PASSWORD }}
+          command_timeout: 20m
+          script: |
+            set -e
+            cd ~/${{ env.DEPLOY_DIR }}
+            chmod 600 .env
+            APP_IMAGE_TAG=${{ github.sha }} sh deploy.sh
+
+      - name: 작업 폴더의 .env 지우기
+        if: always()
+        run: rm -f bundle/.env
