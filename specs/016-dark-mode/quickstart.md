@@ -37,7 +37,7 @@ docker compose up -d postgres redis minio
 | `tokenContrast.test.ts` | 공통(라이트)·선택(다크) | contracts §7 짝 전부 기준 이상, 공통 토큰 11개가 라이트 블록에 모두 있음 |
 | `themeStore.test.ts` | 선택 | 저장 값 읽기(모르는 값·예외 → `system`), `system` 저장 = 키 지움, 순서 system → light → dark → system |
 | `useTheme.test.ts` | 선택 | 처음 값은 `data-theme-choice`에서, `system`일 때만 `matchMedia` 변경 구독, 고정 상태에서 구독 해제 |
-| `ThemeToggle.test.tsx` | 선택 | 아이콘·`aria-label`·`title` 3가지, 누르면 즉시 두 속성 변경, `aria-live` 안내, `DARK_MODE_ENABLED=false`면 그리지 않음 |
+| `ThemeSettings.test.tsx`(옛 `ThemeToggle.test.tsx` (2026-10-10 민서 결정: 설정 화면 라디오로 옮김)) | 선택 | 아이콘·`aria-label`·`title` 3가지, 누르면 즉시 두 속성 변경, `aria-live` 안내, `DARK_MODE_ENABLED=false`면 그리지 않음 |
 | `themeInit.test.ts` | 선택 | `public/js/theme-init.js`를 jsdom에서 실행 — contracts §3 표 6행 |
 | `logout.test.ts`(001 파일에 추가) | 선택 | 로그아웃 뒤 `theme` 남음(US2 #5) |
 | `StaticResourceCacheConfigTest` | 선택 | `/js/theme-init.js` `no-cache`+ETag, `/assets/x.js` `max-age=31536000, immutable`, 404 셸 머리 그대로 |
@@ -46,10 +46,10 @@ docker compose up -d postgres redis minio
 ## 3. 수동 확인 (브라우저)
 
 1. 운영체제를 다크로 두고 새 시크릿 창으로 홈을 연다 → 처음부터 어두운 배경, 흰 화면이 번쩍이지 않는다(개발자 도구 Performance 녹화 첫 프레임도 어두움)
-2. 머리말 맨 오른쪽 🖥 버튼에 마우스를 올린다 → "테마: 시스템 설정 (누르면 라이트)"
-3. 버튼을 누른다 → ☀️, 즉시 라이트. 새로 고침·글 상세로 이동해도 라이트. 개발자 도구 Application → Local Storage에 `theme = light`
-4. 다시 누른다 → 🌙 다크. 운영체제를 라이트로 바꿔도 다크 그대로
-5. 다시 누른다 → 🖥, `theme` 키가 사라짐. 운영체제를 다크 ↔ 라이트로 바꾸면 새로 고치지 않아도 따라 바뀐다
+2. 로그인해 설정 화면 "화면 테마"를 연다 → "시스템 설정 따르기 (기본)"이 골라져 있다 (2026-10-10 민서 결정: 설정 화면 라디오로 옮김 — 옛 머리말 🖥/☀️/🌙 버튼 절차를 대신한다)
+3. "라이트 모드"를 고른다 → 즉시 라이트. 새로 고침·글 상세로 이동해도 라이트. 개발자 도구 Application → Local Storage에 `theme = light`
+4. "다크 모드"를 고른다 → 즉시 다크. 운영체제를 라이트로 바꿔도 다크 그대로
+5. "시스템 설정 따르기 (기본)"을 고른다 → `theme` 키가 사라짐. 운영체제를 다크 ↔ 라이트로 바꾸면 새로 고치지 않아도 따라 바뀐다
 6. 다크로 고른 뒤 로그아웃 → 다크 그대로, `theme` 키 남음
 7. 개발자 도구 Console에 CSP 위반(`Refused to execute inline script`)이 없다
 8. 다크에서 코드 블록이 있는 글 → 코드 강조가 어두운 색 구성, 사진·썸네일·프로필 사진 색이 라이트와 같다

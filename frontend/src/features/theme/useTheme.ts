@@ -58,3 +58,25 @@ export function useTheme() {
 
   return { choice, setChoice };
 }
+
+/**
+ * 모든 화면에서 "시스템"이면 기기 설정 변경을 따라간다 (FR-006). 앱 틀(`AppLayout`)에 한 번 둔다.
+ * 테마 선택 칸은 설정 화면에만 있으므로(2026-10-10), 다른 화면에서도 따라가도록 따로 구독한다.
+ * 선택은 이벤트 때마다 `<html data-theme-choice>`에서 읽어, 설정 화면에서 라이트·다크로 고정하면 바로 무시한다.
+ */
+export function useFollowSystemTheme(): void {
+  useEffect(() => {
+    if (typeof window.matchMedia !== 'function') {
+      return undefined;
+    }
+    const query = window.matchMedia(PREFERS_DARK_QUERY);
+    const onChange = (event: MediaQueryListEvent) => {
+      const root = document.documentElement;
+      if (root.dataset.themeChoice === 'system') {
+        root.dataset.theme = event.matches ? 'dark' : 'light';
+      }
+    };
+    query.addEventListener('change', onChange);
+    return () => query.removeEventListener('change', onChange);
+  }, []);
+}

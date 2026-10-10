@@ -36,11 +36,6 @@ export function writeChoice(choice: ThemeChoice): void {
   }
 }
 
-/** 버튼을 누를 때의 다음 선택: 시스템 → 라이트 → 다크 → 시스템 (FR-004). */
-export function nextChoice(choice: ThemeChoice): ThemeChoice {
-  return choice === 'system' ? 'light' : choice === 'light' ? 'dark' : 'system';
-}
-
 export function resolve(choice: ThemeChoice, prefersDark: boolean): AppliedTheme {
   if (choice === 'system') {
     return prefersDark ? 'dark' : 'light';

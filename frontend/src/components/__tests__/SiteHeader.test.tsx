@@ -55,6 +55,24 @@ describe('공통 머리말 (SiteHeader)', () => {
     expect(within(header).queryByRole('link', { name: '피드' })).toBeNull();
   });
 
+  it('016: 테마 버튼이 없다 — 비로그인·로그인 모두(테마는 설정 화면에서 고른다)', async () => {
+    stubFetch({ 'GET /api/me': anonymous });
+    const { unmount } = renderHeader('/');
+    let header = screen.getByRole('banner');
+    await within(header).findByRole('link', { name: '로그인' });
+    expect(within(header).queryByRole('button', { name: /테마/ })).toBeNull();
+    expect(header.querySelector('[data-testid="theme-toggle"]')).toBeNull();
+    unmount();
+
+    resetClientForTests();
+    stubFetch({ 'GET /api/me': () => json(200, ME) });
+    renderHeader('/');
+    header = screen.getByRole('banner');
+    await within(header).findByRole('button', { name: /계정 메뉴/ });
+    expect(within(header).queryByRole('button', { name: /테마/ })).toBeNull();
+    expect(header.querySelector('[data-testid="theme-toggle"]')).toBeNull();
+  });
+
   it('로그인 화면에서는 [로그인]에 returnTo를 붙이지 않는다', async () => {
     stubFetch({ 'GET /api/me': anonymous });
     renderHeader('/login?returnTo=%2Fsettings');
@@ -145,7 +163,7 @@ describe('공통 머리말 (SiteHeader)', () => {
     expect(assign).not.toHaveBeenCalled();
   });
 
-  it('글쓰기 화면(/write/*)에서는 [글쓰기]를 숨긴다 — 머리말 자체는 남는다(016 테마 버튼 자리)', async () => {
+  it('글쓰기 화면(/write/*)에서는 [글쓰기]를 숨긴다 — 머리말 자체는 남는다', async () => {
     stubFetch({ 'GET /api/me': () => json(200, ME) });
     renderHeader('/write/new');
     const header = screen.getByRole('banner');
@@ -178,7 +196,7 @@ describe('AppLayout', () => {
     await screen.findByRole('link', { name: '로그인' });
   });
 
-  it('012: 검색창(이름 "검색")과 좁은 화면용 [검색] 링크가 테마 버튼보다 앞에 있다', async () => {
+  it('012: 검색창(이름 "검색")이 줄 맨 앞에 있고 좁은 화면용 [검색] 링크가 있다', async () => {
     stubFetch({ 'GET /api/me': anonymous });
     renderHeader('/');
 

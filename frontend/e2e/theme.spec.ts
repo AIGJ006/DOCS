@@ -119,47 +119,78 @@ test.describe('US1 처음 방문하면 기기 설정을 따른다', () => {
     const errors: string[] = [];
     page.on('pageerror', (error) => errors.push(error.message));
     await page.goto('/');
-    await expect(page.getByTestId('theme-toggle')).toBeVisible();
+    await expect(page.getByRole('banner')).toBeVisible();
     expect(await html(page)).toEqual({ theme: 'dark', choice: 'system' });
-    await page.getByTestId('theme-toggle').click();
-    expect(await html(page)).toEqual({ theme: 'light', choice: 'light' });
     expect(errors.filter((message) => message.includes('blocked'))).toEqual([]);
     await context.close();
   });
-});
 
-test.describe('US2 테마를 고르고 유지한다', () => {
-  test('버튼 순환, 새로 고침·이동·뒤로 가기 뒤 유지, 시스템이면 기기 설정을 따라감', async ({
+  test('비회원: 머리말에 테마 버튼이 없고 기기 설정을 따른다, 머리말이 가로로 넘치지 않는다', async ({
     page,
   }) => {
     await page.emulateMedia({ colorScheme: 'light' });
     await page.goto('/');
-    const toggle = page.getByRole('banner').getByTestId('theme-toggle');
-    await expect(toggle).toHaveAccessibleName('테마: 시스템 설정 (누르면 라이트)');
+    const header = page.getByRole('banner');
+    await expect(header.getByRole('link', { name: '회원 가입' })).toBeVisible();
+    await expect(page.getByTestId('theme-toggle')).toHaveCount(0);
+    await expect(header.getByRole('button', { name: /테마/ })).toHaveCount(0);
+    expect(await html(page)).toEqual({ theme: 'light', choice: 'system' });
+    await page.emulateMedia({ colorScheme: 'dark' });
+    await expect.poll(() => html(page)).toEqual({ theme: 'dark', choice: 'system' });
+    const size = await page.evaluate(() => ({
+      scrollWidth: document.documentElement.scrollWidth,
+      innerWidth: window.innerWidth,
+    }));
+    expect(size.scrollWidth).toBeLessThanOrEqual(size.innerWidth);
+  });
+});
 
-    // US2 #1: 시스템 → 라이트 → 다크
-    await toggle.click();
-    await expect(toggle).toHaveAccessibleName('테마: 라이트 (누르면 다크)');
+test.describe('US2 설정 화면에서 테마를 고르고 유지한다 (2026-10-10 머리말 버튼에서 옮김)', () => {
+  test.skip(!hasAccount, 'E2E_EMAIL·E2E_PASSWORD(이메일 인증된 회원)가 필요합니다');
+
+  function themeSection(page: Page) {
+    return page.getByRole('region', { name: '화면 테마' });
+  }
+
+  test('라디오 선택 즉시 적용, 새로 고침·이동·뒤로 가기 뒤 유지, 시스템이면 기기 설정을 따라감', async ({
+    page,
+  }) => {
+    await page.emulateMedia({ colorScheme: 'light' });
+    await login(page);
+    await page.goto('/settings');
+    const section = themeSection(page);
+    await expect(section.getByRole('heading', { name: '화면 테마' })).toBeVisible();
+    const radios = section.getByRole('radio');
+    await expect(radios).toHaveCount(3);
+    const system = section.getByRole('radio', { name: '시스템 설정 따르기 (기본)' });
+    const light = section.getByRole('radio', { name: '라이트 모드' });
+    const dark = section.getByRole('radio', { name: '다크 모드' });
+    await expect(system).toBeChecked();
+
+    // US2 #1: 고르면 바로 적용
+    await light.check();
     expect(await html(page)).toEqual({ theme: 'light', choice: 'light' });
-    await toggle.click();
-    await expect(toggle).toHaveAccessibleName('테마: 다크 (누르면 시스템 설정)');
+    await dark.check();
     expect(await html(page)).toEqual({ theme: 'dark', choice: 'dark' });
     expect(await page.evaluate(() => localStorage.getItem('theme'))).toBe('dark');
+    await expect(page.getByTestId('theme-announcement')).toHaveText('다크 테마로 바꿨어요');
 
     // US2 #2·SC-002: 새로 고침·이동·뒤로 가기
     await page.reload();
     expect(await html(page)).toEqual({ theme: 'dark', choice: 'dark' });
-    await page.goto('/login');
+    await expect(dark).toBeChecked();
+    await page.goto('/');
     expect(await html(page)).toEqual({ theme: 'dark', choice: 'dark' });
     await page.goBack();
     expect(await html(page)).toEqual({ theme: 'dark', choice: 'dark' });
+    await expect(dark).toBeChecked();
 
     // 다크 고정이면 기기 설정을 바꿔도 그대로
     await page.emulateMedia({ colorScheme: 'light' });
     expect(await html(page)).toEqual({ theme: 'dark', choice: 'dark' });
 
     // US2 #3: 시스템으로 돌아오면 기기 설정을 바로 따라간다(SC-005)
-    await page.getByRole('banner').getByTestId('theme-toggle').click();
+    await system.check();
     expect(await html(page)).toEqual({ theme: 'light', choice: 'system' });
     expect(await page.evaluate(() => localStorage.getItem('theme'))).toBeNull();
     await page.emulateMedia({ colorScheme: 'dark' });
@@ -168,24 +199,32 @@ test.describe('US2 테마를 고르고 유지한다', () => {
     await expect.poll(() => html(page)).toEqual({ theme: 'light', choice: 'system' });
 
     // US2 #4: 라이트 고정이면 기기 다크로 바꿔도 라이트
-    await page.getByRole('banner').getByTestId('theme-toggle').click();
+    await light.check();
     await page.emulateMedia({ colorScheme: 'dark' });
     expect(await html(page)).toEqual({ theme: 'light', choice: 'light' });
+
+    // 설정 화면이 가로로 넘치지 않는다
+    const size = await page.evaluate(() => ({
+      scrollWidth: document.documentElement.scrollWidth,
+      innerWidth: window.innerWidth,
+    }));
+    expect(size.scrollWidth).toBeLessThanOrEqual(size.innerWidth);
+
+    // 다음 시험을 위해 시스템으로
+    await system.check();
   });
 
   test('로그인 → 다크 → 로그아웃 뒤에도 다크, 다른 기기는 그 기기 설정 (US2 #5·#6)', async ({
     page,
     browser,
   }) => {
-    test.skip(!hasAccount, 'E2E_EMAIL·E2E_PASSWORD(이메일 인증된 회원)가 필요합니다');
     await page.emulateMedia({ colorScheme: 'light' });
     await login(page);
-    await page.goto('/');
-    const header = page.getByRole('banner');
-    await header.getByTestId('theme-toggle').click();
-    await header.getByTestId('theme-toggle').click();
+    await page.goto('/settings');
+    await themeSection(page).getByRole('radio', { name: '다크 모드' }).check();
     expect(await html(page)).toEqual({ theme: 'dark', choice: 'dark' });
 
+    const header = page.getByRole('banner');
     await header.getByRole('button', { name: /계정 메뉴/ }).click();
     await header.getByRole('button', { name: '로그아웃' }).click();
     await expect(header.getByRole('link', { name: '회원 가입' })).toBeVisible();
@@ -196,25 +235,11 @@ test.describe('US2 테마를 고르고 유지한다', () => {
     await login(other.page);
     await other.page.goto('/');
     expect(await html(other.page)).toEqual({ theme: 'light', choice: 'system' });
+    await other.page.goto('/settings');
+    await expect(
+      themeSection(other.page).getByRole('radio', { name: '시스템 설정 따르기 (기본)' }),
+    ).toBeChecked();
     await other.context.close();
-  });
-
-  test('버튼이 머리말 맨 오른쪽에 있고 머리말이 가로로 넘치지 않는다', async ({ page }) => {
-    await page.goto('/');
-    const isLast = await page
-      .getByRole('banner')
-      .getByTestId('theme-toggle')
-      .evaluate((button) => {
-        const nav = button.closest('nav');
-        const last = nav?.lastElementChild;
-        return !!last && last.contains(button);
-      });
-    expect(isLast).toBe(true);
-    const size = await page.evaluate(() => ({
-      scrollWidth: document.documentElement.scrollWidth,
-      innerWidth: window.innerWidth,
-    }));
-    expect(size.scrollWidth).toBeLessThanOrEqual(size.innerWidth);
   });
 });
 

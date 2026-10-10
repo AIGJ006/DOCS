@@ -121,7 +121,7 @@ frontend/
     ├── features/theme/
     │   ├── themeStore.ts                         # 읽기·쓰기·다음 상태
     │   ├── useTheme.ts                           # data-theme 적용, matchMedia 구독
-    │   ├── ThemeToggle.tsx                       # 버튼
+    │   ├── ThemeSettings.tsx                     # 설정 화면 라디오 (옛 ThemeToggle 버튼 (2026-10-10 민서 결정: 설정 화면 라디오로 옮김))
     │   └── __tests__/
     ├── config.ts                                 # + DARK_MODE_ENABLED (import.meta.env.VITE_DARK_MODE)
     ├── App.tsx                                   # 머리말 맨 오른쪽 ThemeToggle (006 머지 후)
