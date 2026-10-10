@@ -72,6 +72,8 @@ dc run --rm minio-init
 
 echo "deploy: 컨테이너 올리는 중 (이미지 buildlog-app:$APP_IMAGE_TAG)"
 dc up -d --remove-orphans
+# edge(nginx)는 설정이 그대로면 다시 만들어지지 않는다. 새 앱 컨테이너를 바로 찾도록 한 번 다시 띄운다
+dc up -d --force-recreate --no-deps edge
 
 echo "deploy: 앱 기동 확인 (최대 180초)"
 i=0

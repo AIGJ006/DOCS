@@ -34,20 +34,27 @@ server {
     proxy_set_header X-Real-IP $remote_addr;
     proxy_set_header Connection "";
 
+    # 앱·minio 컨테이너가 다시 만들어지면 내부 주소가 바뀐다. 시작할 때 한 번만 찾지 않도록
+    # 도커 내부 DNS(127.0.0.11)로 10초마다 다시 찾는다 (변수로 쓴 proxy_pass만 다시 찾는다)
+    resolver 127.0.0.11 valid=10s ipv6=off;
+    resolver_timeout 5s;
+    set $minio_upstream minio:9000;
+    set $app_upstream app:8080;
+
     location /blog/ {
         # 브라우저가 쓰는 것만: 공개 사진 읽기(GET·HEAD), 서명 주소 업로드(PUT), CORS 사전 요청(OPTIONS).
         # 지우기·목록은 앱이 compose 안 주소(http://minio:9000)로 직접 한다
         limit_except GET PUT OPTIONS {
             deny all;
         }
-        proxy_pass http://minio:9000;
+        proxy_pass http://$minio_upstream;
         proxy_request_buffering off;
         proxy_buffering off;
         proxy_read_timeout 60s;
     }
 
     location / {
-        proxy_pass http://app:8080;
+        proxy_pass http://$app_upstream;
         proxy_read_timeout 60s;
     }
 }
