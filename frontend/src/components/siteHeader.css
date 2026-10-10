@@ -46,7 +46,7 @@
   text-decoration: underline;
 }
 
-/* BuildLOG의 대문자(B·L·O·G): 브랜드 색. 나머지 소문자는 --color-text-muted */
+/* BaseLOG의 대문자(B·L·O·G): 브랜드 색. 나머지 소문자는 --color-text-muted */
 .site-header-logo span {
   color: var(--color-text-muted);
   font-weight: 400;

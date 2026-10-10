@@ -177,7 +177,7 @@ function AccountMenu({ me }: { me: MeSummary }) {
   );
 }
 
-/** 대문자만 브랜드 색으로 칠한다: BuildLOG → B·LOG가 이어져 BLOG로 읽힌다. */
+/** 대문자만 브랜드 색으로 칠한다: BaseLOG → B·LOG가 이어져 BLOG로 읽힌다. */
 function logoParts(name: string) {
   return Array.from(name.matchAll(/[A-Z]+|[^A-Z]+/g), ([part], i) => (
     <span
