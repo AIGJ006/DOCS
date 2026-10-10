@@ -6,7 +6,7 @@ import {
   setPrefersDark,
   uninstallMatchMedia,
 } from '../../../test/matchMedia';
-import { useTheme } from '../useTheme';
+import { useFollowSystemTheme, useTheme } from '../useTheme';
 
 /** 016 T025: 처음 값, 즉시 적용, 시스템일 때만 기기 설정 구독 (US2 #3·#4). */
 const root = document.documentElement;
@@ -93,5 +93,37 @@ describe('useTheme', () => {
     act(() => result.current.setChoice('system'));
     expect(root.dataset.theme).toBe('light');
     expect(localStorage.getItem('theme')).toBeNull();
+  });
+});
+
+/** 2026-10-10: 테마 선택이 설정 화면으로 옮겨 가, 다른 화면에서도 "시스템"이면 기기 설정을 따라가야 한다 (FR-006). */
+describe('useFollowSystemTheme', () => {
+  beforeEach(() => {
+    localStorage.clear();
+    root.dataset.theme = 'light';
+    root.dataset.themeChoice = 'system';
+    installMatchMedia(false);
+  });
+
+  afterEach(() => {
+    uninstallMatchMedia();
+    localStorage.clear();
+  });
+
+  it('시스템이면 기기 설정 변경을 따라가고, 다른 곳에서 고정하면 무시한다', () => {
+    const { unmount } = renderHook(() => useFollowSystemTheme());
+    expect(listenerCount()).toBe(1);
+    act(() => setPrefersDark(true));
+    expect(root.dataset.theme).toBe('dark');
+
+    // 설정 화면(useTheme)에서 라이트로 고정
+    const { result } = renderHook(() => useTheme());
+    act(() => result.current.setChoice('light'));
+    act(() => setPrefersDark(false));
+    act(() => setPrefersDark(true));
+    expect(root.dataset.theme).toBe('light');
+
+    unmount();
+    expect(listenerCount()).toBe(0);
   });
 });

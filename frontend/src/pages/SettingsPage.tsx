@@ -19,6 +19,7 @@ import { groupFieldErrors } from '../features/auth/fieldErrors';
 import FriendLists from '../features/friends/FriendLists';
 import NotificationSettingsSection from '../features/notification/NotificationSettingsSection';
 import AiConsentSettings from '../features/ai-suggest/AiConsentSettings';
+import ThemeSettings from '../features/theme/ThemeSettings';
 import { useSession } from '../features/auth/useSession';
 import { uploadProfileImage } from '../features/profile/uploadProfileImage';
 import PasswordChangeForm from '../features/settings/PasswordChangeForm';
@@ -57,6 +58,7 @@ type PendingPhoto =
  * - 프로필: 사진([사진 바꾸기]·[기본 이미지로] — 고른 사진은 [저장] 때 올리고 연결한다), 닉네임(30일 제한 중이면 막고 다음 변경
  *   가능일), 소개(글자 수는 코드 포인트), 블로그 주소 `@handle` 읽기 전용. [저장] 한 번에 바꾼 칸만 보내고, 실패한 칸을 모두 보인다.
  * - 계정: 이메일 읽기 전용, 로그인 수단, 직전 로그인(없으면 "첫 로그인"), 비밀번호 변경(이메일 계정만), 새 글 기본 공개 범위·최근 활동 공개(바꾸면 바로 저장), 약관 링크.
+ * - 화면 테마: 시스템 설정 따르기(기본)·라이트·다크 라디오(016 `ThemeSettings`, 고르면 바로 적용·이 기기에만 저장).
  * - 친구: 받은 친구 요청·내 친구 목록(`FriendLists`, US7).
  * - 회원 탈퇴: 계정 칸 맨 아래 [회원 탈퇴] 링크 → `/settings/withdraw` (015).
  *
@@ -118,6 +120,8 @@ export default function SettingsPage() {
         }}
       />
       <AccountSection settings={settings} onChange={setSettings} />
+      {/* 016: 화면 테마(이 기기에만 저장, 2026-10-10 머리말 버튼에서 옮김) */}
+      <ThemeSettings />
       {/* 013 T037: AI 외부 전송 동의 */}
       <AiConsentSettings />
       <section aria-labelledby="storage-title">
