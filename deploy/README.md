@@ -70,12 +70,13 @@ GitHub 저장소 → **Settings → Secrets and variables → Actions → New re
 
 | 이름 | 값 | 뜻 |
 |---|---|---|
-| `COMPOSE_PROFILES` | 비움 / `ai` / `localdb` / `ai,localdb` | `ai`: 서버 안에 자체 AI(Ollama) 띄움(메모리 약 2~4GB 더 씀). `localdb`: Crowfoot DB 대신 서버 안 PostgreSQL |
+| `COMPOSE_PROFILES` | 비움(= `localdb`) / `ai,localdb` / `external` | **기본은 `localdb`**: 서버 안 PostgreSQL. `ai`: 서버 안에 자체 AI(Ollama) 띄움(메모리 약 2~4GB 더 씀). `external`처럼 `localdb`가 없는 값이면 Secrets의 DB(Crowfoot 등)를 씀 |
 | `OLLAMA_ENABLED` | `true` | `ai`를 켰을 때만 넣습니다 |
 | `BLOG_AI_TAG_SUGGEST_ENABLED` | `false` | Gemini 키도 `ai`도 없을 때 AI 추천 기능을 끕니다 |
 
-`localdb`를 쓸 때는 Secrets를 `DB_ADDRESS`=`postgres`, `DB_PORT`=`5432`, `DB_SCHEMA`=`public`으로 넣고,
-`DB_NAME`·`DB_USERNAME`·`DB_PASSWORD`는 직접 정합니다 (처음 뜰 때 그 값으로 DB가 만들어집니다).
+`localdb`(기본)일 때는 배포가 `DB_ADDRESS`·`DB_PORT`·`DB_SCHEMA`를 알아서 `postgres`·`5432`·`public`으로 바꿉니다.
+`DB_NAME`·`DB_USERNAME`·`DB_PASSWORD`는 Secrets 값 그대로 쓰고, 서버 안 DB가 처음 뜰 때 그 값으로 만들어집니다.
+(2026-10-10: Crowfoot PostgreSQL은 확장 기능이 없어 V1의 `pg_trgm`을 만들 수 없어서 기본을 `localdb`로 바꿨습니다.)
 
 ## 2. Crowfoot DB에서 확인할 것 — pg_trgm 확장
 
