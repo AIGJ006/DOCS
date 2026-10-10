@@ -1,0 +1,68 @@
+# 운영(팀 공용 서버) 프로필. deploy/docker-compose.prod.yml이 SPRING_PROFILES_ACTIVE=prod로 켠다.
+# 값은 전부 환경 변수(서버 ~/buildlog/.env ← GitHub Secrets)로만 넣는다 — 이 파일에 실제 주소·비밀값을 쓰지 않는다 (constitution IV).
+# 공통 수치·기본값은 application.yml 그대로이고, 여기서는 접속 정보와 운영 주소만 바꾼다.
+spring:
+  datasource:
+    # Crowfoot이 발급한 PostgreSQL. 스키마가 따로 주어진다(public이 아닐 수 있음).
+    # currentSchema에 "<스키마>,public"을 주는 이유: 테이블·Flyway 기록은 첫 스키마에 만들고, DB 관리자가 pg_trgm을
+    # public에 미리 만들어 둔 경우에도 gin_trgm_ops를 찾게 한다 (deploy/README.md "pg_trgm").
+    url: jdbc:postgresql://${DB_ADDRESS}:${DB_PORT:5432}/${DB_NAME}?currentSchema=${DB_SCHEMA:public},public
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+    hikari:
+      # 공용 DB — 연결을 많이 잡지 않는다
+      maximum-pool-size: ${DB_POOL_SIZE:10}
+  flyway:
+    # 기록 테이블(flyway_schema_history)과 V1~V3 객체를 이 스키마에 만든다. 스키마는 미리 있어야 한다(만들 권한이 없을 수 있음)
+    schemas: ${DB_SCHEMA:public}
+    default-schema: ${DB_SCHEMA:public}
+    create-schemas: false
+  data:
+    redis:
+      host: ${REDIS_HOST:redis}
+      port: ${REDIS_PORT:6379}
+  mail:
+    # 외부 SMTP(예: Gmail 앱 비밀번호, smtp.gmail.com:587). 비어 있어도 앱은 뜬다 — 메일 발송만 실패하고 경고 로그를 남긴다
+    host: ${SPRING_MAIL_HOST:}
+    port: ${SPRING_MAIL_PORT:587}
+    username: ${SPRING_MAIL_USERNAME:}
+    password: ${SPRING_MAIL_PASSWORD:}
+    properties:
+      mail:
+        smtp:
+          auth: ${SPRING_MAIL_SMTP_AUTH:true}
+          starttls:
+            enable: true
+            required: ${SPRING_MAIL_STARTTLS_REQUIRED:true}
+          connectiontimeout: 5000
+          timeout: 10000
+          writetimeout: 10000
+
+management:
+  health:
+    # 외부 SMTP 상태로 앱 상태를 DOWN으로 보지 않는다(메일 실패는 기능 실패일 뿐, constitution V)
+    mail:
+      enabled: false
+
+blog:
+  site:
+    # SITE_URL = https://<도메인> (끝 / 없이)
+    base-url: ${SITE_URL}
+  mail:
+    # 보내는 주소. Gmail은 로그인한 주소와 같아야 한다 — compose가 비어 있으면 SPRING_MAIL_USERNAME으로 채운다
+    from: ${BLOG_MAIL_FROM:no-reply@localhost}
+    link-base-url: ${SITE_URL}
+  seo:
+    default-og-image-url: ${SITE_URL}/og-default.png
+  image:
+    # 사진 공개 주소·업로드 서명 주소 모두 같은 도메인(edge nginx가 /blog/ → MinIO). 서버 → 저장소는 compose 안 주소
+    public-base-url: ${SITE_URL}/blog
+    storage:
+      endpoint: ${BLOG_IMAGE_STORAGE_ENDPOINT:http://minio:9000}
+      presign-endpoint: ${SITE_URL}
+  ai:
+    tag-suggest:
+      ollama:
+        # 공용 서버 메모리 때문에 기본 꺼짐. compose profile "ai"로 ollama를 띄울 때만 OLLAMA_ENABLED=true
+        enabled: ${OLLAMA_ENABLED:false}
+        base-url: ${BLOG_AI_TAG_SUGGEST_OLLAMA_BASE_URL:http://ollama:11434}
