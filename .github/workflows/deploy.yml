@@ -136,6 +136,11 @@ jobs:
           docker save "$IMAGE_NAME:$GITHUB_SHA" "$IMAGE_NAME:latest" | gzip -1 > bundle/buildlog-app.tar.gz
           cp deploy/docker-compose.prod.yml deploy/deploy.sh deploy/nginx.conf.template scripts/minio-init.sh bundle/
           du -sh bundle/buildlog-app.tar.gz
+          # scp 액션은 다른 사용자로 도는 컨테이너 안에서 bundle을 tar로 묶는다 → 읽을 수 있게 연다.
+          # 러너는 이 작업이 끝나면 사라지고, 서버에서는 deploy 단계가 .env를 다시 600으로 바꾼다.
+          chmod 755 bundle
+          chmod 644 bundle/* bundle/.env
+          chmod 755 bundle/deploy.sh
 
       - name: 서버로 복사
         if: steps.gate.outputs.ready == 'true'
